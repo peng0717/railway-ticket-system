@@ -308,8 +308,8 @@ def calculate_price(from_station, to_station, seat_type):
         return price.base_price
     
     # 如果没有固定票价，按距离计算
-    from_stop = TrainStop.query.join(Station).filter(Station.station_code == from_station).first()
-    to_stop = TrainStop.query.join(Station).filter(Station.station_code == to_station).first()
+    from_stop = TrainStop.query.filter(TrainStop.station_code == from_station).first()
+    to_stop = TrainStop.query.filter(TrainStop.station_code == to_station).first()
     
     if from_stop and to_stop and from_stop.distance_from_start and to_stop.distance_from_start:
         distance = abs(to_stop.distance_from_start - from_stop.distance_from_start)
@@ -320,18 +320,36 @@ def calculate_price(from_station, to_station, seat_type):
         
         return round(distance * base_rate * coefficient, 2)
     
-    return 0.0
+    # 如果没有距离信息，使用默认价格
+    default_prices = {
+        'business': 800, 'first': 500, 'second': 300,
+        'soft_seat': 250, 'hard_seat': 150,
+        'soft_sleeper': 400, 'hard_sleeper': 280
+    }
+    return default_prices.get(seat_type, 200)
 
-def calculate_refund_fee(ticket, refund_time):
+def calculate_refund_fee(ticket, refund_time=None):
     """计算退票手续费"""
-    travel_datetime = datetime.strptime(f"{ticket.travel_date} {ticket.departure_time}", '%Y-%m-%d %H:%M')
-    hours_until_departure = (travel_datetime - refund_time).total_seconds() / 3600
+    if refund_time is None:
+        refund_time = datetime.now()
     
-    for rule in config.REFUND_RULES:
-        if hours_until_departure >= rule['hours']:
-            return round(ticket.price * rule['rate'], 2)
+    try:
+        travel_datetime = datetime.strptime(f"{ticket.travel_date} {ticket.departure_time}", '%Y-%m-%d %H:%M')
+        hours_until_departure = (travel_datetime - refund_time).total_seconds() / 3600
+    except:
+        return 0.0
     
-    return ticket.price  # 开车后不退
+    # 退票手续费规则（按开车前时间）
+    if hours_until_departure >= 360:  # 15天以上
+        return 0.0
+    elif hours_until_departure >= 48:  # 48小时以上
+        return round(ticket.price * 0.05, 2)
+    elif hours_until_departure >= 24:  # 24-48小时
+        return round(ticket.price * 0.10, 2)
+    elif hours_until_departure >= 0:  # 24小时内
+        return round(ticket.price * 0.20, 2)
+    else:  # 开车后不退
+        return ticket.price
 
 def generate_seat_number(seat_type):
     """生成座位号"""
@@ -557,6 +575,12 @@ def api_train_availability(train_id):
     if not train:
         return jsonify({'error': '车次不存在'}), 404
     
+    # 如果没有指定发到站，返回全程信息
+    if not from_station:
+        from_station = train.start_station
+    if not to_station:
+        to_station = train.end_station
+    
     # 获取经停站信息
     from_stop = TrainStop.query.filter(
         TrainStop.train_id == train_id,
@@ -568,24 +592,40 @@ def api_train_availability(train_id):
         TrainStop.station_code == to_station
     ).first()
     
-    if not from_stop or not to_stop:
-        return jsonify({'error': '车站不在该车次经停站中'}), 400
+    # 如果找不到经停站，使用默认信息
+    if not from_stop:
+        from_stop = TrainStop.query.filter(
+            TrainStop.train_id == train_id
+        ).order_by(TrainStop.stop_sequence).first()
+    
+    if not to_stop:
+        to_stop = TrainStop.query.filter(
+            TrainStop.train_id == train_id
+        ).order_by(TrainStop.stop_sequence.desc()).first()
     
     # 计算票价
     prices = {}
-    for seat_type, config in config.SEAT_TYPES.items():
+    for seat_type, seat_config in config.SEAT_TYPES.items():
         price = calculate_price(from_station, to_station, seat_type)
-        prices[config['name']] = {
+        # 获取余票数
+        seat_column = f'seat_{seat_type}'
+        count = 0
+        if from_stop and hasattr(from_stop, seat_column):
+            count = getattr(from_stop, seat_column, 0) or 0
+        prices[seat_config['name']] = {
             'price': price,
-            'available': True,
-            'count': getattr(from_stop, f'seat_{seat_type}', 0)
+            'available': count > 0,
+            'count': count
         }
     
     return jsonify({
+        'train_id': train.train_id,
         'train_number': train.train_number,
         'train_type': train.train_type,
-        'departure_time': from_stop.departure_time,
-        'arrival_time': to_stop.arrival_time,
+        'start_station': train.start_station,
+        'end_station': train.end_station,
+        'departure_time': from_stop.departure_time if from_stop else train.start_time,
+        'arrival_time': to_stop.arrival_time if to_stop else train.end_time,
         'from_station': from_station,
         'to_station': to_station,
         'prices': prices
@@ -620,8 +660,10 @@ def api_sell_ticket():
             TrainStop.station_code == data['to_station']
         ).first()
         
-        if not from_stop or not to_stop:
-            return jsonify({'success': False, 'error': '车站不在该车次经停站中'}), 400
+        # 如果找不到，使用默认值
+        departure_time = train.start_time or '08:00'
+        if from_stop and from_stop.departure_time:
+            departure_time = from_stop.departure_time
         
         # 计算票价
         ticket_type = data.get('ticket_type', 'adult')
@@ -639,6 +681,11 @@ def api_sell_ticket():
         seat_number = generate_seat_number(data['seat_type'])
         carriage = seat_number[:2]
         
+        # 票额用途
+        ticket_purpose = data.get('ticket_purpose', 'public')
+        ticket_class_map = {'public': 'normal', 'flexible': 'flex', 'student': 'student', 'forbidden': 'blocked'}
+        ticket_class = ticket_class_map.get(ticket_purpose, 'normal')
+        
         # 创建车票记录
         ticket = Ticket(
             ticket_id=ticket_id,
@@ -650,13 +697,14 @@ def api_sell_ticket():
             from_station=data['from_station'],
             to_station=data['to_station'],
             travel_date=data['travel_date'],
-            departure_time=from_stop.departure_time,
+            departure_time=departure_time,
             carriage=carriage,
             seat_number=seat_number,
             seat_type=data['seat_type'],
             price=price,
             ticket_type=ticket_type,
             status='valid',
+            ticket_class=ticket_class,
             seller_id=current_user.user_id,
             window_no=session.get('window_no')
         )
@@ -680,7 +728,8 @@ def api_sell_ticket():
             'from_station': data['from_station'],
             'to_station': data['to_station'],
             'seat_type': data['seat_type'],
-            'price': price
+            'price': price,
+            'ticket_purpose': ticket_purpose
         })
         
         return jsonify({
@@ -691,7 +740,7 @@ def api_sell_ticket():
                 'from_station': data['from_station'],
                 'to_station': data['to_station'],
                 'travel_date': data['travel_date'],
-                'departure_time': from_stop.departure_time,
+                'departure_time': departure_time,
                 'carriage': carriage,
                 'seat_number': seat_number,
                 'seat_type': data['seat_type'],
@@ -712,11 +761,29 @@ def api_get_ticket(ticket_id):
     if not ticket:
         return jsonify({'error': '车票不存在'}), 404
     
+    # 获取车站名称
+    from_station_name = ticket.from_station
+    to_station_name = ticket.to_station
+    
+    from_st = Station.query.filter(
+        db.or_(Station.station_code == ticket.from_station, Station.station_name == ticket.from_station)
+    ).first()
+    to_st = Station.query.filter(
+        db.or_(Station.station_code == ticket.to_station, Station.station_name == ticket.to_station)
+    ).first()
+    
+    if from_st:
+        from_station_name = from_st.station_name
+    if to_st:
+        to_station_name = to_st.station_name
+    
     return jsonify({
         'ticket_id': ticket.ticket_id,
         'train_number': ticket.train_number,
-        'from_station': ticket.from_station,
-        'to_station': ticket.to_station,
+        'from_station': from_station_name,
+        'from_station_code': ticket.from_station,
+        'to_station': to_station_name,
+        'to_station_code': ticket.to_station,
         'travel_date': ticket.travel_date,
         'departure_time': ticket.departure_time,
         'carriage': ticket.carriage,
@@ -743,15 +810,33 @@ def api_refund_ticket(ticket_id):
     if ticket.status != 'valid':
         return jsonify({'success': False, 'error': '车票状态不允许退票'}), 400
     
+    data = request.get_json() or {}
+    refund_reason = data.get('refund_reason', '24hours_less')
+    
     try:
-        refund_fee = calculate_refund_fee(ticket, datetime.now())
+        # 根据退票原因计算手续费
+        rates = {
+            '15days': 0.0,
+            '48hours': 0.05,
+            '24hours': 0.10,
+            '24hours_less': 0.20,
+            'after_departure': 1.0
+        }
+        rate = rates.get(refund_reason, 0.20)
+        
+        refund_fee = round(ticket.price * rate, 2)
         refund_amount = round(ticket.price - refund_fee, 2)
+        
+        # 开车后不允许退票
+        if refund_reason == 'after_departure' or refund_amount < 0:
+            return jsonify({'success': False, 'error': '开车后不办理退票'}), 400
         
         refund = Refund(
             ticket_id=ticket_id,
             refund_amount=refund_amount,
             refund_fee=refund_fee,
-            refund_reason='voluntary',
+            refund_reason=refund_reason,
+            refund_type='normal',
             operator_id=current_user.user_id
         )
         
@@ -769,7 +854,8 @@ def api_refund_ticket(ticket_id):
         # 记录操作日志
         log_operation('refund', ticket_id, {
             'refund_amount': refund_amount,
-            'refund_fee': refund_fee
+            'refund_fee': refund_fee,
+            'refund_reason': refund_reason
         })
         
         return jsonify({
@@ -799,23 +885,30 @@ def api_create_supplement():
             return jsonify({'success': False, 'error': f'缺少必填字段: {field}'}), 400
     
     try:
-        # 计算补票费用
-        from_station = data.get('from_station', 'ZZO')  # 默认从郑州
-        seat_type = data.get('seat_type', 'hard_seat')
-        
-        base_price = calculate_price(from_station, data['to_station'], seat_type)
-        
-        # 加上罚款
+        # 获取前端传来的费用数据
+        base_price = data.get('base_price', 0)
         fine = data.get('fine', 0)
-        if data['supp_type'] == 'no_ticket':
-            fine = round(base_price * 0.5, 2)  # 50%罚款
-        elif data['supp_type'] == 'over_station':
-            fine = 0
-        elif data['supp_type'] == 'over_class':
-            fine = 0
+        service_fee = data.get('service_fee', 2.0)
         
-        service_fee = 2.0  # 手续费
+        # 如果前端没有传来，使用计算
+        if base_price == 0:
+            from_station = data.get('from_station', 'ZZO')
+            seat_type = data.get('seat_type', 'hard_seat')
+            base_price = calculate_price(from_station, data['to_station'], seat_type)
+        
+        # 根据补票类型调整罚款
+        if data['supp_type'] == 'no_ticket' and fine == 0:
+            fine = round(base_price * 0.5, 2)
+        elif data['supp_type'] == 'over_station':
+            fine = fine if fine > 0 else base_price
+        elif data['supp_type'] == 'over_class':
+            fine = fine if fine > 0 else round(base_price * 0.3, 2)
+        
+        service_fee = 2.0  # 固定手续费
         total_amount = round(base_price + fine + service_fee, 2)
+        
+        from_station = data.get('from_station', '郑州')
+        seat_type = data.get('seat_type', 'hard_seat')
         
         supplement = SupplementTicket(
             original_ticket_id=data.get('original_ticket_id'),
@@ -846,6 +939,8 @@ def api_create_supplement():
         # 记录操作日志
         log_operation('supplement', details={
             'supp_type': data['supp_type'],
+            'from_station': from_station,
+            'to_station': data['to_station'],
             'amount': total_amount
         })
         
@@ -873,6 +968,20 @@ def api_shift_summary():
     if not shift:
         return jsonify({'error': '班次不存在'}), 404
     
+    # 获取本班次补票统计
+    supplement_count = SupplementTicket.query.filter_by(
+        operator_id=current_user.user_id
+    ).filter(
+        db.func.date(SupplementTicket.supp_time) == datetime.now().date()
+    ).count()
+    
+    supplement_amount = db.session.query(
+        db.func.sum(SupplementTicket.amount)
+    ).filter(
+        SupplementTicket.operator_id == current_user.user_id,
+        db.func.date(SupplementTicket.supp_time) == datetime.now().date()
+    ).scalar() or 0
+    
     return jsonify({
         'shift_id': shift.shift_id,
         'employee_no': shift.employee_no,
@@ -885,7 +994,9 @@ def api_shift_summary():
         'waste_count': shift.waste_count,
         'revenue': shift.revenue,
         'refund_amount': shift.refund_amount,
-        'actual_amount': shift.revenue - shift.refund_amount,
+        'supplement_count': supplement_count,
+        'supplement_amount': supplement_amount,
+        'actual_amount': shift.revenue - shift.refund_amount + supplement_amount,
         'status': shift.status
     })
 
@@ -1018,23 +1129,41 @@ def api_sold_tickets():
     if 'shift_id' not in session:
         return jsonify([])
     
-    tickets = Ticket.query.filter_by(
-        seller_id=current_user.user_id,
-        travel_date=datetime.now().strftime('%Y-%m-%d')
-    ).order_by(Ticket.sold_at.desc()).limit(50).all()
+    date = request.args.get('date', '')
+    if not date:
+        date = datetime.now().strftime('%Y-%m-%d')
     
-    return jsonify([{
-        'ticket_id': t.ticket_id,
-        'train_number': t.train_number,
-        'from_station': t.from_station,
-        'to_station': t.to_station,
-        'travel_date': t.travel_date,
-        'departure_time': t.departure_time,
-        'seat_type': t.seat_type,
-        'price': t.price,
-        'status': t.status,
-        'sold_at': t.sold_at.strftime('%H:%M:%S') if t.sold_at else ''
-    } for t in tickets])
+    query = Ticket.query.filter_by(
+        seller_id=current_user.user_id,
+        travel_date=date
+    )
+    
+    tickets = query.order_by(Ticket.sold_at.desc()).limit(100).all()
+    
+    result = []
+    for t in tickets:
+        # 获取车站名称
+        from_st = Station.query.filter(
+            db.or_(Station.station_code == t.from_station, Station.station_name == t.from_station)
+        ).first()
+        to_st = Station.query.filter(
+            db.or_(Station.station_code == t.to_station, Station.station_name == t.to_station)
+        ).first()
+        
+        result.append({
+            'ticket_id': t.ticket_id,
+            'train_number': t.train_number,
+            'from_station': from_st.station_name if from_st else t.from_station,
+            'to_station': to_st.station_name if to_st else t.to_station,
+            'travel_date': t.travel_date,
+            'departure_time': t.departure_time,
+            'seat_type': t.seat_type,
+            'price': t.price,
+            'status': t.status,
+            'sold_at': t.sold_at.strftime('%H:%M:%S') if t.sold_at else ''
+        })
+    
+    return jsonify(result)
 
 # ==================== 错误处理 ====================
 

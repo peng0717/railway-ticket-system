@@ -10,48 +10,73 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; background: #e8ecf0; font-size: 13px; }
         
-        .header-bar { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 8px 15px; display: flex; justify-content: space-between; }
+        .header-bar { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; }
         .header-left { display: flex; align-items: center; gap: 20px; }
         .station-name { font-size: 16px; font-weight: bold; }
         .header-info { font-size: 13px; color: #a8c8e8; }
         .header-right { display: flex; align-items: center; gap: 20px; }
         
         .menu-bar { background: #fff; border-bottom: 2px solid #1a4a7a; padding: 0; display: flex; }
-        .menu-item { padding: 8px 18px; cursor: pointer; border-right: 1px solid #eee; font-size: 13px; }
+        .menu-item { padding: 8px 18px; cursor: pointer; border-right: 1px solid #eee; font-size: 13px; tabindex: "-1"; onfocus: "this.blur()"; }
         .menu-item:hover { background: #f0f5fa; }
         
         .main-content { padding: 20px; }
         
         .panel { background: #fff; border: 1px solid #ddd; border-radius: 3px; margin-bottom: 15px; }
-        .panel-header { background: #f5f5f5; padding: 10px 15px; border-bottom: 1px solid #ddd; font-weight: bold; }
+        .panel-header { background: #f5f5f5; padding: 10px 15px; border-bottom: 1px solid #ddd; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .panel-body { padding: 15px; }
         
-        .query-type { display: flex; gap: 20px; margin-bottom: 20px; }
-        .type-btn { padding: 8px 20px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; background: #fff; }
-        .type-btn.active { background: #1a4a7a; color: #fff; border-color: #1a4a7a; }
+        .query-tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab-btn { padding: 8px 20px; border: 1px solid #ccc; border-radius: 3px 3px 0 0; cursor: pointer; background: #f5f5f5; font-size: 13px; tabindex: "-1"; onfocus: "this.blur()"; }
+        .tab-btn.active { background: #1a4a7a; color: #fff; border-color: #1a4a7a; border-bottom-color: #fff; }
         
-        .input-row { display: flex; margin-bottom: 15px; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .input-label { font-weight: bold; width: 80px; }
-        .input-field input { height: 32px; border: 1px solid #ccc; border-radius: 2px; padding: 5px 10px; width: 150px; }
+        .input-row { display: flex; margin-bottom: 12px; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .input-label { font-weight: bold; width: 70px; }
+        .input-field { display: flex; align-items: center; gap: 8px; }
+        .input-field input { height: 32px; border: 1px solid #ccc; border-radius: 2px; padding: 5px 10px; font-size: 14px; }
+        .input-field input:focus { outline: none; border-color: #1a4a7a; }
         
-        .btn { padding: 8px 20px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; background: #fff; }
+        .btn { padding: 6px 15px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; background: #fff; font-size: 13px; }
         .btn.primary { background: #1a4a7a; color: #fff; border-color: #1a4a7a; }
         .btn:hover { opacity: 0.9; }
         
         table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; }
-        th { background: #e8f4fc; padding: 10px 8px; text-align: center; border: 1px solid #ddd; }
+        th { background: #e8f4fc; padding: 10px 8px; text-align: center; border: 1px solid #ddd; font-weight: bold; }
         td { padding: 8px; text-align: center; border: 1px solid #eee; }
         tr:hover { background: #f8f9fa; }
+        tr.no-data { background: #fff3cd; }
         
         .status-bar { background: #f5f5f5; border-top: 2px solid #1a4a7a; padding: 8px 15px; }
         
         .station-input-wrapper { position: relative; display: inline-block; }
-        .station-suggestions { position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #1a4a7a; border-radius: 2px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 250px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .station-suggestions { position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #1a4a7a; border-radius: 2px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 280px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
         .station-suggestions.show { display: block; }
-        .station-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .station-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
         .station-item:hover { background: #e8f4fc; }
+        .station-item:last-child { border-bottom: none; }
+        .station-item .name { font-weight: bold; }
+        .station-item .code { color: #1a4a7a; font-size: 12px; }
         
-        .result-info { padding: 10px 15px; background: #f8f9fa; border-radius: 3px; margin-bottom: 15px; }
+        .result-summary { padding: 10px 15px; background: #e8f4fc; border-radius: 3px; margin-bottom: 15px; }
+        .result-summary strong { color: #1a4a7a; }
+        
+        .train-card { background: #f8f9fa; border: 1px solid #ddd; border-radius: 3px; padding: 15px; margin-bottom: 15px; }
+        .train-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #ddd; }
+        .train-number { font-size: 18px; font-weight: bold; color: #1a4a7a; }
+        .train-type { background: #1a4a7a; color: #fff; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 10px; }
+        .train-times { display: flex; justify-content: space-between; font-size: 13px; color: #666; }
+        
+        .seat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+        .seat-cell { padding: 10px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
+        .seat-cell .name { font-weight: bold; margin-bottom: 5px; }
+        .seat-cell .count { font-size: 16px; color: #1a4a7a; font-weight: bold; }
+        .seat-cell .count.zero { color: #999; }
+        .seat-cell .price { color: #666; font-size: 12px; margin-top: 3px; }
+        
+        .empty-result { text-align: center; color: #999; padding: 50px; }
+        .empty-result i { font-size: 48px; margin-bottom: 15px; display: block; color: #ccc; }
+        
+        .loading { text-align: center; padding: 50px; color: #666; }
     </style>
 </head>
 <body>
@@ -61,7 +86,7 @@
             <span class="header-info">{{ window_no }} {{ shift_name }}</span>
         </div>
         <div class="header-center">
-            <span>现在查询 余票查询</span>
+            <span style="color:#ffcc00;">余票查询</span>
         </div>
         <div class="header-right">
             <span id="currentTime">{{ current_time }}</span>
@@ -69,67 +94,104 @@
     </div>
     
     <div class="menu-bar">
-        <div class="menu-item" onclick="window.location.href='/'">售票<span class="shortcut">[G]</span></div>
-        <div class="menu-item" onclick="window.location.href='/refund'">退票[R]</div>
-        <div class="menu-item" onclick="window.location.href='/supplement'">到达补票</div>
-        <div class="menu-item" onclick="window.location.href='/query'" style="background:#e8f4fc;">余票查询[U]</div>
-        <div class="menu-item" onclick="window.location.href='/shift'">交班</div>
+        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goMain()">售票<span class="shortcut">[G]</span></div>
+        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goRefund()">退票[R]</div>
+        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goSupplement()">到达补票</div>
+        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goQuery()">余票查询[U]</div>
+        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goShift()">交班[X]</div>
     </div>
     
     <div class="main-content">
         <div class="panel">
             <div class="panel-header">查询条件</div>
             <div class="panel-body">
-                <div class="query-type">
-                    <button class="type-btn active" onclick="setQueryType('train', this)">按车次查询[C]</button>
-                    <button class="type-btn" onclick="setQueryType('station', this)">按发到站查询[S]</button>
+                <div class="query-tabs">
+                    <button class="tab-btn active" tabindex="-1" onblur="this.blur()" onclick="setQueryType('train')">按车次查询[C]</button>
+                    <button class="tab-btn" tabindex="-1" onblur="this.blur()" onclick="setQueryType('station')">按发到站查询[S]</button>
+                    <button class="tab-btn" tabindex="-1" onblur="this.blur()" onclick="setQueryType('sold')">售票记录[P]</button>
                 </div>
                 
+                <!-- 按车次查询 -->
                 <div id="trainQuery">
                     <div class="input-row">
                         <div class="input-label">日期:</div>
                         <div class="input-field">
                             <input type="date" id="queryDate">
                         </div>
-                        <div class="input-label">车次:</div>
+                        <div class="input-label" style="width:50px;">车次:</div>
                         <div class="input-field">
-                            <input type="text" id="queryTrainNumber" placeholder="输入车次">
+                            <input type="text" id="queryTrainNumber" placeholder="输入车次号" style="width:120px;">
                         </div>
-                        <button class="btn primary" onclick="queryByTrain()">查询</button>
+                        <div class="input-label" style="width:50px;">发站:</div>
+                        <div class="input-field">
+                            <div class="station-input-wrapper">
+                                <input type="text" id="queryFromStation" placeholder="拼音码" style="width:80px;" oninput="searchStation(this, 'from')">
+                                <div class="station-suggestions" id="fromSuggestions"></div>
+                            </div>
+                            <span id="queryFromName" style="color:#1a4a7a; font-size:12px;"></span>
+                        </div>
+                        <div class="input-label" style="width:50px;">到站:</div>
+                        <div class="input-field">
+                            <div class="station-input-wrapper">
+                                <input type="text" id="queryToStation" placeholder="拼音码" style="width:80px;" oninput="searchStation(this, 'to')">
+                                <div class="station-suggestions" id="toSuggestions"></div>
+                            </div>
+                            <span id="queryToName" style="color:#1a4a7a; font-size:12px;"></span>
+                        </div>
+                        <button class="btn primary" onclick="queryByTrain()">查询[Enter]</button>
                     </div>
                 </div>
                 
+                <!-- 按发到站查询 -->
                 <div id="stationQuery" style="display:none;">
                     <div class="input-row">
                         <div class="input-label">日期:</div>
                         <div class="input-field">
                             <input type="date" id="queryDate2">
                         </div>
-                        <div class="input-label">发站:</div>
+                        <div class="input-label" style="width:50px;">发站:</div>
                         <div class="input-field">
                             <div class="station-input-wrapper">
-                                <input type="text" id="queryFromStation" placeholder="输入拼音码" oninput="searchStation(this, 'from')">
-                                <div class="station-suggestions" id="fromSuggestions"></div>
+                                <input type="text" id="queryFromStation2" placeholder="拼音码" style="width:80px;" oninput="searchStation(this, 'from2')">
+                                <div class="station-suggestions" id="from2Suggestions"></div>
                             </div>
+                            <span id="queryFromName2" style="color:#1a4a7a; font-size:12px;"></span>
                         </div>
-                        <div class="input-label">到站:</div>
+                        <div class="input-label" style="width:50px;">到站:</div>
                         <div class="input-field">
                             <div class="station-input-wrapper">
-                                <input type="text" id="queryToStation" placeholder="输入拼音码" oninput="searchStation(this, 'to')">
-                                <div class="station-suggestions" id="toSuggestions"></div>
+                                <input type="text" id="queryToStation2" placeholder="拼音码" style="width:80px;" oninput="searchStation(this, 'to2')">
+                                <div class="station-suggestions" id="to2Suggestions"></div>
                             </div>
+                            <span id="queryToName2" style="color:#1a4a7a; font-size:12px;"></span>
                         </div>
-                        <button class="btn primary" onclick="queryByStation()">查询</button>
+                        <button class="btn primary" onclick="queryByStation()">查询[Enter]</button>
+                    </div>
+                </div>
+                
+                <!-- 售票记录查询 -->
+                <div id="soldQuery" style="display:none;">
+                    <div class="input-row">
+                        <div class="input-label">日期:</div>
+                        <div class="input-field">
+                            <input type="date" id="queryDate3">
+                        </div>
+                        <div class="input-label" style="width:50px;">票号:</div>
+                        <div class="input-field">
+                            <input type="text" id="queryTicketId" placeholder="输入票号" style="width:150px;">
+                        </div>
+                        <button class="btn primary" onclick="querySoldRecords()">查询[Enter]</button>
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="panel">
-            <div class="panel-header">查询结果</div>
+            <div class="panel-header">查询结果 <span id="resultCount"></span></div>
             <div class="panel-body">
                 <div id="resultArea">
-                    <div style="text-align:center; color:#999; padding:50px;">
+                    <div class="empty-result">
+                        <i class="fas fa-search"></i>
                         请输入查询条件
                     </div>
                 </div>
@@ -138,120 +200,192 @@
     </div>
     
     <div class="status-bar">
-        <span>查询[U] 按车次[C] 按到站[S] 返回主界面[X]</span>
+        <span>按车次[C] 按到站[S] 售票记录[P] 返回主界面[X]</span>
+        <span>快捷键: Alt+G-售票 Alt+U-查询</span>
     </div>
-    
+
     <script>
         let queryType = 'train';
+        let stationCache = { from: '', to: '', from2: '', to2: '' };
+        
+        const seatNames = {
+            'business': '商务座', 'first': '一等座', 'second': '二等座',
+            'soft_seat': '软座', 'hard_seat': '硬座', 'soft_sleeper': '软卧', 'hard_sleeper': '硬卧'
+        };
         
         document.addEventListener('DOMContentLoaded', function() {
             updateTime();
             setInterval(updateTime, 1000);
-            document.getElementById('queryDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('queryDate2').value = new Date().toISOString().split('T')[0];
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('queryDate').value = today;
+            document.getElementById('queryDate2').value = today;
+            document.getElementById('queryDate3').value = today;
         });
         
         function updateTime() {
             const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                           now.getMinutes().toString().padStart(2, '0') + ':' + 
-                           now.getSeconds().toString().padStart(2, '0');
-            document.getElementById('currentTime').textContent = timeStr;
+            document.getElementById('currentTime').textContent = 
+                String(now.getHours()).padStart(2, '0') + ':' + 
+                String(now.getMinutes()).padStart(2, '0') + ':' + 
+                String(now.getSeconds()).padStart(2, '0');
         }
         
-        function setQueryType(type, btn) {
+        function setQueryType(type) {
             queryType = type;
-            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', 
+                    (type === 'train' && i === 0) || 
+                    (type === 'station' && i === 1) ||
+                    (type === 'sold' && i === 2)
+                );
+            });
             
             document.getElementById('trainQuery').style.display = type === 'train' ? 'block' : 'none';
             document.getElementById('stationQuery').style.display = type === 'station' ? 'block' : 'none';
+            document.getElementById('soldQuery').style.display = type === 'sold' ? 'block' : 'none';
         }
         
-        async function queryByTrain() {
-            const trainNumber = document.getElementById('queryTrainNumber').value.trim();
-            if (!trainNumber) {
-                alert('请输入车次');
+        async function searchStation(input, type) {
+            const query = input.value.trim();
+            const suffix = type.replace(/[0-9]/g, '');
+            const suggestions = document.getElementById(suffix + 'Suggestions');
+            
+            if (query.length < 1) {
+                suggestions.classList.remove('show');
                 return;
             }
             
             try {
-                const response = await fetch('/api/trains/search?from=&to=');
-                const trains = await response.json();
+                const response = await fetch('/api/stations/search?q=' + encodeURIComponent(query));
+                const stations = await response.json();
                 
-                const filtered = trains.filter(t => t.train_number.toUpperCase().includes(trainNumber.toUpperCase()));
-                
-                if (filtered.length === 0) {
-                    document.getElementById('resultArea').innerHTML = '<div style="text-align:center; color:#999; padding:50px;">未找到相关车次</div>';
+                if (stations.length === 0) {
+                    suggestions.classList.remove('show');
                     return;
                 }
                 
-                // 显示车次列表的余票信息
-                let html = '';
-                for (const train of filtered) {
-                    const availResponse = await fetch(`/api/trains/${train.train_id}/availability?from=${train.start_station}&to=${train.end_station}`);
+                suggestions.innerHTML = stations.map(s => 
+                    `<div class="station-item" onclick="selectStation('${type}', '${s.code}', '${s.name}')">
+                        <span class="name">${s.name}</span>
+                        <span class="code">${s.code}</span>
+                    </div>`
+                ).join('');
+                
+                suggestions.classList.add('show');
+            } catch (e) {}
+        }
+        
+        function selectStation(type, code, name) {
+            const suffix = type.replace(/[0-9]/g, '');
+            stationCache[type] = code;
+            
+            document.getElementById(type + 'Station').value = code;
+            document.getElementById(type + 'Name').textContent = name;
+            document.getElementById(suffix + 'Suggestions').classList.remove('show');
+        }
+        
+        async function queryByTrain() {
+            const trainNumber = document.getElementById('queryTrainNumber').value.trim();
+            const fromStation = stationCache.from;
+            const toStation = stationCache.to;
+            
+            if (!trainNumber && !fromStation && !toStation) {
+                alert('请输入查询条件');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/trains/search?from=' + fromStation + '&to=' + toStation);
+                let trains = await response.json();
+                
+                if (trainNumber) {
+                    trains = trains.filter(t => t.train_number.toUpperCase().includes(trainNumber.toUpperCase()));
+                }
+                
+                if (trains.length === 0) {
+                    showEmpty('未找到相关车次');
+                    return;
+                }
+                
+                let html = `<div class="result-summary">找到 <strong>${trains.length}</strong> 个车次</div>`;
+                
+                for (const train of trains.slice(0, 10)) {
+                    // 获取余票信息
+                    const availResponse = await fetch(`/api/trains/${train.train_id}/availability?from=${fromStation || train.start_station}&to=${toStation || train.end_station}`);
                     const avail = await availResponse.json();
                     
-                    if (avail.error) continue;
+                    const depTime = avail.departure_time || train.departure_time || train.start_time || '-';
+                    const arrTime = avail.arrival_time || train.arrival_time || train.end_time || '-';
                     
                     html += `
-                    <div class="result-info">
-                        <strong>${avail.train_number}</strong> ${avail.train_type} 
-                        ${avail.departure_time} - ${avail.arrival_time}
-                        ${train.start_station} -> ${train.end_station}
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>席别</th>
-                                <th>余票</th>
-                                <th>票价(元)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                        <div class="train-card">
+                            <div class="train-card-header">
+                                <span>
+                                    <span class="train-number">${train.train_number}</span>
+                                    <span class="train-type">${train.train_type}</span>
+                                </span>
+                                <span style="color:#666; font-size:12px;">${train.start_station} -> ${train.end_station}</span>
+                            </div>
+                            <div class="train-times">
+                                <span>开车: ${depTime}</span>
+                                <span>到达: ${arrTime}</span>
+                                <span>历时: ${train.duration || '-'}</span>
+                            </div>
                     `;
                     
-                    for (const [name, info] of Object.entries(avail.prices)) {
-                        html += `
-                            <tr>
-                                <td>${name}</td>
-                                <td>${info.count}</td>
-                                <td>${info.price}</td>
-                            </tr>
-                        `;
+                    if (!avail.error && avail.prices) {
+                        html += '<div class="seat-grid">';
+                        for (const [name, info] of Object.entries(avail.prices)) {
+                            const count = info.count || 0;
+                            html += `
+                                <div class="seat-cell">
+                                    <div class="name">${name}</div>
+                                    <div class="count ${count === 0 ? 'zero' : ''}">${count === 0 ? '售完' : count + '张'}</div>
+                                    <div class="price">¥${info.price}</div>
+                                </div>
+                            `;
+                        }
+                        html += '</div>';
+                    } else {
+                        html += '<div style="color:#999; padding:10px;">暂无余票信息</div>';
                     }
                     
-                    html += '</tbody></table>';
+                    html += '</div>';
                 }
                 
                 document.getElementById('resultArea').innerHTML = html;
                 
             } catch (e) {
-                alert('查询失败: ' + e.message);
+                showError('查询失败: ' + e.message);
             }
         }
         
         async function queryByStation() {
-            const fromStation = document.getElementById('queryFromStation').value.trim();
-            const toStation = document.getElementById('queryToStation').value.trim();
+            const fromStation = stationCache.from2;
+            const toStation = stationCache.to2;
             
             if (!fromStation || !toStation) {
                 alert('请输入发站和到站');
                 return;
             }
             
+            showLoading();
+            
             try {
                 const response = await fetch('/api/trains/search?from=' + fromStation + '&to=' + toStation);
                 const trains = await response.json();
                 
                 if (trains.length === 0) {
-                    document.getElementById('resultArea').innerHTML = '<div style="text-align:center; color:#999; padding:50px;">未找到相关车次</div>';
+                    showEmpty(fromStation + ' -> ' + toStation + ' 未找到相关车次');
                     return;
                 }
                 
                 let html = `
-                    <div class="result-info">
-                        <strong>查询结果:</strong> ${fromStation} -> ${toStation} 
+                    <div class="result-summary">
+                        <strong>${fromStation}</strong> -> <strong>${toStation}</strong> 
                         共找到 <strong>${trains.length}</strong> 个车次
                     </div>
                     <table>
@@ -259,8 +393,9 @@
                             <tr>
                                 <th>车次</th>
                                 <th>类型</th>
-                                <th>开车时间</th>
-                                <th>到达时间</th>
+                                <th>发车</th>
+                                <th>到达</th>
+                                <th>历时</th>
                                 <th>商务座</th>
                                 <th>一等座</th>
                                 <th>二等座</th>
@@ -282,6 +417,7 @@
                             <td>${avail.train_type}</td>
                             <td>${avail.departure_time}</td>
                             <td>${avail.arrival_time}</td>
+                            <td>${train.duration || '-'}</td>
                             <td>${avail.prices['商务座']?.count || '-'}</td>
                             <td>${avail.prices['一等座']?.count || '-'}</td>
                             <td>${avail.prices['二等座']?.count || '-'}</td>
@@ -294,47 +430,140 @@
                 document.getElementById('resultArea').innerHTML = html;
                 
             } catch (e) {
-                alert('查询失败: ' + e.message);
+                showError('查询失败: ' + e.message);
             }
         }
         
-        async function searchStation(input, type) {
-            const query = input.value.trim();
-            const suggestions = document.getElementById(type + 'Suggestions');
+        async function querySoldRecords() {
+            const date = document.getElementById('queryDate3').value;
+            const ticketId = document.getElementById('queryTicketId').value.trim();
             
-            if (query.length < 1) {
-                suggestions.classList.remove('show');
-                return;
-            }
+            showLoading();
             
             try {
-                const response = await fetch('/api/stations/search?q=' + encodeURIComponent(query));
-                const stations = await response.json();
+                const response = await fetch('/api/tickets/sold');
+                let tickets = await response.json();
                 
-                if (stations.length === 0) {
-                    suggestions.classList.remove('show');
+                if (date) {
+                    tickets = tickets.filter(t => t.travel_date === date);
+                }
+                
+                if (ticketId) {
+                    tickets = tickets.filter(t => t.ticket_id.toUpperCase().includes(ticketId.toUpperCase()));
+                }
+                
+                if (tickets.length === 0) {
+                    showEmpty('未找到售票记录');
                     return;
                 }
                 
-                suggestions.innerHTML = stations.map(s => 
-                    `<div class="station-item" onclick="selectStation('${type}', '${s.code}', this)">
-                        ${s.name} (${s.code})
-                    </div>`
-                ).join('');
+                let html = `
+                    <div class="result-summary">
+                        共找到 <strong>${tickets.length}</strong> 条售票记录
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>票号</th>
+                                <th>车次</th>
+                                <th>区间</th>
+                                <th>日期</th>
+                                <th>时间</th>
+                                <th>席别</th>
+                                <th>票价</th>
+                                <th>状态</th>
+                                <th>发售时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
                 
-                suggestions.classList.add('show');
-            } catch (e) {}
+                const statusMap = {'valid': '有效', 'refunded': '已退', 'used': '已用'};
+                
+                for (const ticket of tickets) {
+                    html += `
+                        <tr>
+                            <td>${ticket.ticket_id}</td>
+                            <td>${ticket.train_number}</td>
+                            <td>${ticket.from_station} -> ${ticket.to_station}</td>
+                            <td>${ticket.travel_date}</td>
+                            <td>${ticket.departure_time}</td>
+                            <td>${seatNames[ticket.seat_type] || ticket.seat_type}</td>
+                            <td>¥${parseFloat(ticket.price).toFixed(2)}</td>
+                            <td>${statusMap[ticket.status] || ticket.status}</td>
+                            <td>${ticket.sold_at}</td>
+                        </tr>
+                    `;
+                }
+                
+                html += '</tbody></table>';
+                document.getElementById('resultArea').innerHTML = html;
+                
+            } catch (e) {
+                showError('查询失败: ' + e.message);
+            }
         }
         
-        function selectStation(type, code, el) {
-            document.getElementById(type + 'Station').value = code;
-            document.getElementById(type + 'Suggestions').classList.remove('show');
+        function showLoading() {
+            document.getElementById('resultArea').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> 查询中...</div>';
         }
         
+        function showEmpty(message) {
+            document.getElementById('resultArea').innerHTML = `
+                <div class="empty-result">
+                    <i class="fas fa-search"></i>
+                    ${message}
+                </div>
+            `;
+        }
+        
+        function showError(message) {
+            document.getElementById('resultArea').innerHTML = `
+                <div class="empty-result" style="color:#dc3545;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ${message}
+                </div>
+            `;
+        }
+        
+        // 导航
+        function goMain() { window.location.href = '/'; }
+        function goRefund() { window.location.href = '/refund'; }
+        function goSupplement() { window.location.href = '/supplement'; }
+        function goQuery() { window.location.href = '/query'; }
+        function goShift() { window.location.href = '/shift'; }
+        
+        // 键盘事件
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'x' || e.key === 'X') window.location.href = '/';
-            if (e.key === 'c' || e.key === 'C') setQueryType('train', document.querySelectorAll('.type-btn')[0]);
-            if (e.key === 's' || e.key === 'S') setQueryType('station', document.querySelectorAll('.type-btn')[1]);
+            if (e.altKey) {
+                switch(e.key.toUpperCase()) {
+                    case 'G': e.preventDefault(); goMain(); break;
+                    case 'R': e.preventDefault(); goRefund(); break;
+                    case 'S': e.preventDefault(); goSupplement(); break;
+                    case 'U': e.preventDefault(); goQuery(); break;
+                    case 'X': e.preventDefault(); goShift(); break;
+                }
+            } else if (!e.target.matches('input, select, textarea')) {
+                switch(e.key) {
+                    case 'c': case 'C': e.preventDefault(); setQueryType('train'); break;
+                    case 's': case 'S': e.preventDefault(); setQueryType('station'); break;
+                    case 'p': case 'P': e.preventDefault(); setQueryType('sold'); break;
+                    case 'x': case 'X': e.preventDefault(); goMain(); break;
+                    case 'Enter': 
+                        e.preventDefault();
+                        if (queryType === 'train') queryByTrain();
+                        else if (queryType === 'station') queryByStation();
+                        else querySoldRecords();
+                        break;
+                }
+            }
+        });
+        
+        // 点击其他地方关闭建议
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.station-input-wrapper')) {
+                document.querySelectorAll('.station-suggestions').forEach(s => s.classList.remove('show'));
+            }
         });
     </script>
 </body>
