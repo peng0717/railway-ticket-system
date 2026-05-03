@@ -751,7 +751,7 @@ def admin_dashboard():
         today_stats['total_amount'] = today_row['total_amount'] if today_row else 0
         
         cursor.execute("""
-            SELECT COUNT(*) as cnt, SUM(refund_amount) as amount
+            SELECT COUNT(*) as cnt, SUM(actual_refund) as amount
             FROM refunds
             WHERE DATE(created_at) = ?
         """, (today,))
@@ -969,7 +969,7 @@ def admin_daily_reports():
                 COALESCE(SUM(total_tickets), 0) as total_tickets,
                 COALESCE(SUM(total_refunds), 0) as total_refunds,
                 COALESCE(SUM(total_amount), 0) as total_amount,
-                COALESCE(SUM(refund_amount), 0) as refund_amount
+                COALESCE(SUM(actual_refund), 0) as refund_amount
             FROM shifts WHERE status = 'closed'
         """)
         sum_row = cursor.fetchone()
@@ -1364,7 +1364,7 @@ def api_approve_refund(refund_id):
             
             # 添加退款记录
             cursor.execute("""
-                INSERT INTO refunds (ticket_id, refund_amount, refund_fee, refund_reason, refund_time)
+                INSERT INTO refunds (ticket_id, actual_refund, refund_fee, reason, created_at)
                 VALUES (?, ?, ?, ?, ?)
             """, (refund['ticket_id'], refund['refund_amount'], refund['refund_fee'], refund['reason'], datetime.now().isoformat()))
             
