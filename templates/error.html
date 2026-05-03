@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出错了</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            font-family: "Microsoft YaHei", Arial, sans-serif; 
+            background: #e8ecf0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .error-container {
+            text-align: center;
+            padding: 40px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .error-code {
+            font-size: 72px;
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .error-message {
+            font-size: 18px;
+            color: #333;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 10px 30px;
+            background: #1a4a7a;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-code">{{ code or 'Error' }}</div>
+        <div class="error-message">{{ message or '发生了一个错误' }}</div>
+        <a href="/" class="btn">返回首页</a>
+    </div>
+</body>
+</html>

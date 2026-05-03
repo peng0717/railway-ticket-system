@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ system_name }} - 登录</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #0d2137 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%);
+            color: #fff;
+            padding: 25px 20px;
+            text-align: center;
+        }
+        
+        .login-header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+        
+        .login-header .subtitle {
+            font-size: 14px;
+            color: #a8c8e8;
+            letter-spacing: 1px;
+        }
+        
+        .login-body {
+            padding: 30px 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-control {
+            height: 40px;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            font-size: 16px;
+            padding: 8px 12px;
+        }
+        
+        .form-control:focus {
+            border-color: #1a4a7a;
+            box-shadow: 0 0 0 2px rgba(26, 74, 122, 0.2);
+        }
+        
+        .btn-login {
+            width: 100%;
+            height: 45px;
+            background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%);
+            color: #fff;
+            border: none;
+            border-radius: 2px;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            background: linear-gradient(180deg, #245a8a 0%, #1a4a6a 100%);
+            transform: translateY(-1px);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .btn-reset {
+            width: 100%;
+            height: 40px;
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .btn-reset:hover {
+            background: #e8e8e8;
+        }
+        
+        .login-footer {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+        
+        .login-footer .copyright {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .login-footer .version {
+            color: #999;
+            font-size: 11px;
+        }
+        
+        .alert {
+            padding: 10px 15px;
+            border-radius: 2px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .alert-danger {
+            background: #fef2f2;
+            border: 1px solid #f5c6cb;
+            color: #dc3545;
+        }
+        
+        .ticket-info {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 2px;
+        }
+        
+        .ticket-info .label {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .ticket-info .value {
+            color: #1a4a7a;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: "Courier New", monospace;
+        }
+        
+        .keyboard-hint {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+        
+        .keyboard-hint kbd {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>{{ system_name }}</h1>
+                <div class="subtitle">Railway Ticketing System</div>
+            </div>
+            
+            <div class="login-body">
+                {% if error %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> {{ error }}
+                </div>
+                {% endif %}
+                
+                <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+                    <div class="form-group">
+                        <label for="employee_no">工号</label>
+                        <input type="text" class="form-control" id="employee_no" name="employee_no" 
+                               placeholder="请输入工号" autocomplete="off" autofocus>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="请输入6位密码" autocomplete="off">
+                    </div>
+                    
+                    <div class="ticket-info">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="label">下一张票号:</span>
+                            <span class="value" id="nextTicketId">A000001</span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i> 登 录
+                    </button>
+                    
+                    <button type="button" class="btn-reset" onclick="resetForm()">
+                        <i class="fas fa-undo"></i> 清 空
+                    </button>
+                    
+                    <div class="keyboard-hint">
+                        按 <kbd>Enter</kbd> 直接登录
+                    </div>
+                </form>
+            </div>
+            
+            <div class="login-footer">
+                <div class="copyright">铁路客票发售和预订系统总体组</div>
+                <div class="version">Copyright 1996-2006</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function resetForm() {
+            document.getElementById('employee_no').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('employee_no').focus();
+        }
+        
+        document.getElementById('loginForm').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                // Enter key handled by form submit
+            }
+        });
+    </script>
+</body>
+</html>

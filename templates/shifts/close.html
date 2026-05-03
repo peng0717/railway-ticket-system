@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ system_name }} - 交班</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; background: #e8ecf0; font-size: 13px; }
+        
+        .header-bar { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 8px 15px; display: flex; justify-content: space-between; }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .station-name { font-size: 16px; font-weight: bold; }
+        .header-info { font-size: 13px; color: #a8c8e8; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        
+        .menu-bar { background: #fff; border-bottom: 2px solid #1a4a7a; padding: 0; display: flex; }
+        .menu-item { padding: 8px 18px; cursor: pointer; border-right: 1px solid #eee; font-size: 13px; }
+        .menu-item:hover { background: #f0f5fa; }
+        
+        .main-content { padding: 20px; display: flex; justify-content: center; }
+        
+        .shift-panel { background: #fff; border: 1px solid #ddd; border-radius: 4px; width: 500px; overflow: hidden; }
+        .shift-header { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 20px; text-align: center; }
+        .shift-header h2 { font-size: 22px; letter-spacing: 4px; margin: 0; }
+        
+        .shift-body { padding: 25px; }
+        
+        .info-section { margin-bottom: 20px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #666; }
+        .info-value { font-weight: bold; color: #333; }
+        
+        .stats-section { background: #f8f9fa; padding: 15px; border-radius: 3px; margin-bottom: 20px; }
+        .stats-title { font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #1a4a7a; }
+        .stats-row { display: flex; justify-content: space-between; padding: 6px 0; }
+        .stats-row.highlight { font-size: 16px; font-weight: bold; color: #1a4a7a; }
+        .stats-value { font-weight: bold; }
+        .stats-value.money { color: #28a745; font-size: 16px; }
+        
+        .next-shift { background: #fffbe6; padding: 12px; border-radius: 3px; margin-bottom: 20px; text-align: center; color: #856404; }
+        
+        .btn-group { display: flex; gap: 20px; justify-content: center; }
+        .btn { padding: 12px 40px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; font-size: 16px; background: #fff; letter-spacing: 2px; }
+        .btn.primary { background: #1a4a7a; color: #fff; border-color: #1a4a7a; }
+        .btn:hover { opacity: 0.9; }
+        
+        .status-bar { background: #f5f5f5; border-top: 2px solid #1a4a7a; padding: 8px 15px; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: #fff; border-radius: 4px; padding: 20px; min-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); text-align: center; }
+        .modal-header { background: #1a4a7a; color: #fff; padding: 10px 15px; margin: -20px -20px 15px -20px; border-radius: 4px 4px 0 0; }
+        
+        .success-icon { font-size: 60px; color: #28a745; margin-bottom: 15px; }
+        .modal-message { font-size: 18px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <div class="header-left">
+            <span class="station-name">{{ station_name }}</span>
+            <span class="header-info">{{ window_no }} {{ shift_name }}</span>
+        </div>
+        <div class="header-center">
+            <span>交班结账</span>
+        </div>
+        <div class="header-right">
+            <span id="currentTime">{{ current_time }}</span>
+        </div>
+    </div>
+    
+    <div class="menu-bar">
+        <div class="menu-item" onclick="window.location.href='/'">售票<span class="shortcut">[G]</span></div>
+        <div class="menu-item" onclick="window.location.href='/refund'">退票[R]</div>
+        <div class="menu-item" onclick="window.location.href='/supplement'">到达补票</div>
+        <div class="menu-item" onclick="window.location.href='/query'">余票查询</div>
+        <div class="menu-item" onclick="window.location.href='/shift'" style="background:#e8f4fc;">交班[X]</div>
+    </div>
+    
+    <div class="main-content">
+        <div class="shift-panel">
+            <div class="shift-header">
+                <h2>交 班 记 录</h2>
+            </div>
+            
+            <div class="shift-body">
+                <div class="info-section">
+                    <div class="info-row">
+                        <span class="info-label">工号:</span>
+                        <span class="info-value" id="employeeNo"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">姓名:</span>
+                        <span class="info-value" id="userName"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">窗口:</span>
+                        <span class="info-value" id="windowNo"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">班次:</span>
+                        <span class="info-value" id="shiftType"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">上班时间:</span>
+                        <span class="info-value" id="startTime"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">下班时间:</span>
+                        <span class="info-value" id="endTime"></span>
+                    </div>
+                </div>
+                
+                <div class="stats-section">
+                    <div class="stats-title">本班售票统计</div>
+                    <div class="stats-row">
+                        <span>售票张数:</span>
+                        <span class="stats-value" id="ticketCount">0 张</span>
+                    </div>
+                    <div class="stats-row">
+                        <span>退票张数:</span>
+                        <span class="stats-value" id="refundCount">0 张</span>
+                    </div>
+                    <div class="stats-row">
+                        <span>废票张数:</span>
+                        <span class="stats-value" id="wasteCount">0 张</span>
+                    </div>
+                    <div style="height:1px; background:#ddd; margin:10px 0;"></div>
+                    <div class="stats-row">
+                        <span>票房收入:</span>
+                        <span class="stats-value money" id="revenue">¥0.00</span>
+                    </div>
+                    <div class="stats-row">
+                        <span>退款金额:</span>
+                        <span class="stats-value" id="refundAmount">¥0.00</span>
+                    </div>
+                    <div style="height:1px; background:#ddd; margin:10px 0;"></div>
+                    <div class="stats-row highlight">
+                        <span>实收金额:</span>
+                        <span class="stats-value money" id="actualAmount">¥0.00</span>
+                    </div>
+                </div>
+                
+                <div class="next-shift" id="nextShiftInfo">
+                    下一班次提醒: 白班 00:00 开始
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn primary" onclick="confirmShiftClose()">确认交班[N]</button>
+                    <button class="btn" onclick="window.location.href='/'">取消[C]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <span>确认交班[N] 取消[C]</span>
+    </div>
+    
+    <!-- 确认弹窗 -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>确认交班</h4>
+            </div>
+            <div style="padding:20px; text-align:center;">
+                <p style="margin-bottom:15px;">确定要进行交班操作吗？</p>
+                <div style="background:#f8f9fa; padding:15px; border-radius:3px; margin-bottom:20px;">
+                    <div style="margin-bottom:8px;">实收金额: <strong id="c_actualAmount" style="color:#28a745; font-size:18px;"></strong></div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn primary" onclick="processShiftClose()">确认</button>
+                    <button class="btn" onclick="closeModal()">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 成功弹窗 -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-content">
+            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="modal-message">交班成功</div>
+            <div style="margin-top:20px;">
+                <button class="btn primary" onclick="goLogin()">返回登录</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let shiftData = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            loadShiftSummary();
+        });
+        
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                           now.getMinutes().toString().padStart(2, '0') + ':' + 
+                           now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        
+        async function loadShiftSummary() {
+            try {
+                const response = await fetch('/api/shift/summary');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                shiftData = data;
+                
+                document.getElementById('employeeNo').textContent = data.employee_no;
+                document.getElementById('userName').textContent = '{{ session.get("user_name", "") }}';
+                document.getElementById('windowNo').textContent = '{{ session.get("window_no", "") }}';
+                document.getElementById('shiftType').textContent = data.shift_name;
+                document.getElementById('startTime').textContent = data.start_time.split(' ')[1] || data.start_time;
+                document.getElementById('endTime').textContent = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                
+                document.getElementById('ticketCount').textContent = data.ticket_count + ' 张';
+                document.getElementById('refundCount').textContent = data.refund_count + ' 张';
+                document.getElementById('wasteCount').textContent = data.waste_count + ' 张';
+                document.getElementById('revenue').textContent = '¥' + data.revenue.toFixed(2);
+                document.getElementById('refundAmount').textContent = '¥' + data.refund_amount.toFixed(2);
+                document.getElementById('actualAmount').textContent = '¥' + data.actual_amount.toFixed(2);
+                
+                document.getElementById('c_actualAmount').textContent = '¥' + data.actual_amount.toFixed(2);
+                
+                // 设置下一班次提醒
+                const nextShiftType = data.shift_type === 'day' ? '夜班' : '白班';
+                document.getElementById('nextShiftInfo').textContent = 
+                    '下一班次提醒: ' + nextShiftType + ' ' + (data.shift_type === 'day' ? '12:00' : '00:00') + ' 开始';
+                
+            } catch (e) {
+                alert('加载班次信息失败: ' + e.message);
+            }
+        }
+        
+        function confirmShiftClose() {
+            document.getElementById('confirmModal').classList.add('show');
+        }
+        
+        async function processShiftClose() {
+            try {
+                const response = await fetch('/api/shift/close', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('confirmModal').classList.remove('show');
+                    document.getElementById('successModal').classList.add('show');
+                } else {
+                    alert('交班失败: ' + data.error);
+                }
+                
+            } catch (e) {
+                alert('交班失败: ' + e.message);
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('show');
+        }
+        
+        function goLogin() {
+            window.location.href = '/login';
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'n' || e.key === 'N') confirmShiftClose();
+            if (e.key === 'c' || e.key === 'C') window.location.href = '/';
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>

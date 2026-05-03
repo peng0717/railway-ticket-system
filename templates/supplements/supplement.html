@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ system_name }} - 到达补票</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; background: #e8ecf0; font-size: 13px; }
+        
+        .header-bar { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 8px 15px; display: flex; justify-content: space-between; }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .station-name { font-size: 16px; font-weight: bold; }
+        .header-info { font-size: 13px; color: #a8c8e8; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        
+        .menu-bar { background: #fff; border-bottom: 2px solid #1a4a7a; padding: 0; display: flex; }
+        .menu-item { padding: 8px 18px; cursor: pointer; border-right: 1px solid #eee; font-size: 13px; }
+        .menu-item:hover { background: #f0f5fa; }
+        
+        .main-content { padding: 20px; }
+        
+        .panel { background: #fff; border: 1px solid #ddd; border-radius: 3px; margin-bottom: 15px; }
+        .panel-header { background: #f5f5f5; padding: 10px 15px; border-bottom: 1px solid #ddd; font-weight: bold; }
+        .panel-body { padding: 15px; }
+        
+        .type-select { display: flex; gap: 20px; margin-bottom: 20px; }
+        .type-option { padding: 10px 20px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; }
+        .type-option:hover { background: #f5f5f5; }
+        .type-option.active { background: #1a4a7a; color: #fff; border-color: #1a4a7a; }
+        
+        .input-row { display: flex; margin-bottom: 15px; align-items: center; }
+        .input-label { width: 100px; font-weight: bold; }
+        .input-field { flex: 1; }
+        .input-field input { height: 35px; border: 1px solid #ccc; border-radius: 2px; padding: 5px 10px; width: 200px; }
+        .input-field select { height: 35px; border: 1px solid #ccc; border-radius: 2px; padding: 5px 10px; }
+        
+        .calc-panel { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 3px; }
+        .calc-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ddd; }
+        .calc-row:last-child { border-bottom: none; }
+        .calc-row.total { font-size: 18px; font-weight: bold; color: #1a4a7a; }
+        
+        .btn-group { display: flex; gap: 15px; margin-top: 20px; justify-content: center; }
+        .btn { padding: 10px 30px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; font-size: 14px; background: #fff; }
+        .btn.primary { background: #1a4a7a; color: #fff; border-color: #1a4a7a; }
+        .btn:hover { opacity: 0.9; }
+        
+        .status-bar { background: #f5f5f5; border-top: 2px solid #1a4a7a; padding: 8px 15px; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: #fff; border-radius: 4px; padding: 20px; min-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .modal-header { background: #1a4a7a; color: #fff; padding: 10px 15px; margin: -20px -20px 15px -20px; border-radius: 4px 4px 0 0; }
+        
+        .station-input-wrapper { position: relative; display: inline-block; }
+        .station-suggestions { position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #1a4a7a; border-radius: 2px; max-height: 200px; overflow-y: auto; z-index: 1000; width: 250px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .station-suggestions.show { display: block; }
+        .station-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .station-item:hover { background: #e8f4fc; }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <div class="header-left">
+            <span class="station-name">{{ station_name }}</span>
+            <span class="header-info">{{ window_no }} {{ shift_name }}</span>
+        </div>
+        <div class="header-center">
+            <span>现在处理 到达补票</span>
+        </div>
+        <div class="header-right">
+            <span id="currentTime">{{ current_time }}</span>
+        </div>
+    </div>
+    
+    <div class="menu-bar">
+        <div class="menu-item" onclick="window.location.href='/'">售票<span class="shortcut">[G]</span></div>
+        <div class="menu-item" onclick="window.location.href='/refund'">退票[R]</div>
+        <div class="menu-item" onclick="window.location.href='/supplement'" style="background:#e8f4fc;">到达补票[S]</div>
+        <div class="menu-item" onclick="window.location.href='/query'">余票查询</div>
+        <div class="menu-item" onclick="window.location.href='/shift'">交班</div>
+    </div>
+    
+    <div class="main-content">
+        <div class="panel">
+            <div class="panel-header">补票类型选择</div>
+            <div class="panel-body">
+                <div class="type-select">
+                    <div class="type-option active" onclick="setSuppType('no_ticket', this)">无票[N]</div>
+                    <div class="type-option" onclick="setSuppType('over_station', this)">越站[O]</div>
+                    <div class="type-option" onclick="setSuppType('over_class', this)">越席[C]</div>
+                    <div class="type-option" onclick="setSuppType('diff', this)">补差[D]</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">旅客信息</div>
+            <div class="panel-body">
+                <div class="input-row">
+                    <div class="input-label">姓名:</div>
+                    <div class="input-field">
+                        <input type="text" id="passengerName" placeholder="输入旅客姓名">
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-label">证件类型:</div>
+                    <div class="input-field">
+                        <select id="idType">
+                            <option value="id_card">身份证</option>
+                            <option value="passport">护照</option>
+                            <option value="hk_pass">港澳通行证</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-label">证件号:</div>
+                    <div class="input-field">
+                        <input type="text" id="idNumber" placeholder="输入证件号码">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">行程信息</div>
+            <div class="panel-body">
+                <div class="input-row">
+                    <div class="input-label">原票到站:</div>
+                    <div class="input-field">
+                        <div class="station-input-wrapper">
+                            <input type="text" id="fromStation" placeholder="输入拼音码" oninput="searchStation(this, 'from')" value="ZZO">
+                            <div class="station-suggestions" id="fromSuggestions"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-label">实际到站:</div>
+                    <div class="input-field">
+                        <div class="station-input-wrapper">
+                            <input type="text" id="toStation" placeholder="输入拼音码" oninput="searchStation(this, 'to')">
+                            <div class="station-suggestions" id="toSuggestions"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-label">席别:</div>
+                    <div class="input-field">
+                        <select id="seatType" onchange="calculateAmount()">
+                            <option value="hard_seat">硬座</option>
+                            <option value="soft_seat">软座</option>
+                            <option value="second">二等座</option>
+                            <option value="first">一等座</option>
+                            <option value="business">商务座</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">费用计算</div>
+            <div class="panel-body">
+                <div class="calc-panel">
+                    <div class="calc-row">
+                        <span>区间票价:</span>
+                        <span id="basePrice">¥0.00</span>
+                    </div>
+                    <div class="calc-row" id="fineRow">
+                        <span>罚款(50%):</span>
+                        <span id="fine">¥0.00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span>手续费:</span>
+                        <span>¥2.00</span>
+                    </div>
+                    <div class="calc-row total">
+                        <span>补票金额合计:</span>
+                        <span id="totalAmount">¥0.00</span>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn primary" onclick="processSupplement()">确认出票[N]</button>
+                    <button class="btn" onclick="window.location.href='/'">返回主界面[X]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <span>补票[S] 无票[N] 越站[O] 越席[C] 补差[D] 返回主界面[X]</span>
+    </div>
+    
+    <!-- 成功弹窗 -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>补票成功</h4>
+            </div>
+            <div style="padding:30px; text-align:center;">
+                <div style="font-size:48px; color:#28a745; margin-bottom:15px;"><i class="fas fa-check-circle"></i></div>
+                <p style="font-size:16px; margin-bottom:10px;">补票办理成功</p>
+                <div style="background:#f8f9fa; padding:15px; border-radius:3px; margin:15px 0;">
+                    <div style="margin-bottom:8px;">区间: <strong id="s_route"></strong></div>
+                    <div style="font-size:18px; color:#1a4a7a;">补票金额: <strong id="s_amount"></strong></div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn primary" onclick="closeModal(); resetForm();">继续办理</button>
+                    <button class="btn" onclick="window.location.href='/'">返回主界面</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let suppType = 'no_ticket';
+        let calcData = { basePrice: 0, fine: 0, total: 0 };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            document.getElementById('fromStation').dataset.stationName = '郑州';
+        });
+        
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                           now.getMinutes().toString().padStart(2, '0') + ':' + 
+                           now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        
+        function setSuppType(type, el) {
+            suppType = type;
+            document.querySelectorAll('.type-option').forEach(o => o.classList.remove('active'));
+            el.classList.add('active');
+            
+            // 根据类型显示/隐藏罚款行
+            const fineRow = document.getElementById('fineRow');
+            if (type === 'no_ticket') {
+                fineRow.style.display = 'flex';
+                fineRow.querySelector('span:first-child').textContent = '罚款(50%):';
+            } else if (type === 'over_station') {
+                fineRow.style.display = 'flex';
+                fineRow.querySelector('span:first-child').textContent = '区间票价:';
+            } else {
+                fineRow.style.display = 'none';
+            }
+            
+            calculateAmount();
+        }
+        
+        async function searchStation(input, type) {
+            const query = input.value.trim();
+            const suggestions = document.getElementById(type + 'Suggestions');
+            
+            if (query.length < 1) {
+                suggestions.classList.remove('show');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/stations/search?q=' + encodeURIComponent(query));
+                const stations = await response.json();
+                
+                if (stations.length === 0) {
+                    suggestions.classList.remove('show');
+                    return;
+                }
+                
+                suggestions.innerHTML = stations.map(s => 
+                    `<div class="station-item" onclick="selectStation('${type}', '${s.code}', '${s.name}', this)">
+                        ${s.name} (${s.code})
+                    </div>`
+                ).join('');
+                
+                suggestions.classList.add('show');
+            } catch (e) {
+                console.error('搜索车站失败:', e);
+            }
+        }
+        
+        function selectStation(type, code, name, el) {
+            document.getElementById(type + 'Station').value = code;
+            document.getElementById(type + 'Station').dataset.stationName = name;
+            document.getElementById(type + 'Suggestions').classList.remove('show');
+            calculateAmount();
+        }
+        
+        async function calculateAmount() {
+            const fromStation = document.getElementById('fromStation').value;
+            const toStation = document.getElementById('toStation').value;
+            const seatType = document.getElementById('seatType').value;
+            
+            if (!fromStation || !toStation) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/stations/search?q=' + encodeURIComponent(toStation));
+                const stations = await response.json();
+                if (stations.length > 0) {
+                    document.getElementById('toStation').dataset.stationName = stations[0].name;
+                }
+            } catch (e) {}
+            
+            // 简化计算
+            const seatConfig = {
+                'hard_seat': 50, 'soft_seat': 75, 
+                'second': 100, 'first': 180, 'business': 300
+            };
+            
+            let basePrice = seatConfig[seatType] || 50;
+            
+            // 根据站间距离调整
+            const stationDistances = {
+                'BJN-TJN': 55, 'TJN-JNX': 160, 'JNX-NJH': 330, 'NJH-SHH': 300,
+                'BJX-SJZ': 93, 'SJZ-WHN': 353, 'WHN-CSN': 138, 'CSN-GZN': 166,
+                'BJN-TJJ': 25
+            };
+            
+            const key = fromStation + '-' + toStation;
+            const reverseKey = toStation + '-' + fromStation;
+            
+            if (stationDistances[key]) {
+                basePrice = stationDistances[key];
+            } else if (stationDistances[reverseKey]) {
+                basePrice = stationDistances[reverseKey];
+            }
+            
+            let fine = 0;
+            if (suppType === 'no_ticket') {
+                fine = basePrice * 0.5;
+            }
+            
+            const serviceFee = 2;
+            const total = basePrice + fine + serviceFee;
+            
+            calcData = { basePrice, fine, total };
+            
+            document.getElementById('basePrice').textContent = '¥' + basePrice.toFixed(2);
+            document.getElementById('fine').textContent = '¥' + fine.toFixed(2);
+            document.getElementById('totalAmount').textContent = '¥' + total.toFixed(2);
+        }
+        
+        async function processSupplement() {
+            const fromStation = document.getElementById('fromStation').value;
+            const toStation = document.getElementById('toStation').value;
+            const toName = document.getElementById('toStation').dataset.stationName || toStation;
+            
+            if (!toStation) {
+                alert('请输入到站');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/supplements', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        supp_type: suppType,
+                        from_station: fromStation,
+                        to_station: toName,
+                        seat_type: document.getElementById('seatType').value,
+                        passenger_name: document.getElementById('passengerName').value,
+                        id_number: document.getElementById('idNumber').value,
+                        id_type: document.getElementById('idType').value,
+                        fine: calcData.fine
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('s_route').textContent = fromStation + ' -> ' + toName;
+                    document.getElementById('s_amount').textContent = '¥' + data.supplement.amount.toFixed(2);
+                    document.getElementById('successModal').classList.add('show');
+                } else {
+                    alert('补票失败: ' + data.error);
+                }
+                
+            } catch (e) {
+                alert('补票失败: ' + e.message);
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('successModal').classList.remove('show');
+        }
+        
+        function resetForm() {
+            document.getElementById('passengerName').value = '';
+            document.getElementById('idNumber').value = '';
+            document.getElementById('toStation').value = '';
+            document.getElementById('toStation').dataset.stationName = '';
+            calculateAmount();
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'n' || e.key === 'N') processSupplement();
+            if (e.key === 'x' || e.key === 'X') window.location.href = '/';
+            if (e.key === 'o' || e.key === 'O') setSuppType('over_station', document.querySelectorAll('.type-option')[1]);
+            if (e.key === 'c' || e.key === 'C') setSuppType('over_class', document.querySelectorAll('.type-option')[2]);
+            if (e.key === 'd' || e.key === 'D') setSuppType('diff', document.querySelectorAll('.type-option')[3]);
+        });
+    </script>
+</body>
+</html>

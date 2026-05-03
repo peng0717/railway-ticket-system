@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Database (can be regenerated)
+data/*.db
+
+# Ticket generator dependencies (too large, clone separately)
+ticket-generator-src/node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Design doc (too large for GitHub, keep locally)
+项目设计方案.md
+ticket-generator-src/
