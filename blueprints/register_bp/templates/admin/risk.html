@@ -68,8 +68,8 @@
                     <tbody>
                         {% for record in records %}
                         <tr>
-                            <td>{{ record.real_name or '-' }}</td>
-                            <td class="highlight">{{ record.username or '-' }}</td>
+                            <td>{{ record.employee_no or '-' }}</td>
+                            <td class="highlight">{{ record.employee_no or '-' }}</td>
                             <td>
                                 <span class="risk-badge risk-{{ record.action }}">
                                     {% if record.action == 'machine_code_mismatch' %}异地登录

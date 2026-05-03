@@ -46,9 +46,9 @@
                     <tbody>
                         {% for seller in sellers %}
                         <tr>
-                            <td><code>{{ seller.username or seller.employee_no }}</code></td>
-                            <td>{{ seller.name or seller.real_name or '-' }}</td>
-                            <td>{{ seller.station_name or seller.station_code or '-' }}</td>
+                            <td><code>{{ seller.employee_no }}</code></td>
+                            <td>{{ seller.name }}</td>
+                            <td>{{ seller.station_code or '-' }}</td>
                             <td>{{ seller.window_no or '-' }}</td>
                             <td>
                                 {% if seller.current_shift %}
@@ -71,7 +71,7 @@
                                     <input type="number" class="form-control form-control-sm" 
                                            style="width: 80px;" 
                                            value="{{ seller.ticket_limit or default_limit }}"
-                                           id="limit_{{ seller.id }}"
+                                           id="limit_{{ seller.user_id }}"
                                            min="1" max="1000">
                                     <span class="ms-1">张</span>
                                 </div>
@@ -103,7 +103,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-primary" onclick="updateLimit({{ seller.id }})">
+                                <button class="btn btn-sm btn-primary" onclick="updateLimit({{ seller.user_id }})">
                                     <i class="fas fa-save"></i> 保存
                                 </button>
                             </td>

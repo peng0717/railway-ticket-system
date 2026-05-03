@@ -93,11 +93,11 @@
                                 <span class="badge bg-primary">售票员</span>
                                 {% endif %}
                             </td>
-                            <td>{{ user.station_name or user.station_code or '-' }}</td>
+                            <td>{{ user.station_code or '-' }}</td>
                             <td>{{ user.window_no or '-' }}</td>
                             <td>
                                 <span class="text-muted">{{ user.ticket_limit or 200 }}</span>
-                                <button class="btn btn-sm btn-link p-0 ms-1" onclick="editTicketLimit({{ user.id }}, {{ user.ticket_limit or 200 }})">
+                                <button class="btn btn-sm btn-link p-0 ms-1" onclick="editTicketLimit({{ user.user_id }}, {{ user.ticket_limit or 200 }})">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </td>
@@ -117,19 +117,19 @@
                             <td>{{ user.last_login[:16] if user.last_login else '-' }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="viewUser({{ user.id }})">
+                                    <button class="btn btn-outline-primary" onclick="viewUser({{ user.user_id }})">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     {% if user.role != 'admin' %}
-                                    <button class="btn btn-outline-warning" onclick="editUser({{ user.id }})">
+                                    <button class="btn btn-outline-warning" onclick="editUser({{ user.user_id }})">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     {% if user.status == 'active' %}
-                                    <button class="btn btn-outline-danger" onclick="toggleUserStatus({{ user.id }}, 'inactive')">
+                                    <button class="btn btn-outline-danger" onclick="toggleUserStatus({{ user.user_id }}, 'inactive')">
                                         <i class="fas fa-ban"></i>
                                     </button>
                                     {% elif user.status == 'inactive' %}
-                                    <button class="btn btn-outline-success" onclick="toggleUserStatus({{ user.id }}, 'active')">
+                                    <button class="btn btn-outline-success" onclick="toggleUserStatus({{ user.user_id }}, 'active')">
                                         <i class="fas fa-check"></i>
                                     </button>
                                     {% endif %}
@@ -236,8 +236,8 @@ function viewUser(id) {
             if (data.status === 'success') {
                 document.getElementById('userDetailContent').innerHTML = `
                     <table class="table table-bordered">
-                        <tr><th width="30%">工号</th><td>${data.user.username || data.user.employee_no}</td></tr>
-                        <tr><th>姓名</th><td>${data.user.name || data.user.real_name || '-'}</td></tr>
+                        <tr><th width="30%">工号</th><td>${data.user.employee_no || '-'}</td></tr>
+                        <tr><th>姓名</th><td>${data.user.name || '-'}</td></tr>
                         <tr><th>角色</th><td>${data.user.role === 'admin' ? '管理员' : '售票员'}</td></tr>
                         <tr><th>车站</th><td>${data.user.station_name || data.user.station_code || '-'}</td></tr>
                         <tr><th>窗口</th><td>${data.user.window_no || '-'}</td></tr>

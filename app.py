@@ -92,7 +92,7 @@ def update_user_machine_code(user_id, machine_code, status='active'):
         cursor.execute("""
             UPDATE users 
             SET machine_code = ?, status = ?, last_login = ?
-            WHERE id = ?
+            WHERE user_id = ?
         """, (machine_code, status, datetime.now().isoformat(), user_id))
         conn.commit()
         cursor.close()
@@ -444,7 +444,7 @@ def check_ticket_limit(user_id, shift_id):
         cursor = conn.cursor()
         
         # 获取用户个人限额
-        cursor.execute("SELECT ticket_limit FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT ticket_limit FROM users WHERE user_id = ?", (user_id,))
         user_row = cursor.fetchone()
         user_limit = user_row['ticket_limit'] if user_row else config.TICKET_LIMIT_PER_SHIFT
         
@@ -1538,7 +1538,7 @@ def api_get_user(user_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -1567,7 +1567,7 @@ def api_update_ticket_limit(user_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET ticket_limit = ? WHERE id = ?", (ticket_limit, user_id))
+        cursor.execute("UPDATE users SET ticket_limit = ? WHERE user_id = ?", (ticket_limit, user_id))
         conn.commit()
         cursor.close()
         conn.close()
@@ -1594,7 +1594,7 @@ def api_update_user_status(user_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET status = ? WHERE id = ?", (status, user_id))
+        cursor.execute("UPDATE users SET status = ? WHERE user_id = ?", (status, user_id))
         conn.commit()
         cursor.close()
         conn.close()

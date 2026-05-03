@@ -199,7 +199,7 @@ def check_id_card():
     cursor = conn.cursor()
     
     # 检查已注册用户
-    cursor.execute("SELECT id FROM users WHERE id_card = ?", (id_card,))
+    cursor.execute("SELECT user_id FROM users WHERE id_card = ?", (id_card,))
     if cursor.fetchone():
         cursor.close()
         conn.close()
