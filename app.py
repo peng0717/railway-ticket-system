@@ -691,7 +691,7 @@ def admin_dashboard():
         # 获取活跃售票员
         cursor.execute("""
             SELECT s.*, u.employee_no, u.name, u.window_no, u.ticket_limit,
-                   COUNT(t.id) as ticket_count,
+                   COUNT(t.ticket_id) as ticket_count,
                    COALESCE(SUM(t.price), 0) as total_amount,
                    MAX(t.created_at) as last_ticket_time
             FROM shifts s
@@ -740,7 +740,7 @@ def admin_dashboard():
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute("""
             SELECT 
-                COUNT(DISTINCT t.id) as total_tickets,
+                COUNT(DISTINCT t.ticket_id) as total_tickets,
                 SUM(t.price) as total_amount
             FROM tickets t
             JOIN shifts s ON t.shift_id = s.shift_id
@@ -1055,7 +1055,7 @@ def admin_income_stats():
         if group_by == 'daily':
             cursor.execute("""
                 SELECT DATE(t.created_at) as period,
-                       COUNT(DISTINCT t.id) as total_tickets,
+                       COUNT(DISTINCT t.ticket_id) as total_tickets,
                        SUM(t.price) as total_amount,
                        0 as total_refunds,
                        0 as refund_amount,
@@ -1074,7 +1074,7 @@ def admin_income_stats():
         elif group_by == 'monthly':
             cursor.execute("""
                 SELECT STRFTIME('%Y-%m', t.created_at) as period,
-                       COUNT(DISTINCT t.id) as total_tickets,
+                       COUNT(DISTINCT t.ticket_id) as total_tickets,
                        SUM(t.price) as total_amount
                 FROM tickets t
                 WHERE t.status = 'sold'
@@ -1090,7 +1090,7 @@ def admin_income_stats():
         elif group_by == 'seller':
             cursor.execute("""
                 SELECT s.employee_no, u.name,
-                       COUNT(DISTINCT t.id) as total_tickets,
+                       COUNT(DISTINCT t.ticket_id) as total_tickets,
                        SUM(t.price) as total_amount
                 FROM shifts s
                 LEFT JOIN tickets t ON s.shift_id = t.shift_id AND t.status = 'sold'
