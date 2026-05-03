@@ -3,6 +3,15 @@
 {% block title %}工号注册 - 铁路客票系统{% endblock %}
 
 {% block content %}
+<!-- 浮动通知条 -->
+<div id="notification" class="notification hidden">
+    <div class="notification-content">
+        <span class="notification-icon"></span>
+        <span class="notification-text"></span>
+    </div>
+    <button class="notification-close" onclick="hideNotification()">&times;</button>
+</div>
+
 <div class="container">
     <div class="header">
         <div class="logo-section">

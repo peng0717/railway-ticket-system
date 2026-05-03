@@ -423,6 +423,76 @@ select.form-input option {
     margin-top: 30px;
 }
 
+/* 浮动通知条 */
+.notification {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    font-size: 15px;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.notification.show {
+    transform: translateY(0);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #0052a5, #0077e6);
+    color: #fff;
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: #fff;
+}
+
+.notification.info {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: #fff;
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, #c9a84c, #dbb856);
+    color: #1a1a2e;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification-icon {
+    font-size: 18px;
+}
+
+.notification.success .notification-icon::before { content: '✓'; }
+.notification.error .notification-icon::before { content: '✕'; }
+.notification.info .notification-icon::before { content: 'ℹ'; }
+.notification.warning .notification-icon::before { content: '⚠'; }
+
+.notification-close {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0 5px;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
 /* 开发模式验证码显示 */
 .dev-code-display {
     background: rgba(0, 82, 165, 0.2);

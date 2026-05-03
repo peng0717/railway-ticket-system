@@ -9,8 +9,11 @@ import sqlite3
 import random
 import string
 import re
+import smtplib
 from datetime import datetime, timedelta
 from functools import wraps
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from flask import render_template, request, jsonify, redirect, url_for, session, flash, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +23,68 @@ from .utils import (
     validate_id_card, validate_email, validate_password, validate_username,
     generate_verification_code, mask_id_card, is_code_expired
 )
+
+
+# ==================== 邮件配置 ====================
+
+# 邮件发送配置（从环境变量读取或使用默认值）
+MAIL_CONFIG = {
+    'smtp_server': os.getenv('MAIL_SMTP_SERVER', 'smtp.qq.com'),
+    'smtp_port': int(os.getenv('MAIL_SMTP_PORT', '465')),
+    'sender': os.getenv('MAIL_SENDER', '2790885462@qq.com'),
+    'password': os.getenv('MAIL_PASSWORD', 'fncwiptujvaydhba'),
+    'sender_name': os.getenv('MAIL_SENDER_NAME', '铁路客票系统'),
+    'enabled': os.getenv('MAIL_ENABLED', 'true').lower() == 'true'
+}
+
+
+def send_email_code(to_email, code):
+    """
+    发送邮箱验证码邮件
+    
+    Args:
+        to_email: 收件人邮箱
+        code: 验证码
+    
+    Returns:
+        bool: 发送是否成功
+    """
+    if not MAIL_CONFIG['enabled']:
+        print(f"[邮件功能未启用] 跳过向 {to_email} 发送验证码: {code}")
+        return False
+    
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = '铁路客票系统注册验证码'
+    msg['From'] = f'{MAIL_CONFIG["sender_name"]} <{MAIL_CONFIG["sender"]}>'
+    msg['To'] = to_email
+    
+    html = f'''
+    <div style="max-width:500px;margin:0 auto;font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;">
+      <div style="background:#0052a5;color:#fff;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+        <h2 style="margin:0;">🚄 铁路客票系统</h2>
+      </div>
+      <div style="background:#fff;padding:30px;border-radius:0 0 8px 8px;">
+        <p>您好，</p>
+        <p>您正在注册铁路客票系统工号，验证码为：</p>
+        <div style="background:#f0f7ff;border:2px dashed #0052a5;border-radius:8px;padding:15px;text-align:center;margin:20px 0;">
+          <span style="font-size:32px;font-weight:bold;color:#0052a5;letter-spacing:8px;">{code}</span>
+        </div>
+        <p style="color:#666;font-size:14px;">验证码5分钟内有效，请勿泄露给他人。</p>
+        <p style="color:#999;font-size:12px;">如非本人操作，请忽略此邮件。</p>
+      </div>
+    </div>
+    '''
+    msg.attach(MIMEText(html, 'html', 'utf-8'))
+    
+    try:
+        with smtplib.SMTP_SSL(MAIL_CONFIG['smtp_server'], MAIL_CONFIG['smtp_port']) as server:
+            server.login(MAIL_CONFIG['sender'], MAIL_CONFIG['password'])
+            server.sendmail(MAIL_CONFIG['sender'], [to_email], msg.as_string())
+        print(f"[邮件发送成功] 向 {to_email} 发送验证码: {code}")
+        return True
+    except Exception as e:
+        print(f"[邮件发送失败] 向 {to_email} 发送验证码失败: {e}")
+        return False
 
 
 # ==================== 数据库连接 ====================
@@ -172,15 +237,17 @@ def send_verification_code():
     
     conn.commit()
     
-    # 开发模式：直接返回验证码
-    # 生产环境可以配置邮件发送
-    mail_server = os.getenv('MAIL_SERVER')
-    if mail_server:
-        # 实际发送邮件的逻辑可以在这里实现
+    # 尝试发送邮件
+    email_sent = send_email_code(email, code)
+    
+    if email_sent:
         message = '验证码已发送到您的邮箱'
+        dev_code = None
     else:
-        message = f'开发模式: 验证码是 {code}'
-        print(f"[开发模式] 向 {email} 发送验证码: {code}")
+        # 发送失败，fallback到开发模式
+        message = f'邮件发送失败，开发模式验证码: {code}'
+        dev_code = code
+        print(f"[邮件发送失败，开发模式] 向 {email} 发送验证码: {code}")
     
     cursor.close()
     conn.close()
@@ -188,7 +255,7 @@ def send_verification_code():
     return jsonify({
         'status': 'success',
         'message': message,
-        'dev_code': code if not mail_server else None
+        'dev_code': dev_code
     })
 
 

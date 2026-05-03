@@ -2,6 +2,32 @@
  * 注册流程控制脚本
  */
 
+// ==================== 浮动通知条功能 ====================
+
+function showNotification(message, type = 'info', duration = 3000) {
+    const notification = document.getElementById('notification');
+    const textEl = notification.querySelector('.notification-text');
+    
+    notification.className = `notification ${type}`;
+    textEl.textContent = message;
+    
+    // 显示
+    requestAnimationFrame(() => {
+        notification.classList.add('show');
+    });
+    
+    // 自动隐藏
+    if (duration > 0) {
+        clearTimeout(window._notificationTimer);
+        window._notificationTimer = setTimeout(hideNotification, duration);
+    }
+}
+
+function hideNotification() {
+    const notification = document.getElementById('notification');
+    notification.classList.remove('show');
+}
+
 // 注册数据存储
 const registrationData = {
     real_name: '',
@@ -206,11 +232,14 @@ function initStep2() {
                 devCode = data.dev_code;
                 devCodeDisplay.classList.remove('hidden');
                 devCodeValue.textContent = devCode;
+                // 开发模式：显示8秒，方便看到验证码
+                showNotification(data.message, 'info', 8000);
+            } else {
+                // 邮件发送成功
+                showNotification(data.message, 'success', 3000);
             }
-            
-            alert(data.message);
         } else {
-            alert(data.message);
+            showNotification(data.message, 'error');
         }
     });
     
@@ -547,10 +576,10 @@ function initStep7() {
                 document.getElementById('success_username').textContent = data.username;
                 showStep('success');
             } else {
-                alert(data.message);
+                showNotification(data.message, 'error');
             }
         } catch (e) {
-            alert('提交失败，请重试');
+            showNotification('提交失败，请重试', 'error');
         }
         
         submitBtn.disabled = false;
