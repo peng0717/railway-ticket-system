@@ -55,9 +55,11 @@ class Station(db.Model):
     __tablename__ = 'stations'
     
     station_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    station_code = db.Column(db.String(6), unique=True, nullable=False)
+    station_code = db.Column(db.String(6), unique=True, nullable=False)  # 现在存储电报码
     station_name = db.Column(db.String(50), nullable=False)
-    station_pinyin = db.Column(db.String(100))
+    station_pinyin = db.Column(db.String(100))  # 原始拼音
+    pinyin_code = db.Column(db.String(10))  # 拼音码(BJN等)
+    telecode = db.Column(db.String(6))  # 电报码(VNP等)，与station_code相同
     region = db.Column(db.String(20))
     line_name = db.Column(db.String(50))
     is_major = db.Column(db.Boolean, default=False)
@@ -276,20 +278,23 @@ def log_operation(operation_type, ticket_id=None, details=None):
     db.session.commit()
 
 def search_stations(pinyin_code):
-    """搜索车站（按拼音码）"""
+    """搜索车站（按拼音码或站名）"""
     if not pinyin_code or len(pinyin_code) < 1:
         return []
     
     pinyin_code = pinyin_code.upper()
+    # 支持拼音码搜索(BJN)、电报码搜索(VNP)、站名搜索、拼音搜索
     stations = Station.query.filter(
         db.or_(
+            Station.pinyin_code.like(f'{pinyin_code}%'),
             Station.station_code.like(f'{pinyin_code}%'),
+            Station.station_name.like(f'%{pinyin_code}%'),
             Station.station_pinyin.like(f'{pinyin_code}%')
         ),
         Station.status == 'active'
     ).limit(10).all()
     
-    return [{'code': s.station_code, 'name': s.station_name, 'pinyin': s.station_pinyin} for s in stations]
+    return [{'code': s.station_code, 'name': s.station_name, 'pinyin': s.station_pinyin, 'pinyin_code': s.pinyin_code} for s in stations]
 
 def calculate_price(from_station, to_station, seat_type):
     """计算票价"""

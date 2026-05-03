@@ -5,22 +5,38 @@
 
 import sys
 import os
+import re
+import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app, db, User, Station, Train, TrainStop, TicketPrice, Counter
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 
+def generate_pinyin_code(pinyin):
+    """从拼音生成拼音码（每个音节首字母）"""
+    matches = re.findall(r'[bcdfghjklmnpqrstwxyz]+', pinyin.lower())
+    return ''.join([m[0].upper() for m in matches if m])[:4]
+
+def load_all_stations():
+    """加载所有车站数据"""
+    stations_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'all_stations.json')
+    
+    with open(stations_file, 'r', encoding='utf-8') as f:
+        all_stations = json.load(f)
+    
+    # 为每个站添加拼音码
+    for s in all_stations:
+        s['pinyin_code'] = generate_pinyin_code(s['pinyin'])
+    
+    return all_stations
+
 def init_database():
     """初始化数据库"""
     with app.app_context():
-        # 创建所有表
+        # 删除旧数据库重新创建
+        db.drop_all()
         db.create_all()
-        
-        # 检查是否已有数据
-        if User.query.first() is not None:
-            print("数据库已有数据，跳过初始化")
-            return
         
         print("开始初始化数据库...")
         
@@ -31,7 +47,7 @@ def init_database():
             password_hash=generate_password_hash('admin123'),
             role='admin',
             window_no='001号口',
-            station_code='ZZO'
+            station_code='ZZF'  # 郑州站电报码
         )
         db.session.add(admin)
         
@@ -42,7 +58,7 @@ def init_database():
             password_hash=generate_password_hash('123456'),
             role='seller',
             window_no='101号口',
-            station_code='ZZO'
+            station_code='ZZF'
         )
         db.session.add(seller)
         
@@ -53,7 +69,7 @@ def init_database():
             password_hash=generate_password_hash('123456'),
             role='seller',
             window_no='102号口',
-            station_code='ZZO'
+            station_code='ZZF'
         )
         db.session.add(seller2)
         
@@ -64,61 +80,71 @@ def init_database():
         db.session.commit()
         print("用户和计数器创建完成")
         
-        # 创建车站数据
-        stations_data = [
-            # 京沪高铁
-            {'code': 'BJN', 'name': '北京南', 'pinyin': 'beijingnan', 'region': '北京市', 'line': '京沪高铁', 'is_major': True},
-            {'code': 'TJN', 'name': '天津南', 'pinyin': 'tianjinnan', 'region': '天津市', 'line': '京沪高铁', 'is_major': False},
-            {'code': 'JNX', 'name': '济南西', 'pinyin': 'jinanxi', 'region': '济南市', 'line': '京沪高铁', 'is_major': True},
-            {'code': 'TZX', 'name': '泰安', 'pinyin': 'taian', 'region': '泰安市', 'line': '京沪高铁', 'is_major': False},
-            {'code': 'NJH', 'name': '南京南', 'pinyin': 'nanjingnan', 'region': '南京市', 'line': '京沪高铁', 'is_major': True},
-            {'code': 'SHH', 'name': '上海虹桥', 'pinyin': 'shanghaihongqiao', 'region': '上海市', 'line': '京沪高铁', 'is_major': True},
-            
-            # 京广高铁
-            {'code': 'BJX', 'name': '北京西', 'pinyin': 'beijingxi', 'region': '北京市', 'line': '京广高铁', 'is_major': True},
-            {'code': 'BZD', 'name': '保定东', 'pinyin': 'baodingdong', 'region': '保定市', 'line': '京广高铁', 'is_major': False},
-            {'code': 'SJZ', 'name': '石家庄', 'pinyin': 'shijiazhuang', 'region': '石家庄市', 'line': '京广高铁', 'is_major': True},
-            {'code': 'XHD', 'name': '邢台东', 'pinyin': 'xingtangdong', 'region': '邢台市', 'line': '京广高铁', 'is_major': False},
-            {'code': 'HZD', 'name': '邯郸东', 'pinyin': 'handandong', 'region': '邯郸市', 'line': '京广高铁', 'is_major': False},
-            {'code': 'WHN', 'name': '武汉', 'pinyin': 'wuhan', 'region': '武汉市', 'line': '京广高铁', 'is_major': True},
-            {'code': 'CSN', 'name': '长沙南', 'pinyin': 'changshanan', 'region': '长沙市', 'line': '京广高铁', 'is_major': True},
-            {'code': 'GZN', 'name': '广州南', 'pinyin': 'guangzhounan', 'region': '广州市', 'line': '京广高铁', 'is_major': True},
-            
-            # 京哈铁路
-            {'code': 'BJI', 'name': '北京', 'pinyin': 'beijing', 'region': '北京市', 'line': '京哈铁路', 'is_major': True},
-            {'code': 'SJL', 'name': '石家庄', 'pinyin': 'shijiazhuang', 'region': '石家庄市', 'line': '京哈铁路', 'is_major': True},
-            {'code': 'ZZO', 'name': '郑州', 'pinyin': 'zhengzhou', 'region': '郑州市', 'line': '京哈铁路', 'is_major': True},
-            {'code': 'HRB', 'name': '哈尔滨', 'pinyin': 'haerbin', 'region': '哈尔滨市', 'line': '京哈铁路', 'is_major': True},
-            
-            # 京津城际
-            {'code': 'TJJ', 'name': '天津', 'pinyin': 'tianjin', 'region': '天津市', 'line': '京津城际', 'is_major': True},
-            
-            # 其他车站
-            {'code': 'XHD2', 'name': '徐州东', 'pinyin': 'xuzhoudong', 'region': '徐州市', 'line': '京沪高铁', 'is_major': True},
-            {'code': 'CZD', 'name': '滁州', 'pinyin': 'chuzhou', 'region': '滁州市', 'line': '京沪高铁', 'is_major': False},
-            {'code': 'BBD', 'name': '蚌埠南', 'pinyin': 'bengbunan', 'region': '蚌埠市', 'line': '京沪高铁', 'is_major': False},
-            {'code': 'CBU', 'name': '苍南', 'pinyin': 'cangnan', 'region': '温州市', 'line': '京沪高铁', 'is_major': False},
-            {'code': 'SHN', 'name': '上海南', 'pinyin': 'shanghainan', 'region': '上海市', 'line': '沪昆铁路', 'is_major': True},
-            {'code': 'HZD2', 'name': '杭州东', 'pinyin': 'hangzhoudong', 'region': '杭州市', 'line': '沪昆高铁', 'is_major': True},
-            {'code': 'XZB', 'name': '徐州', 'pinyin': 'xuzhou', 'region': '徐州市', 'line': '陇海铁路', 'is_major': True},
-            {'code': 'LFZ', 'name': '洛阳龙门', 'pinyin': 'luoyanglongmen', 'region': '洛阳市', 'line': '郑西高铁', 'is_major': True},
-        ]
+        # 加载并创建所有车站
+        all_stations = load_all_stations()
         
-        for s in stations_data:
+        # 建立站名到车站信息的映射
+        name_to_station = {s['name']: s for s in all_stations}
+        
+        # 为现有27个车站分配线路信息
+        line_assignments = {
+            "北京南": {"line": "京沪高铁", "is_major": True, "region": "北京市"},
+            "天津南": {"line": "京沪高铁", "is_major": False, "region": "天津市"},
+            "济南西": {"line": "京沪高铁", "is_major": True, "region": "济南市"},
+            "泰安": {"line": "京沪高铁", "is_major": False, "region": "泰安市"},
+            "南京南": {"line": "京沪高铁", "is_major": True, "region": "南京市"},
+            "上海虹桥": {"line": "京沪高铁", "is_major": True, "region": "上海市"},
+            "北京西": {"line": "京广高铁", "is_major": True, "region": "北京市"},
+            "保定东": {"line": "京广高铁", "is_major": False, "region": "保定市"},
+            "石家庄": {"line": "京广高铁", "is_major": True, "region": "石家庄市"},
+            "邢台东": {"line": "京广高铁", "is_major": False, "region": "邢台市"},
+            "邯郸东": {"line": "京广高铁", "is_major": False, "region": "邯郸市"},
+            "武汉": {"line": "京广高铁", "is_major": True, "region": "武汉市"},
+            "长沙南": {"line": "京广高铁", "is_major": True, "region": "长沙市"},
+            "广州南": {"line": "京广高铁", "is_major": True, "region": "广州市"},
+            "北京": {"line": "京哈铁路", "is_major": True, "region": "北京市"},
+            "天津": {"line": "京津城际", "is_major": True, "region": "天津市"},
+            "哈尔滨": {"line": "京哈铁路", "is_major": True, "region": "哈尔滨市"},
+            "郑州": {"line": "京哈铁路", "is_major": True, "region": "郑州市"},
+            "徐州东": {"line": "京沪高铁", "is_major": True, "region": "徐州市"},
+            "滁州": {"line": "京沪高铁", "is_major": False, "region": "滁州市"},
+            "蚌埠南": {"line": "京沪高铁", "is_major": False, "region": "蚌埠市"},
+            "苍南": {"line": "杭深铁路", "is_major": False, "region": "温州市"},
+            "上海南": {"line": "沪昆铁路", "is_major": True, "region": "上海市"},
+            "杭州东": {"line": "沪昆高铁", "is_major": True, "region": "杭州市"},
+            "徐州": {"line": "陇海铁路", "is_major": True, "region": "徐州市"},
+            "洛阳龙门": {"line": "郑西高铁", "is_major": True, "region": "洛阳市"},
+            "长沙": {"line": "京广铁路", "is_major": True, "region": "长沙市"},
+        }
+        
+        # 创建所有车站（使用电报码作为station_code）
+        for s in all_stations:
+            name = s['name']
+            info = line_assignments.get(name, {})
+            
             station = Station(
-                station_code=s['code'],
-                station_name=s['name'],
+                station_code=s['telecode'],  # 使用电报码作为station_code
+                station_name=name,
                 station_pinyin=s['pinyin'],
-                region=s['region'],
-                line_name=s['line'],
-                is_major=s['is_major']
+                pinyin_code=s['pinyin_code'],
+                telecode=s['telecode'],
+                region=info.get('region', ''),
+                line_name=info.get('line', ''),
+                is_major=info.get('is_major', False)
             )
             db.session.add(station)
         
         db.session.commit()
-        print(f"创建了 {len(stations_data)} 个车站")
+        print(f"创建了 {len(all_stations)} 个车站")
         
-        # 创建车次数据
+        # 建立站名到电报码的映射
+        name_to_telecode = {s['name']: s['telecode'] for s in all_stations}
+        
+        def get_telecode(name):
+            """获取站名的电报码"""
+            return name_to_telecode.get(name, None)
+        
+        # 创建车次数据（使用站名）
         trains_data = [
             # 京沪高铁车次
             {'number': 'G1', 'type': 'G', 'start': '北京南', 'end': '上海虹桥', 'start_time': '08:00', 'end_time': '12:30', 'distance': 1318},
@@ -174,73 +200,187 @@ def init_database():
         db.session.commit()
         print(f"创建了 {len(trains_data)} 个车次")
         
-        # 创建车次经停站数据
+        # 创建车次经停站数据（使用电报码）
+        # 电报码映射
+        tc = {
+            '北京南': 'VNP', '天津南': 'TIP', '济南西': 'JGK', '泰安': 'TMK',
+            '南京南': 'NKH', '上海虹桥': 'AOH', '北京西': 'BXP', '保定东': 'BMP',
+            '石家庄': 'SJP', '邢台东': 'EDP', '邯郸东': 'HPP', '武汉': 'WHN',
+            '长沙南': 'CWQ', '广州南': 'IZQ', '北京': 'BJP', '天津': 'TJP',
+            '哈尔滨': 'HBB', '郑州': 'ZZF', '徐州东': 'UUH', '滁州': 'CXH',
+            '蚌埠南': 'BMH', '苍南': 'CEH', '上海南': 'SNH', '杭州东': 'HGH',
+            '徐州': 'XCH', '洛阳龙门': 'LLF', '长沙': 'CSQ', '上海': 'SHH',
+            '广州': 'GZQ'
+        }
+        
         stops_data = {
             'G1': [
-                {'station': 'BJN', 'sequence': 1, 'departure': '08:00', 'arrival': None, 'distance': 0},
-                {'station': 'TJN', 'sequence': 2, 'departure': '08:15', 'arrival': '08:12', 'distance': 120},
-                {'station': 'JNX', 'sequence': 3, 'departure': '09:00', 'arrival': '08:57', 'distance': 406},
-                {'station': 'TZX', 'sequence': 4, 'departure': '09:20', 'arrival': '09:18', 'distance': 471},
-                {'station': 'XHD2', 'sequence': 5, 'departure': '09:45', 'arrival': '09:43', 'distance': 627},
-                {'station': 'NJH', 'sequence': 6, 'departure': '10:45', 'arrival': '10:42', 'distance': 1020},
-                {'station': 'SHH', 'sequence': 7, 'departure': None, 'arrival': '12:30', 'distance': 1318},
+                {'station': tc['北京南'], 'sequence': 1, 'departure': '08:00', 'arrival': None, 'distance': 0},
+                {'station': tc['天津南'], 'sequence': 2, 'departure': '08:15', 'arrival': '08:12', 'distance': 120},
+                {'station': tc['济南西'], 'sequence': 3, 'departure': '09:00', 'arrival': '08:57', 'distance': 406},
+                {'station': tc['泰安'], 'sequence': 4, 'departure': '09:20', 'arrival': '09:18', 'distance': 471},
+                {'station': tc['徐州东'], 'sequence': 5, 'departure': '09:45', 'arrival': '09:43', 'distance': 627},
+                {'station': tc['南京南'], 'sequence': 6, 'departure': '10:45', 'arrival': '10:42', 'distance': 1020},
+                {'station': tc['上海虹桥'], 'sequence': 7, 'departure': None, 'arrival': '12:30', 'distance': 1318},
             ],
             'G2': [
-                {'station': 'SHH', 'sequence': 1, 'departure': '08:05', 'arrival': None, 'distance': 0},
-                {'station': 'NJH', 'sequence': 2, 'departure': '09:00', 'arrival': '08:58', 'distance': 298},
-                {'station': 'XHD2', 'sequence': 3, 'departure': '09:55', 'arrival': '09:53', 'distance': 691},
-                {'station': 'TZX', 'sequence': 4, 'departure': '10:18', 'arrival': '10:16', 'distance': 847},
-                {'station': 'JNX', 'sequence': 5, 'departure': '10:40', 'arrival': '10:38', 'distance': 912},
-                {'station': 'TJN', 'sequence': 6, 'departure': '11:20', 'arrival': '11:18', 'distance': 1198},
-                {'station': 'BJN', 'sequence': 7, 'departure': None, 'arrival': '12:35', 'distance': 1318},
+                {'station': tc['上海虹桥'], 'sequence': 1, 'departure': '08:05', 'arrival': None, 'distance': 0},
+                {'station': tc['南京南'], 'sequence': 2, 'departure': '09:00', 'arrival': '08:58', 'distance': 298},
+                {'station': tc['徐州东'], 'sequence': 3, 'departure': '09:55', 'arrival': '09:53', 'distance': 691},
+                {'station': tc['泰安'], 'sequence': 4, 'departure': '10:18', 'arrival': '10:16', 'distance': 847},
+                {'station': tc['济南西'], 'sequence': 5, 'departure': '10:40', 'arrival': '10:38', 'distance': 912},
+                {'station': tc['天津南'], 'sequence': 6, 'departure': '11:20', 'arrival': '11:18', 'distance': 1198},
+                {'station': tc['北京南'], 'sequence': 7, 'departure': None, 'arrival': '12:35', 'distance': 1318},
             ],
             'G79': [
-                {'station': 'BJX', 'sequence': 1, 'departure': '08:00', 'arrival': None, 'distance': 0},
-                {'station': 'BZD', 'sequence': 2, 'departure': '08:45', 'arrival': '08:43', 'distance': 139},
-                {'station': 'SJZ', 'sequence': 3, 'departure': '09:15', 'arrival': '09:13', 'distance': 281},
-                {'station': 'HZD', 'sequence': 4, 'departure': '09:45', 'arrival': '09:43', 'distance': 428},
-                {'station': 'WHN', 'sequence': 5, 'departure': '11:30', 'arrival': '11:25', 'distance': 1229},
-                {'station': 'CSN', 'sequence': 6, 'departure': '13:30', 'arrival': '13:26', 'distance': 1591},
-                {'station': 'GZN', 'sequence': 7, 'departure': None, 'arrival': '18:00', 'distance': 2298},
+                {'station': tc['北京西'], 'sequence': 1, 'departure': '08:00', 'arrival': None, 'distance': 0},
+                {'station': tc['保定东'], 'sequence': 2, 'departure': '08:45', 'arrival': '08:43', 'distance': 139},
+                {'station': tc['石家庄'], 'sequence': 3, 'departure': '09:15', 'arrival': '09:13', 'distance': 281},
+                {'station': tc['邢台东'], 'sequence': 4, 'departure': '09:45', 'arrival': '09:43', 'distance': 428},
+                {'station': tc['邯郸东'], 'sequence': 5, 'departure': '10:15', 'arrival': '10:13', 'distance': 528},
+                {'station': tc['武汉'], 'sequence': 6, 'departure': '11:30', 'arrival': '11:25', 'distance': 1229},
+                {'station': tc['长沙南'], 'sequence': 7, 'departure': '13:30', 'arrival': '13:26', 'distance': 1591},
+                {'station': tc['广州南'], 'sequence': 8, 'departure': None, 'arrival': '18:00', 'distance': 2298},
             ],
             'C2001': [
-                {'station': 'BJN', 'sequence': 1, 'departure': '06:30', 'arrival': None, 'distance': 0},
-                {'station': 'TJJ', 'sequence': 2, 'departure': None, 'arrival': '07:05', 'distance': 120},
+                {'station': tc['北京南'], 'sequence': 1, 'departure': '06:30', 'arrival': None, 'distance': 0},
+                {'station': tc['天津'], 'sequence': 2, 'departure': None, 'arrival': '07:05', 'distance': 120},
             ],
             'C2003': [
-                {'station': 'BJN', 'sequence': 1, 'departure': '07:30', 'arrival': None, 'distance': 0},
-                {'station': 'TJJ', 'sequence': 2, 'departure': None, 'arrival': '08:05', 'distance': 120},
+                {'station': tc['北京南'], 'sequence': 1, 'departure': '07:30', 'arrival': None, 'distance': 0},
+                {'station': tc['天津'], 'sequence': 2, 'departure': None, 'arrival': '08:05', 'distance': 120},
             ],
             'K101': [
-                {'station': 'BJI', 'sequence': 1, 'departure': '19:00', 'arrival': None, 'distance': 0},
-                {'station': 'XZB', 'sequence': 2, 'departure': '23:00', 'arrival': '22:55', 'distance': 689},
-                {'station': 'NJH', 'sequence': 3, 'departure': '03:00', 'arrival': '02:55', 'distance': 1020},
-                {'station': 'SHN', 'sequence': 4, 'departure': None, 'arrival': '06:00', 'distance': 1463},
+                {'station': tc['北京'], 'sequence': 1, 'departure': '19:00', 'arrival': None, 'distance': 0},
+                {'station': tc['徐州'], 'sequence': 2, 'departure': '23:00', 'arrival': '22:55', 'distance': 689},
+                {'station': tc['南京南'], 'sequence': 3, 'departure': '03:00', 'arrival': '02:55', 'distance': 1020},
+                {'station': tc['上海'], 'sequence': 4, 'departure': None, 'arrival': '06:00', 'distance': 1463},
             ],
         }
         
-        # 为所有高铁和动车添加默认经停站
+        # 为所有高铁和动车添加默认经停站（使用电报码）
         default_stops = {
-            'G3': [('BJN', 1, '09:00', None, 0), ('TJN', 2, '09:18', '09:15', 120), ('JNX', 3, '10:00', '09:58', 406), ('NJH', 4, '11:45', '11:42', 1020), ('SHH', 5, None, '13:28', 1318)],
-            'G5': [('BJN', 1, '10:00', None, 0), ('JNX', 2, '11:00', '10:58', 406), ('NJH', 3, '12:30', '12:28', 1020), ('SHH', 4, None, '14:28', 1318)],
-            'G7': [('BJN', 1, '14:00', None, 0), ('TJN', 2, '14:20', '14:17', 120), ('JNX', 3, '15:00', '14:58', 406), ('NJH', 4, '16:30', '16:28', 1020), ('SHH', 5, None, '18:28', 1318)],
-            'G11': [('BJN', 1, '16:00', None, 0), ('JNX', 2, '17:00', '16:58', 406), ('NJH', 3, '18:30', '18:28', 1020), ('SHH', 4, None, '20:28', 1318)],
-            'G101': [('BJN', 1, '07:00', None, 0), ('TJN', 2, '07:18', '07:16', 120), ('JNX', 3, '08:00', '07:58', 406), ('NJH', 4, '09:30', '09:28', 1020), ('SHH', 5, None, '11:30', 1318)],
-            'G103': [('BJN', 1, '17:00', None, 0), ('TJN', 2, '17:18', '17:16', 120), ('JNX', 3, '18:00', '17:58', 406), ('NJH', 4, '19:30', '19:28', 1020), ('SHH', 5, None, '21:30', 1318)],
-            'G80': [('GZN', 1, '08:00', None, 0), ('CSN', 2, '11:30', '11:27', 707), ('WHN', 3, '13:30', '13:27', 1069), ('HZD', 4, '15:00', '14:58', 1870), ('SJZ', 5, '15:45', '15:43', 2017), ('BJX', 6, None, '18:00', 2298)],
-            'G81': [('BJX', 1, '09:30', None, 0), ('SJZ', 2, '10:45', '10:43', 281), ('WHN', 3, '13:00', '12:57', 1229), ('GZN', 4, None, '19:30', 2298)],
-            'G401': [('BJX', 1, '07:00', None, 0), ('SJZ', 2, '08:00', '07:58', 281), ('HZD', 3, '08:45', '08:43', 428), ('WHN', 4, None, '12:30', 1229)],
-            'G403': [('BJX', 1, '08:00', None, 0), ('BZD', 2, '08:45', '08:43', 139), ('SJZ', 3, '09:15', '09:13', 281), ('HZD', 4, '09:45', '09:43', 428), ('WHN', 5, '11:30', '11:27', 1229), ('CSN', 6, '13:30', '13:27', 1591), ('GZN', 7, None, '17:35', 2298)],
-            'D101': [('BJN', 1, '07:30', None, 0), ('TJN', 2, '08:00', '07:58', 120), ('JNX', 3, '09:00', '08:58', 406), ('NJH', 4, '10:30', '10:28', 1020), ('SHH', 5, None, '15:00', 1318)],
-            'D701': [('BJN', 1, '09:30', None, 0), ('TJN', 2, '10:00', '09:58', 120), ('JNX', 3, '11:00', '10:58', 406), ('NJH', 4, '12:30', '12:28', 1020), ('SHH', 5, None, '17:00', 1318)],
-            'D703': [('BJN', 1, '14:30', None, 0), ('TJN', 2, '15:00', '14:58', 120), ('JNX', 3, '16:00', '15:58', 406), ('NJH', 4, '17:30', '17:28', 1020), ('SHH', 5, None, '22:00', 1318)],
-            'C2005': [('BJN', 1, '08:30', None, 0), ('TJJ', 2, None, '09:05', 120)],
-            'C2007': [('BJN', 1, '09:30', None, 0), ('TJJ', 2, None, '10:05', 120)],
-            'K103': [('BJI', 1, '20:30', None, 0), ('SJL', 2, '23:00', '22:55', 293), ('ZZO', 3, '03:00', '02:55', 695), ('HRB', 4, None, '08:30', 1249)],
-            'Z201': [('BJI', 1, '18:00', None, 0), ('SJZ', 2, '21:00', '20:55', 293), ('ZZO', 3, '01:00', '00:55', 695), ('WHN', 4, '05:00', '04:55', 1229), ('CSN', 5, '07:30', '07:25', 1591), ('GZN', 6, None, '09:30', 2298)],
-            'Z35': [('BJX', 1, '23:00', None, 0), ('SJZ', 2, '02:00', '01:55', 281), ('WHN', 3, '06:00', '05:55', 1229), ('GZN', 4, None, '11:30', 2298)],
+            'G3': [
+                (tc['北京南'], 1, '09:00', None, 0), 
+                (tc['天津南'], 2, '09:18', '09:15', 120), 
+                (tc['济南西'], 3, '10:00', '09:58', 406), 
+                (tc['南京南'], 4, '11:45', '11:42', 1020), 
+                (tc['上海虹桥'], 5, None, '13:28', 1318)
+            ],
+            'G5': [
+                (tc['北京南'], 1, '10:00', None, 0), 
+                (tc['济南西'], 2, '11:00', '10:58', 406), 
+                (tc['南京南'], 3, '12:30', '12:28', 1020), 
+                (tc['上海虹桥'], 4, None, '14:28', 1318)
+            ],
+            'G7': [
+                (tc['北京南'], 1, '14:00', None, 0), 
+                (tc['天津南'], 2, '14:20', '14:17', 120), 
+                (tc['济南西'], 3, '15:00', '14:58', 406), 
+                (tc['南京南'], 4, '16:30', '16:28', 1020), 
+                (tc['上海虹桥'], 5, None, '18:28', 1318)
+            ],
+            'G11': [
+                (tc['北京南'], 1, '16:00', None, 0), 
+                (tc['济南西'], 2, '17:00', '16:58', 406), 
+                (tc['南京南'], 3, '18:30', '18:28', 1020), 
+                (tc['上海虹桥'], 4, None, '20:28', 1318)
+            ],
+            'G101': [
+                (tc['北京南'], 1, '07:00', None, 0), 
+                (tc['天津南'], 2, '07:18', '07:16', 120), 
+                (tc['济南西'], 3, '08:00', '07:58', 406), 
+                (tc['南京南'], 4, '09:30', '09:28', 1020), 
+                (tc['上海虹桥'], 5, None, '11:30', 1318)
+            ],
+            'G103': [
+                (tc['北京南'], 1, '17:00', None, 0), 
+                (tc['天津南'], 2, '17:18', '17:16', 120), 
+                (tc['济南西'], 3, '18:00', '17:58', 406), 
+                (tc['南京南'], 4, '19:30', '19:28', 1020), 
+                (tc['上海虹桥'], 5, None, '21:30', 1318)
+            ],
+            'G80': [
+                (tc['广州南'], 1, '08:00', None, 0), 
+                (tc['长沙南'], 2, '11:30', '11:27', 707), 
+                (tc['武汉'], 3, '13:30', '13:27', 1069), 
+                (tc['邯郸东'], 4, '15:00', '14:58', 1870), 
+                (tc['石家庄'], 5, '15:45', '15:43', 2017), 
+                (tc['北京西'], 6, None, '18:00', 2298)
+            ],
+            'G81': [
+                (tc['北京西'], 1, '09:30', None, 0), 
+                (tc['石家庄'], 2, '10:45', '10:43', 281), 
+                (tc['武汉'], 3, '13:00', '12:57', 1229), 
+                (tc['广州南'], 4, None, '19:30', 2298)
+            ],
+            'G401': [
+                (tc['北京西'], 1, '07:00', None, 0), 
+                (tc['石家庄'], 2, '08:00', '07:58', 281), 
+                (tc['邯郸东'], 3, '08:45', '08:43', 428), 
+                (tc['武汉'], 4, None, '12:30', 1229)
+            ],
+            'G403': [
+                (tc['北京西'], 1, '08:00', None, 0), 
+                (tc['保定东'], 2, '08:45', '08:43', 139), 
+                (tc['石家庄'], 3, '09:15', '09:13', 281), 
+                (tc['邢台东'], 4, '09:45', '09:43', 428), 
+                (tc['武汉'], 5, '11:30', '11:27', 1229), 
+                (tc['长沙南'], 6, '13:30', '13:27', 1591), 
+                (tc['广州南'], 7, None, '17:35', 2298)
+            ],
+            'D101': [
+                (tc['北京南'], 1, '07:30', None, 0), 
+                (tc['天津南'], 2, '08:00', '07:58', 120), 
+                (tc['济南西'], 3, '09:00', '08:58', 406), 
+                (tc['南京南'], 4, '10:30', '10:28', 1020), 
+                (tc['上海虹桥'], 5, None, '15:00', 1318)
+            ],
+            'D701': [
+                (tc['北京南'], 1, '09:30', None, 0), 
+                (tc['天津南'], 2, '10:00', '09:58', 120), 
+                (tc['济南西'], 3, '11:00', '10:58', 406), 
+                (tc['南京南'], 4, '12:30', '12:28', 1020), 
+                (tc['上海虹桥'], 5, None, '17:00', 1318)
+            ],
+            'D703': [
+                (tc['北京南'], 1, '14:30', None, 0), 
+                (tc['天津南'], 2, '15:00', '14:58', 120), 
+                (tc['济南西'], 3, '16:00', '15:58', 406), 
+                (tc['南京南'], 4, '17:30', '17:28', 1020), 
+                (tc['上海虹桥'], 5, None, '22:00', 1318)
+            ],
+            'C2005': [
+                (tc['北京南'], 1, '08:30', None, 0), 
+                (tc['天津'], 2, None, '09:05', 120)
+            ],
+            'C2007': [
+                (tc['北京南'], 1, '09:30', None, 0), 
+                (tc['天津'], 2, None, '10:05', 120)
+            ],
+            'K103': [
+                (tc['北京'], 1, '20:30', None, 0), 
+                (tc['石家庄'], 2, '23:00', '22:55', 293), 
+                (tc['郑州'], 3, '03:00', '02:55', 695), 
+                (tc['哈尔滨'], 4, None, '08:30', 1249)
+            ],
+            'Z201': [
+                (tc['北京'], 1, '18:00', None, 0), 
+                (tc['石家庄'], 2, '21:00', '20:55', 293), 
+                (tc['郑州'], 3, '01:00', '00:55', 695), 
+                (tc['武汉'], 4, '05:00', '04:55', 1229), 
+                (tc['长沙'], 5, '07:30', '07:25', 1591), 
+                (tc['广州'], 6, None, '09:30', 2298)
+            ],
+            'Z35': [
+                (tc['北京西'], 1, '23:00', None, 0), 
+                (tc['石家庄'], 2, '02:00', '01:55', 281), 
+                (tc['武汉'], 3, '06:00', '05:55', 1229), 
+                (tc['广州'], 4, None, '11:30', 2298)
+            ],
         }
         
+        # 插入所有经停站
         for train_num, stops in stops_data.items():
             train_id = train_map.get(train_num)
             if not train_id:
@@ -291,46 +431,46 @@ def init_database():
         db.session.commit()
         print("车次经停站创建完成")
         
-        # 创建票价数据
+        # 创建票价数据（使用电报码）
         prices_data = [
             # 京沪高铁票价
-            {'from': 'BJN', 'to': 'TJN', 'business': 174, 'first': 88, 'second': 55, 'soft': 45},
-            {'from': 'BJN', 'to': 'JNX', 'business': 694, 'first': 349, 'second': 215, 'soft': 175},
-            {'from': 'BJN', 'to': 'NJH', 'business': 1333, 'first': 679, 'second': 415, 'soft': 325},
-            {'from': 'BJN', 'to': 'SHH', 'business': 1748, 'first': 933, 'second': 553, 'soft': 420},
-            {'from': 'TJN', 'to': 'JNX', 'business': 520, 'first': 261, 'second': 160, 'soft': 130},
-            {'from': 'TJN', 'to': 'NJH', 'business': 1159, 'first': 591, 'second': 360, 'soft': 280},
-            {'from': 'TJN', 'to': 'SHH', 'business': 1574, 'first': 845, 'second': 498, 'soft': 375},
-            {'from': 'JNX', 'to': 'NJH', 'business': 639, 'first': 330, 'second': 200, 'soft': 150},
-            {'from': 'JNX', 'to': 'SHH', 'business': 1098, 'first': 584, 'second': 338, 'soft': 245},
-            {'from': 'NJH', 'to': 'SHH', 'business': 459, 'first': 254, 'second': 138, 'soft': 95},
+            {'from': tc['北京南'], 'to': tc['天津南'], 'business': 174, 'first': 88, 'second': 55, 'soft': 45},
+            {'from': tc['北京南'], 'to': tc['济南西'], 'business': 694, 'first': 349, 'second': 215, 'soft': 175},
+            {'from': tc['北京南'], 'to': tc['南京南'], 'business': 1333, 'first': 679, 'second': 415, 'soft': 325},
+            {'from': tc['北京南'], 'to': tc['上海虹桥'], 'business': 1748, 'first': 933, 'second': 553, 'soft': 420},
+            {'from': tc['天津南'], 'to': tc['济南西'], 'business': 520, 'first': 261, 'second': 160, 'soft': 130},
+            {'from': tc['天津南'], 'to': tc['南京南'], 'business': 1159, 'first': 591, 'second': 360, 'soft': 280},
+            {'from': tc['天津南'], 'to': tc['上海虹桥'], 'business': 1574, 'first': 845, 'second': 498, 'soft': 375},
+            {'from': tc['济南西'], 'to': tc['南京南'], 'business': 639, 'first': 330, 'second': 200, 'soft': 150},
+            {'from': tc['济南西'], 'to': tc['上海虹桥'], 'business': 1098, 'first': 584, 'second': 338, 'soft': 245},
+            {'from': tc['南京南'], 'to': tc['上海虹桥'], 'business': 459, 'first': 254, 'second': 138, 'soft': 95},
             
             # 京广高铁票价
-            {'from': 'BJX', 'to': 'BZD', 'business': 206, 'first': 105, 'second': 65, 'soft': 50},
-            {'from': 'BJX', 'to': 'SJZ', 'business': 311, 'first': 156, 'second': 93, 'soft': 75},
-            {'from': 'BJX', 'to': 'WHN', 'business': 1159, 'first': 588, 'second': 353, 'soft': 270},
-            {'from': 'BJX', 'to': 'GZN', 'business': 1748, 'first': 933, 'second': 553, 'soft': 420},
-            {'from': 'SJZ', 'to': 'WHN', 'business': 848, 'first': 432, 'second': 260, 'soft': 195},
-            {'from': 'SJZ', 'to': 'GZN', 'business': 1437, 'first': 777, 'second': 460, 'soft': 345},
-            {'from': 'WHN', 'to': 'CSN', 'business': 468, 'first': 234, 'second': 138, 'soft': 105},
-            {'from': 'WHN', 'to': 'GZN', 'business': 919, 'first': 472, 'second': 304, 'soft': 230},
-            {'from': 'CSN', 'to': 'GZN', 'business': 451, 'first': 238, 'second': 166, 'soft': 125},
+            {'from': tc['北京西'], 'to': tc['保定东'], 'business': 206, 'first': 105, 'second': 65, 'soft': 50},
+            {'from': tc['北京西'], 'to': tc['石家庄'], 'business': 311, 'first': 156, 'second': 93, 'soft': 75},
+            {'from': tc['北京西'], 'to': tc['武汉'], 'business': 1159, 'first': 588, 'second': 353, 'soft': 270},
+            {'from': tc['北京西'], 'to': tc['广州南'], 'business': 1748, 'first': 933, 'second': 553, 'soft': 420},
+            {'from': tc['石家庄'], 'to': tc['武汉'], 'business': 848, 'first': 432, 'second': 260, 'soft': 195},
+            {'from': tc['石家庄'], 'to': tc['广州南'], 'business': 1437, 'first': 777, 'second': 460, 'soft': 345},
+            {'from': tc['武汉'], 'to': tc['长沙南'], 'business': 468, 'first': 234, 'second': 138, 'soft': 105},
+            {'from': tc['武汉'], 'to': tc['广州南'], 'business': 919, 'first': 472, 'second': 304, 'soft': 230},
+            {'from': tc['长沙南'], 'to': tc['广州南'], 'business': 451, 'first': 238, 'second': 166, 'soft': 125},
             
             # 京津城际票价
-            {'from': 'BJN', 'to': 'TJJ', 'business': 88, 'first': 44, 'second': 25, 'soft': 20},
+            {'from': tc['北京南'], 'to': tc['天津'], 'business': 88, 'first': 44, 'second': 25, 'soft': 20},
             
             # 其他票价
-            {'from': 'BJI', 'to': 'XZB', 'business': 0, 'first': 150, 'second': 93, 'soft': 75},
-            {'from': 'BJI', 'to': 'NJH', 'business': 0, 'first': 250, 'second': 150, 'soft': 120},
-            {'from': 'BJI', 'to': 'SHN', 'business': 0, 'first': 350, 'second': 200, 'soft': 150},
-            {'from': 'XZB', 'to': 'NJH', 'business': 0, 'first': 150, 'second': 93, 'soft': 75},
-            {'from': 'XZB', 'to': 'SHN', 'business': 0, 'first': 250, 'second': 150, 'soft': 120},
-            {'from': 'BJI', 'to': 'SJL', 'business': 0, 'first': 100, 'second': 65, 'soft': 50},
-            {'from': 'BJI', 'to': 'ZZO', 'business': 0, 'first': 150, 'second': 93, 'soft': 75},
-            {'from': 'BJI', 'to': 'HRB', 'business': 0, 'first': 280, 'second': 165, 'soft': 130},
-            {'from': 'ZZO', 'to': 'WHN', 'business': 0, 'first': 200, 'second': 120, 'soft': 95},
-            {'from': 'BJX', 'to': 'SJZ', 'business': 311, 'first': 156, 'second': 93, 'soft': 75},
-            {'from': 'BJX', 'to': 'HZD', 'business': 408, 'first': 206, 'second': 123, 'soft': 98},
+            {'from': tc['北京'], 'to': tc['徐州'], 'business': 0, 'first': 150, 'second': 93, 'soft': 75},
+            {'from': tc['北京'], 'to': tc['南京南'], 'business': 0, 'first': 250, 'second': 150, 'soft': 120},
+            {'from': tc['北京'], 'to': tc['上海'], 'business': 0, 'first': 350, 'second': 200, 'soft': 150},
+            {'from': tc['徐州'], 'to': tc['南京南'], 'business': 0, 'first': 150, 'second': 93, 'soft': 75},
+            {'from': tc['徐州'], 'to': tc['上海'], 'business': 0, 'first': 250, 'second': 150, 'soft': 120},
+            {'from': tc['北京'], 'to': tc['石家庄'], 'business': 0, 'first': 100, 'second': 65, 'soft': 50},
+            {'from': tc['北京'], 'to': tc['郑州'], 'business': 0, 'first': 150, 'second': 93, 'soft': 75},
+            {'from': tc['北京'], 'to': tc['哈尔滨'], 'business': 0, 'first': 280, 'second': 165, 'soft': 130},
+            {'from': tc['郑州'], 'to': tc['武汉'], 'business': 0, 'first': 200, 'second': 120, 'soft': 95},
+            {'from': tc['北京西'], 'to': tc['石家庄'], 'business': 311, 'first': 156, 'second': 93, 'soft': 75},
+            {'from': tc['北京西'], 'to': tc['邯郸东'], 'business': 408, 'first': 206, 'second': 123, 'soft': 98},
         ]
         
         for p in prices_data:
