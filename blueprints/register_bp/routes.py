@@ -510,11 +510,11 @@ def submit_registration():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 检查重复 - 用户表（同时检查id_card, email, username, employee_no）
+    # 检查重复 - 用户表（检查id_card, email, employee_no）
     cursor.execute("""
-        SELECT id FROM users 
-        WHERE id_card = ? OR email = ? OR username = ? OR employee_no = ?
-    """, (data['id_card'], data['email'].lower(), username, username))
+        SELECT user_id FROM users 
+        WHERE id_card = ? OR email = ? OR employee_no = ?
+    """, (data['id_card'], data['email'].lower(), username))
     if cursor.fetchone():
         cursor.close()
         conn.close()
@@ -725,14 +725,14 @@ def approve_application():
         return jsonify({'status': 'error', 'message': '申请不存在或已审核'})
     
     try:
-        # 创建用户（同时设置username和employee_no字段，值相同）
+        # 创建用户（users表只有employee_no, name列，没有username和real_name）
         cursor.execute("""
             INSERT INTO users 
-            (username, employee_no, password_hash, real_name, id_card, email, role, station_code, 
+            (employee_no, name, password_hash, id_card, email, role, station_code, 
              window_no, machine_code, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'seller', ?, ?, ?, 'active', ?)
+            VALUES (?, ?, ?, ?, ?, 'seller', ?, ?, ?, 'active', ?)
         """, (
-            app['username'], app['username'], app['password_hash'], app['real_name'], app['id_card'],
+            app['username'], app['real_name'], app['password_hash'], app['id_card'],
             app['email'], app['station_code'], app['window_no'], app['machine_code'],
             datetime.now().isoformat()
         ))
@@ -838,7 +838,7 @@ def unfreeze_user():
     cursor = conn.cursor()
     
     try:
-        cursor.execute("UPDATE users SET status = 'active' WHERE id = ?", (user_id,))
+        cursor.execute("UPDATE users SET status = 'active' WHERE user_id = ?", (user_id,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -900,13 +900,13 @@ def freeze_user():
     cursor = conn.cursor()
     
     try:
-        cursor.execute("UPDATE users SET status = 'frozen' WHERE id = ?", (user_id,))
+        cursor.execute("UPDATE users SET status = 'frozen' WHERE user_id = ?", (user_id,))
         
         # 记录风控
         cursor.execute("""
-            INSERT INTO risk_controls (user_id, username, original_machine_code, new_machine_code, action, reason, created_at)
-            SELECT id, username, machine_code, '', 'manual_freeze', '管理员手动冻结', ?
-            FROM users WHERE id = ?
+            INSERT INTO risk_controls (user_id, original_machine_code, new_machine_code, action, reason, created_at)
+            SELECT user_id, machine_code, '', 'manual_freeze', '管理员手动冻结', ?
+            FROM users WHERE user_id = ?
         """, (datetime.now().isoformat(), user_id))
         
         conn.commit()

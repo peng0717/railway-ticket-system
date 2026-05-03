@@ -94,9 +94,9 @@
                             <td>{{ user.last_login[:16] if user.last_login else '-' }}</td>
                             <td class="actions">
                                 {% if user.status == 'active' %}
-                                <button class="btn btn-sm btn-danger btn-freeze" data-id="{{ user.id }}">冻结</button>
+                                <button class="btn btn-sm btn-danger btn-freeze" data-id="{{ user.user_id }}">冻结</button>
                                 {% elif user.status == 'frozen' %}
-                                <button class="btn btn-sm btn-success btn-unfreeze" data-id="{{ user.id }}">解冻</button>
+                                <button class="btn btn-sm btn-success btn-unfreeze" data-id="{{ user.user_id }}">解冻</button>
                                 {% endif %}
                             </td>
                         </tr>

@@ -71,7 +71,7 @@ def get_user_by_employee_no(employee_no):
         return None
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ? OR employee_no = ?", (employee_no, employee_no))
+        cursor.execute("SELECT * FROM users WHERE employee_no = ?", (employee_no,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -546,9 +546,9 @@ def login():
                     if not is_valid:
                         error = message
                         if message == "机器码不匹配，检测到异地登录":
-                            update_user_machine_code(user['id'], user.get('machine_code', ''), 'frozen')
+                            update_user_machine_code(user['user_id'], user.get('machine_code', ''), 'frozen')
                             add_risk_control_record(
-                                user['id'], 
+                                user['user_id'], 
                                 employee_no, 
                                 machine_code, 
                                 'machine_code_mismatch',
@@ -557,11 +557,11 @@ def login():
                             error = "该工号因异地登录已被风控冻结，请联系管理员"
                     else:
                         if not user.get('machine_code') and machine_code:
-                            update_user_machine_code(user['id'], machine_code, 'active')
+                            update_user_machine_code(user['user_id'], machine_code, 'active')
                         
-                        session['user_id'] = user['id']
-                        session['employee_no'] = user['username'] or user['employee_no']
-                        session['user_name'] = user.get('name') or user.get('real_name') or ''
+                        session['user_id'] = user['user_id']
+                        session['employee_no'] = user['employee_no']
+                        session['user_name'] = user.get('name') or user.get('name') or ''
                         session['window_no'] = user.get('window_no') or config.DEFAULT_WINDOW_NO
                         session['station_code'] = user.get('station_code') or 'ZZO'
                         session['station_name'] = user.get('station_name', '郑州站')
@@ -722,7 +722,6 @@ def admin_dashboard():
             active_sellers.append({
                 'shift_id': shift['shift_id'],
                 'employee_no': shift['employee_no'],
-                'username': shift.get('username'),
                 'name': shift.get('name'),
                 'window_no': shift.get('window_no') or '未知',
                 'shift_type': shift['shift_type'],
@@ -939,15 +938,15 @@ def admin_daily_reports():
         
         # 查询已关闭的班次作为对账单
         query = """
-            SELECT s.*, u.username, u.name as user_name, u.window_no
+            SELECT s.*, u.employee_no, u.name as user_name, u.window_no
             FROM shifts s
-            LEFT JOIN users u ON s.employee_no = u.username OR s.employee_no = u.employee_no
+            LEFT JOIN users u ON s.employee_no = u.employee_no
             WHERE s.status = 'closed'
         """
         params = []
         
         if employee_no:
-            query += " AND (s.employee_no LIKE ? OR u.username LIKE ?)"
+            query += " AND (s.employee_no LIKE ? OR u.employee_no LIKE ?)"
             params.extend([f'%{employee_no}%', f'%{employee_no}%'])
         
         if shift_type:
@@ -1272,11 +1271,9 @@ def admin_ticket_limits():
             ticket_count = count_row['cnt'] if count_row else 0
         
         sellers.append({
-            'id': row['id'],
-            'username': row['username'],
+            'user_id': row['user_id'],
             'employee_no': row['employee_no'],
             'name': row['name'],
-            'station_name': row['station_name'],
             'station_code': row['station_code'],
             'window_no': row['window_no'],
             'ticket_limit': row['ticket_limit'] or default_limit,
@@ -1452,9 +1449,9 @@ def api_get_report(report_id):
         
         # 获取班次信息
         cursor.execute("""
-            SELECT s.*, u.username, u.name, u.window_no
+            SELECT s.*, u.employee_no, u.name, u.window_no
             FROM shifts s
-            LEFT JOIN users u ON s.employee_no = u.username OR s.employee_no = u.employee_no
+            LEFT JOIN users u ON s.employee_no = u.employee_no
             WHERE s.shift_id = ?
         """, (report_id,))
         shift = cursor.fetchone()
@@ -1504,9 +1501,9 @@ def api_print_report(report_id):
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT s.*, u.username, u.name, u.window_no
+            SELECT s.*, u.employee_no, u.name, u.window_no
             FROM shifts s
-            LEFT JOIN users u ON s.employee_no = u.username OR s.employee_no = u.employee_no
+            LEFT JOIN users u ON s.employee_no = u.employee_no
             WHERE s.shift_id = ?
         """, (report_id,))
         shift = cursor.fetchone()

@@ -1,8 +1,12 @@
-{% extends "base.html" %}
-
-{% block title %}工号注册 - 铁路客票系统{% endblock %}
-
-{% block content %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工号注册 - 铁路客票系统</title>
+    <link rel="stylesheet" href="{{ url_for('register_bp.static', filename='css/register_style.css') }}">
+</head>
+<body>
 <!-- 浮动通知条 -->
 <div id="notification" class="notification hidden">
     <div class="notification-content">
@@ -307,9 +311,7 @@
         <p>如有疑问请联系系统管理员</p>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
 <script src="{{ url_for('register_bp.static', filename='js/fingerprint.js') }}"></script>
 <script src="{{ url_for('register_bp.static', filename='js/register.js') }}"></script>
-{% endblock %}
+</body>
+</html>
