@@ -813,7 +813,7 @@ def admin_risk():
         cursor.execute("""
             SELECT rc.*, u.name, u.employee_no
             FROM risk_controls rc
-            LEFT JOIN users u ON rc.user_id = u.id
+            LEFT JOIN users u ON rc.user_id = u.user_id
             ORDER BY rc.created_at DESC
             LIMIT 100
         """)
@@ -868,14 +868,14 @@ def admin_users():
                 SELECT user_id, employee_no, name, station_code, window_no, role, status, machine_code, last_login
                 FROM users
                 WHERE employee_no LIKE ? OR name LIKE ? OR station_code LIKE ?
-                ORDER BY id DESC
+                ORDER BY user_id DESC
                 LIMIT 100
             """, (f'%{search}%', f'%{search}%', f'%{search}%'))
         else:
             cursor.execute("""
                 SELECT user_id, employee_no, name, station_code, window_no, role, status, machine_code, last_login
                 FROM users
-                ORDER BY id DESC
+                ORDER BY user_id DESC
                 LIMIT 100
             """)
         
@@ -918,4 +918,4 @@ def freeze_user():
         conn.rollback()
         cursor.close()
         conn.close()
-        return jsonify({'status': 'error', 'message': f'操作失败: {str(e)}'})
+        return jsonify({'status': 'error', 'message': f'操作失败: {s

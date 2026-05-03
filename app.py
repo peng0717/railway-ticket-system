@@ -747,8 +747,8 @@ def admin_dashboard():
             WHERE t.status = 'sold' AND DATE(t.created_at) = ?
         """, (today,))
         today_row = cursor.fetchone()
-        today_stats['total_tickets'] = today_row['total_tickets'] if today_row else 0
-        today_stats['total_amount'] = today_row['total_amount'] if today_row else 0
+        today_stats['total_tickets'] = (today_row['total_tickets'] or 0) if today_row else 0
+        today_stats['total_amount'] = (today_row['total_amount'] or 0) if today_row else 0
         
         cursor.execute("""
             SELECT COUNT(*) as cnt, SUM(actual_refund) as amount
@@ -756,9 +756,9 @@ def admin_dashboard():
             WHERE DATE(created_at) = ?
         """, (today,))
         refund_row = cursor.fetchone()
-        today_stats['total_refunds'] = refund_row['cnt'] if refund_row else 0
-        today_stats['refund_amount'] = refund_row['amount'] if refund_row else 0
-        today_stats['net_amount'] = today_stats['total_amount'] - today_stats['refund_amount']
+        today_stats['total_refunds'] = (refund_row['cnt'] or 0) if refund_row else 0
+        today_stats['refund_amount'] = (refund_row['amount'] or 0) if refund_row else 0
+        today_stats['net_amount'] = (today_stats['total_amount'] or 0) - (today_stats['refund_amount'] or 0)
         
         # 最近操作日志
         cursor.execute("""
@@ -1370,9 +1370,9 @@ def api_approve_refund(refund_id):
             
             # 记录操作日志
             cursor.execute("""
-                INSERT INTO operation_logs (employee_no, operation_type, ticket_id, details, ip_address, created_at)
-                VALUES (?, 'refund', ?, ?, ?, ?)
-            """, (session['admin_username'], refund['ticket_id'], 
+                INSERT INTO operation_logs (shift_id, employee_no, operation_type, ticket_id, details, ip_address, created_at)
+                VALUES (?, ?, 'refund', ?, ?, ?, ?)
+            """, (session.get('shift_id'), session['admin_username'], refund['ticket_id'], 
                   json.dumps({'amount': refund['refund_amount'], 'approved_by': session['admin_username']}),
                   request.remote_addr, datetime.now().isoformat()))
         
