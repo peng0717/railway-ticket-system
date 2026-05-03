@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}风控管理 - 铁路客票系统{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" width="32" height="32">
+                    <path fill="#c9a84c" d="M12 2L4 6v12l8 4 8-4V6l-8-4zm0 2.18l6 3v7.64l-6 3-6-3V7.18l6-3z"/>
+                    <path fill="#c9a84c" d="M12 8v8M8 12h8"/>
+                </svg>
+            </div>
+            <span>管理端</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('register_bp.admin_dashboard') }}" class="nav-item">
+                <span class="nav-icon">&#9783;</span>
+                <span>首页概览</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_applications') }}" class="nav-item">
+                <span class="nav-icon">&#9776;</span>
+                <span>审核管理</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_risk') }}" class="nav-item active">
+                <span class="nav-icon">&#9888;</span>
+                <span>风控管理</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_users') }}" class="nav-item">
+                <span class="nav-icon">&#9823;</span>
+                <span>用户管理</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_logout') }}" class="nav-item nav-logout">
+                <span class="nav-icon">&#9167;</span>
+                <span>退出登录</span>
+            </a>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1>风控管理</h1>
+            <div class="header-info">
+                <span>管理员: {{ session.get('admin_username', 'admin') }}</span>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">
+                <h2>风控记录</h2>
+            </div>
+            <div class="panel-body">
+                {% if records %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>工号</th>
+                            <th>操作类型</th>
+                            <th>原机器码</th>
+                            <th>新机器码</th>
+                            <th>原因</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ record.real_name or '-' }}</td>
+                            <td class="highlight">{{ record.username or '-' }}</td>
+                            <td>
+                                <span class="risk-badge risk-{{ record.action }}">
+                                    {% if record.action == 'machine_code_mismatch' %}异地登录
+                                    {% elif record.action == 'freeze' %}自动冻结
+                                    {% elif record.action == 'manual_freeze' %}手动冻结
+                                    {% elif record.action == 'unfreeze' %}解冻
+                                    {% else %}{{ record.action }}{% endif %}
+                                </span>
+                            </td>
+                            <td class="mono">{{ record.original_machine_code[:12] if record.original_machine_code else '-' }}...</td>
+                            <td class="mono">{{ record.new_machine_code[:12] if record.new_machine_code else '-' }}...</td>
+                            <td>{{ record.reason or '-' }}</td>
+                            <td>{{ record.created_at[:16] if record.created_at else '-' }}</td>
+                            <td>
+                                {% if record.action in ['freeze', 'manual_freeze'] and record.user_id %}
+                                <button class="btn btn-sm btn-success btn-unfreeze" data-id="{{ record.user_id }}">解冻</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">暂无风控记录</div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.btn-unfreeze').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const userId = this.dataset.id;
+        if (!confirm('确认解冻该用户？')) return;
+        
+        const res = await fetch('/register/admin/api/unfreeze-user', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: userId})
+        });
+        const data = await res.json();
+        alert(data.message);
+        if (data.status === 'success') location.reload();
+    });
+});
+</script>
+{% endblock %}

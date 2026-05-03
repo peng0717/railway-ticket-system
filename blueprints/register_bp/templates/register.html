@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}工号注册 - 铁路客票系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <div class="logo-section">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" width="40" height="40">
+                    <path fill="#c9a84c" d="M12 2L4 6v12l8 4 8-4V6l-8-4zm0 2.18l6 3v7.64l-6 3-6-3V7.18l6-3z"/>
+                    <path fill="#c9a84c" d="M12 8v8M8 12h8"/>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <h1>铁路客票系统</h1>
+                <p>人工窗口工号注册</p>
+            </div>
+        </div>
+        <div class="header-line"></div>
+    </div>
+
+    <div class="register-card">
+        <div class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">实名认证</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">邮箱验证</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">选择车站</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">注册工号</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-label">窗口号</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="6">
+                <div class="step-number">6</div>
+                <div class="step-label">设置密码</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="7">
+                <div class="step-number">7</div>
+                <div class="step-label">提交</div>
+            </div>
+        </div>
+
+        <!-- 步骤1: 实名认证 -->
+        <div class="step-content" id="step-1">
+            <h2 class="step-title">实名认证</h2>
+            <p class="step-desc">请输入您的真实身份信息</p>
+            
+            <div class="form-group">
+                <label for="real_name">真实姓名</label>
+                <input type="text" id="real_name" class="form-input" placeholder="请输入真实姓名（2-20个汉字）" maxlength="20">
+                <span class="input-hint" id="name_hint"></span>
+            </div>
+            
+            <div class="form-group">
+                <label for="id_card">身份证号</label>
+                <input type="text" id="id_card" class="form-input" placeholder="请输入18位身份证号" maxlength="18">
+                <span class="input-hint" id="id_card_hint"></span>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" id="btn-step-1" disabled>下一步</button>
+            </div>
+        </div>
+
+        <!-- 步骤2: 邮箱验证 -->
+        <div class="step-content hidden" id="step-2">
+            <h2 class="step-title">邮箱验证</h2>
+            <p class="step-desc">验证您的邮箱地址，用于接收重要通知</p>
+            
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input type="email" id="email" class="form-input" placeholder="请输入邮箱地址">
+                <span class="input-hint" id="email_hint"></span>
+            </div>
+            
+            <div class="form-group" id="verify_code_group" style="display:none;">
+                <label for="verify_code">验证码</label>
+                <div class="code-input-group">
+                    <input type="text" id="verify_code" class="form-input" placeholder="请输入6位验证码" maxlength="6">
+                    <button type="button" class="btn btn-outline" id="btn-verify">验证</button>
+                </div>
+                <span class="input-hint" id="code_hint"></span>
+            </div>
+            
+            <div class="form-group">
+                <button type="button" class="btn btn-secondary" id="btn-send-code">发送验证码</button>
+            </div>
+            
+            <div class="dev-code-display hidden" id="dev_code_display">
+                <div class="dev-code-box">
+                    <span class="dev-code-label">开发模式验证码:</span>
+                    <span class="dev-code-value" id="dev_code_value"></span>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btn-back-2">上一步</button>
+                <button type="button" class="btn btn-primary" id="btn-step-2" disabled>下一步</button>
+            </div>
+        </div>
+
+        <!-- 步骤3: 选择车站 -->
+        <div class="step-content hidden" id="step-3">
+            <h2 class="step-title">选择车站</h2>
+            <p class="step-desc">选择您的工作车站</p>
+            
+            <div class="form-group">
+                <label for="station_search">搜索车站</label>
+                <input type="text" id="station_search" class="form-input" placeholder="输入站名或拼音码搜索">
+            </div>
+            
+            <div class="station-list" id="station_list">
+                <div class="station-placeholder">请输入关键词搜索车站</div>
+            </div>
+            
+            <div class="selected-station hidden" id="selected_station">
+                <div class="station-info">
+                    <span class="station-name" id="selected_station_name"></span>
+                    <span class="station-code" id="selected_station_code"></span>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btn-back-3">上一步</button>
+                <button type="button" class="btn btn-primary" id="btn-step-3" disabled>下一步</button>
+            </div>
+        </div>
+
+        <!-- 步骤4: 注册工号 -->
+        <div class="step-content hidden" id="step-4">
+            <h2 class="step-title">注册工号</h2>
+            <p class="step-desc">工号格式: 车站电报码 + 自定义字母 + 序号</p>
+            
+            <div class="username-preview">
+                <div class="preview-label">工号预览</div>
+                <div class="preview-value" id="username_preview">XXX-XX-000</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="username_suffix">自定义字母（2-3位大写）</label>
+                <input type="text" id="username_suffix" class="form-input" placeholder="例如: ZW、ABC" maxlength="3">
+                <span class="input-hint">使用您的姓名缩写或岗位缩写</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="username_seq">序号（3位）</label>
+                <input type="number" id="username_seq" class="form-input" placeholder="001-999" min="1" max="999">
+                <span class="input-hint">系统将自动检测可用序号</span>
+            </div>
+            
+            <div class="form-group">
+                <button type="button" class="btn btn-secondary" id="btn-check-username">检查工号可用性</button>
+            </div>
+            
+            <span class="input-hint" id="username_hint"></span>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btn-back-4">上一步</button>
+                <button type="button" class="btn btn-primary" id="btn-step-4" disabled>下一步</button>
+            </div>
+        </div>
+
+        <!-- 步骤5: 选择窗口号 -->
+        <div class="step-content hidden" id="step-5">
+            <h2 class="step-title">选择售票窗口</h2>
+            <p class="step-desc">选择您的工作窗口号</p>
+            
+            <div class="form-group">
+                <label for="window_no">窗口号</label>
+                <select id="window_no" class="form-input">
+                    <option value="">请选择窗口号</option>
+                    {% for i in range(1, 21) %}
+                    <option value="{{ i }}">{{ i }}号窗口</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="selected-window hidden" id="selected_window">
+                <div class="window-info">
+                    <span id="window_station"></span>
+                    <span id="window_no_display"></span>
+                </div>
+            </div>
+            
+            <span class="input-hint" id="window_hint"></span>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btn-back-5">上一步</button>
+                <button type="button" class="btn btn-primary" id="btn-step-5" disabled>下一步</button>
+            </div>
+        </div>
+
+        <!-- 步骤6: 设置密码 -->
+        <div class="step-content hidden" id="step-6">
+            <h2 class="step-title">设置密码</h2>
+            <p class="step-desc">设置您的登录密码（8-20位，包含字母和数字）</p>
+            
+            <div class="form-group">
+                <label for="password">登录密码</label>
+                <input type="password" id="password" class="form-input" placeholder="请设置登录密码" maxlength="20">
+                <div class="password-strength" id="password_strength">
+                    <div class="strength-bar"></div>
+                </div>
+                <span class="input-hint" id="password_hint"></span>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">确认密码</label>
+                <input type="password" id="confirm_password" class="form-input" placeholder="请再次输入密码" maxlength="20">
+                <span class="input-hint" id="confirm_hint"></span>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btn-back-6">上一步</button>
+                <button type="button" class="btn btn-primary" id="btn-step-6" disabled>下一步</button>
+            </div>
+        </div>
+
+        <!-- 步骤7: 提交注册 -->
+        <div class="step-content hidden" id="step-7">
+            <h2 class="step-title">提交注册</h2>
+            <p class="step-desc">确认您的注册信息</p>
+            
+            <div class="summary-card">
+                <div class="summary-item">
+                    <span class="summary-label">真实姓名</span>
+                    <span class="summary-value" id="summary_name"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">身份证号</span>
+                    <span class="summary-value" id="summary_id_card"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">邮箱</span>
+                    <span class="summary-value" id="summary_email"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">工作车站</span>
+                    <span class="summary-value" id="summary_station"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">工号</span>
+                    <span class="summary-value summary-highlight" id="summary_username"></span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">窗口号</span>
+                    <span class="summary-value" id="summary_window"></span>
+                </div>
+            </div>
+            
+            <div class="notice-box">
+                <p>请确保以上信息准确无误。提交后将等待管理员审核，审核结果将通过邮件通知您。</p>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="btn-back-7">上一步</button>
+                <button type="button" class="btn btn-primary" id="btn-submit">提交注册</button>
+            </div>
+        </div>
+
+        <!-- 注册成功 -->
+        <div class="step-content hidden" id="step-success">
+            <div class="success-box">
+                <div class="success-icon">
+                    <svg viewBox="0 0 24 24" width="80" height="80">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="#28a745" stroke-width="2"/>
+                        <path d="M8 12l3 3 5-6" fill="none" stroke="#28a745" stroke-width="2"/>
+                    </svg>
+                </div>
+                <h2 class="success-title">注册申请已提交</h2>
+                <p class="success-message">您的工号注册申请已提交，请等待管理员审核。</p>
+                <div class="success-info">
+                    <p>工号: <strong id="success_username"></strong></p>
+                    <p>审核结果将通过邮件通知您</p>
+                </div>
+                <button type="button" class="btn btn-outline" onclick="location.href='/'">返回登录页</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>如有疑问请联系系统管理员</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('register_bp.static', filename='js/fingerprint.js') }}"></script>
+<script src="{{ url_for('register_bp.static', filename='js/register.js') }}"></script>
+{% endblock %}

@@ -2,27 +2,16 @@
 """
 WebTRS 配置文件
 模拟铁路车站人工售票系统
+使用SQLite数据库
 """
 
 import os
-from dotenv import load_dotenv
-
-# 加载环境变量
-load_dotenv()
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 数据库配置 - 使用PostgreSQL (Supabase)
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    SQLALCHEMY_DATABASE_URI = DATABASE_URL
-else:
-    # 如果没有配置DATABASE_URL，使用SQLite作为后备
-    DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'railway.db')
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
-
-SQLALCHEMY_TRACK_MODIFICATIONS = False
+# 数据库配置 - SQLite
+DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'railway.db')
 
 # Session配置
 SECRET_KEY = os.getenv('SECRET_KEY', 'webtrs-secret-key-2025-railway-ticketing-system')
@@ -39,7 +28,7 @@ DEFAULT_WINDOW_NO = '101号口'
 
 # 系统名称
 SYSTEM_NAME = '铁路客票发售和预订系统'
-SYSTEM_VERSION = 'WebTRS v1.0'
+SYSTEM_VERSION = 'WebTRS v2.0'
 SYSTEM_COPYRIGHT = '铁路客票发售和预订系统总体组'
 
 # 拼音码最小匹配长度
@@ -90,3 +79,7 @@ SHIFT_TYPES = {
     'day': {'name': '白班', 'start': '00:00', 'end': '12:00'},
     'night': {'name': '夜班', 'start': '12:00', 'end': '24:00'},
 }
+
+# 管理员配置
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'admin123'

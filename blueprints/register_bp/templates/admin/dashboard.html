@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}管理首页 - 铁路客票系统{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" width="32" height="32">
+                    <path fill="#c9a84c" d="M12 2L4 6v12l8 4 8-4V6l-8-4zm0 2.18l6 3v7.64l-6 3-6-3V7.18l6-3z"/>
+                    <path fill="#c9a84c" d="M12 8v8M8 12h8"/>
+                </svg>
+            </div>
+            <span>管理端</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('register_bp.admin_dashboard') }}" class="nav-item active">
+                <span class="nav-icon">&#9783;</span>
+                <span>首页概览</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_applications') }}" class="nav-item">
+                <span class="nav-icon">&#9776;</span>
+                <span>审核管理</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_risk') }}" class="nav-item">
+                <span class="nav-icon">&#9888;</span>
+                <span>风控管理</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_users') }}" class="nav-item">
+                <span class="nav-icon">&#9823;</span>
+                <span>用户管理</span>
+            </a>
+            <a href="{{ url_for('register_bp.admin_logout') }}" class="nav-item nav-logout">
+                <span class="nav-icon">&#9167;</span>
+                <span>退出登录</span>
+            </a>
+        </nav>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1>首页概览</h1>
+            <div class="header-info">
+                <span>管理员: {{ session.get('admin_username', 'admin') }}</span>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card stat-pending">
+                <div class="stat-icon">&#9203;</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.get('pending', 0) }}</div>
+                    <div class="stat-label">待审核</div>
+                </div>
+            </div>
+            
+            <div class="stat-card stat-approved">
+                <div class="stat-icon">&#10003;</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.get('approved', 0) }}</div>
+                    <div class="stat-label">已通过</div>
+                </div>
+            </div>
+            
+            <div class="stat-card stat-rejected">
+                <div class="stat-icon">&#10007;</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.get('rejected', 0) }}</div>
+                    <div class="stat-label">已拒绝</div>
+                </div>
+            </div>
+            
+            <div class="stat-card stat-frozen">
+                <div class="stat-icon">&#128274;</div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.get('frozen', 0) }}</div>
+                    <div class="stat-label">已冻结</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">
+                <h2>最近注册申请</h2>
+                <a href="{{ url_for('register_bp.admin_applications') }}" class="btn btn-sm">查看全部</a>
+            </div>
+            <div class="panel-body">
+                {% if recent %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>工号</th>
+                            <th>车站</th>
+                            <th>窗口</th>
+                            <th>状态</th>
+                            <th>申请时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in recent %}
+                        <tr>
+                            <td>{{ app.real_name }}</td>
+                            <td>{{ app.username }}</td>
+                            <td>{{ app.station_code }}</td>
+                            <td>{{ app.window_no }}号</td>
+                            <td>
+                                <span class="status-badge status-{{ app.status }}">
+                                    {% if app.status == 'pending' %}待审核{% elif app.status == 'approved' %}已通过{% else %}已拒绝{% endif %}
+                                </span>
+                            </td>
+                            <td>{{ app.created_at[:16] if app.created_at else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">暂无注册申请</div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

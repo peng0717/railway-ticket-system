@@ -1,47 +1,38 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Virtual environments
-venv/
+*.so
+.Python
 env/
+venv/
+.venv/
+
+# 环境变量
 .env
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 
-# Database
+# 数据库
 *.db
 *.sqlite
 *.sqlite3
 
-# Log files
+# 日志
 *.log
 
-# OS
+# 缓存
+.cache/
+*.cache
+
+# 操作系统
 .DS_Store
 Thumbs.db
 
-# Temp files
-*.tmp
-*.bak
-*.cache
-
-# Data directory (SQLite backup)
-data/
-
-# Local config
-config.local.py
-
-# Distribution
-dist/
-build/
-*.egg-info/
-
-# Static files that can be generated
-static/css/*.css
-# fingerprint.js is tracked and committed
+# Git
+.git/
+.gitignore
