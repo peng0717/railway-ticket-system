@@ -501,12 +501,42 @@ def api_search_stations():
 
 @app.route('/api/trains/search')
 def api_search_trains():
-    """搜索车次API"""
-    date = request.args.get('date', '')
-    from_station = request.args.get('from', '')
-    to_station = request.args.get('to', '')
+    """搜索车次API
+    
+    参数:
+        - train: 车次号(支持模糊搜索，如G1匹配G1/G10/G100等)
+        - from: 出发站代码
+        - to: 到达站代码
+    """
+    train_code = request.args.get('train', '').strip().upper()
+    from_station = request.args.get('from', '').strip()
+    to_station = request.args.get('to', '').strip()
     
     query = Train.query.filter(Train.status == 'active')
+    
+    # 车次号模糊搜索
+    if train_code:
+        # 匹配规则: 输入G1，匹配G1、G10、G100等
+        # 提取前缀和数字部分
+        import re
+        match = re.match(r'^([A-Z]+)(\d+)$', train_code)
+        if match:
+            prefix = match.group(1)
+            number = match.group(2)
+            # 匹配相同前缀且数字以此开头或完全匹配的车次
+            # 例如: G1 匹配 G1, G10, G100, G101 等
+            query = query.filter(
+                db.and_(
+                    Train.train_number.op('REGEXP')(r'^' + prefix + number),
+                    db.or_(
+                        Train.train_number == train_code,
+                        Train.train_number.like(prefix + number + '%')
+                    )
+                )
+            )
+        else:
+            # 纯字母或纯数字
+            query = query.filter(Train.train_number.like(train_code + '%'))
     
     if from_station and to_station:
         # 按发到站查询
@@ -532,18 +562,21 @@ def api_search_trains():
                         'train_id': train.train_id,
                         'train_number': train.train_number,
                         'train_type': train.train_type,
+                        'start_station': train.start_station,
+                        'end_station': train.end_station,
                         'from_station': from_station,
                         'to_station': to_station,
                         'departure_time': from_stop.departure_time,
                         'arrival_time': stops.arrival_time,
-                        'duration': calculate_duration(from_stop.departure_time, stops.arrival_time)
+                        'duration': calculate_duration(from_stop.departure_time, stops.arrival_time),
+                        'distance': stops.distance_from_start - from_stop.distance_from_start if stops.distance_from_start and from_stop.distance_from_start else 0
                     })
     else:
-        trains = query.all()
+        trains = query.limit(100).all()  # 限制返回数量
         result = [{'train_id': t.train_id, 'train_number': t.train_number, 
                    'train_type': t.train_type, 'start_station': t.start_station,
                    'end_station': t.end_station, 'start_time': t.start_time,
-                   'end_time': t.end_time} for t in trains]
+                   'end_time': t.end_time, 'total_distance': t.total_distance} for t in trains]
     
     return jsonify(result)
 
