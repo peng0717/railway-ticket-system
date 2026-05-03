@@ -5,17 +5,27 @@ WebTRS 配置文件
 """
 
 import os
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 数据库配置
-DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'railway.db')
-SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
+# 数据库配置 - 使用PostgreSQL (Supabase)
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+else:
+    # 如果没有配置DATABASE_URL，使用SQLite作为后备
+    DATABASE_PATH = os.path.join(BASE_DIR, 'data', 'railway.db')
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
+
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # Session配置
-SECRET_KEY = 'webtrs-secret-key-2025-railway-ticketing-system'
+SECRET_KEY = os.getenv('SECRET_KEY', 'webtrs-secret-key-2025-railway-ticketing-system')
 SESSION_TYPE = 'filesystem'
 SESSION_PERMANENT = False
 PERMANENT_SESSION_LIFETIME = 3600 * 8  # 8小时班次时间

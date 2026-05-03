@@ -1,25 +1,47 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
+*.py[cod]
+*$py.class
 
-# Database (can be regenerated)
-data/*.db
-
-# Ticket generator dependencies (too large, clone separately)
-ticket-generator-src/node_modules/
+# Virtual environments
+venv/
+env/
+.env
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Design doc (too large for GitHub, keep locally)
-项目设计方案.md
-ticket-generator-src/
+# Temp files
+*.tmp
+*.bak
+*.cache
+
+# Data directory (SQLite backup)
+data/
+
+# Local config
+config.local.py
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Static files that can be generated
+static/css/*.css
+# fingerprint.js is tracked and committed

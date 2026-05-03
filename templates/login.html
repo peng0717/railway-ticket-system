@@ -105,6 +105,12 @@
             transform: translateY(0);
         }
         
+        .btn-login:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .btn-reset {
             width: 100%;
             height: 40px;
@@ -152,6 +158,12 @@
             color: #dc3545;
         }
         
+        .alert-info {
+            background: #f0f7ff;
+            border: 1px solid #b8daff;
+            color: #0c5460;
+        }
+        
         .ticket-info {
             background: #f8f8f8;
             border: 1px solid #e0e0e0;
@@ -186,6 +198,38 @@
             padding: 2px 6px;
             font-size: 11px;
         }
+        
+        /* Loading spinner */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #1a4a7a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -204,6 +248,8 @@
                 {% endif %}
                 
                 <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+                    <input type="hidden" id="machine_code" name="machine_code" value="">
+                    
                     <div class="form-group">
                         <label for="employee_no">工号</label>
                         <input type="text" class="form-control" id="employee_no" name="employee_no" 
@@ -223,8 +269,8 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn-login">
-                        <i class="fas fa-sign-in-alt"></i> 登 录
+                    <button type="submit" class="btn-login" id="loginBtn">
+                        <span id="loginText">登 录</span>
                     </button>
                     
                     <button type="button" class="btn-reset" onclick="resetForm()">
@@ -244,16 +290,78 @@
         </div>
     </div>
     
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Fingerprint.js -->
+    <script src="{{ url_for('static', filename='js/fingerprint.js') }}"></script>
+    
     <script>
+        let machineCode = '';
+        
+        // 采集机器码
+        async function collectMachineCode() {
+            try {
+                if (window.Fingerprint && window.Fingerprint.collect) {
+                    machineCode = await window.Fingerprint.collect();
+                    document.getElementById('machine_code').value = machineCode;
+                }
+            } catch (e) {
+                console.error('机器码采集失败:', e);
+                // 生成备用机器码
+                machineCode = navigator.userAgent + screen.width + screen.height + new Date().getTimezoneOffset();
+                document.getElementById('machine_code').value = machineCode;
+            }
+        }
+        
+        // 页面加载时采集机器码
+        window.addEventListener('DOMContentLoaded', function() {
+            collectMachineCode();
+        });
+        
         function resetForm() {
             document.getElementById('employee_no').value = '';
             document.getElementById('password').value = '';
             document.getElementById('employee_no').focus();
+            // 清空后重新采集机器码
+            setTimeout(collectMachineCode, 100);
         }
         
         document.getElementById('loginForm').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 // Enter key handled by form submit
+            }
+        });
+        
+        // 表单提交前确保机器码已采集
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            const btn = document.getElementById('loginBtn');
+            const loginText = document.getElementById('loginText');
+            
+            // 如果机器码为空，等待采集
+            if (!machineCode) {
+                e.preventDefault();
+                btn.disabled = true;
+                loginText.textContent = '采集中...';
+                
+                await collectMachineCode();
+                
+                btn.disabled = false;
+                loginText.textContent = '登 录';
+            }
+            
+            // 显示loading
+            document.getElementById('loadingOverlay').classList.add('active');
+            btn.disabled = true;
+            loginText.textContent = '登录中...';
+        });
+        
+        // 页面可见性变化时重新采集机器码（防止缓存）
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                collectMachineCode();
             }
         });
     </script>
