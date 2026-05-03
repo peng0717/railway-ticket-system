@@ -561,7 +561,7 @@ def login():
                         
                         session['user_id'] = user['user_id']
                         session['employee_no'] = user['employee_no']
-                        session['user_name'] = user.get('name') or user.get('name') or ''
+                        session['user_name'] = user.get('name', '') or ''
                         session['window_no'] = user.get('window_no') or config.DEFAULT_WINDOW_NO
                         session['station_code'] = user.get('station_code') or 'ZZO'
                         session['station_name'] = user.get('station_name', '郑州站')
@@ -670,20 +670,20 @@ def admin_dashboard():
         
         # 统计用户
         cursor.execute("SELECT COUNT(*) as cnt FROM users")
-        stats['total_users'] = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        stats['total_users'] = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE status = 'active'")
-        stats['active_users'] = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        stats['active_users'] = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         # 统计待审核注册
         cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'pending'")
-        stats['pending_registrations'] = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        stats['pending_registrations'] = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         # 统计待审批退票
         cursor.execute("""
             SELECT COUNT(*) as cnt FROM pending_refunds WHERE status = 'pending'
         """)
-        stats['pending_refunds'] = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        stats['pending_refunds'] = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         # 获取活跃售票员
         cursor.execute("""
@@ -713,7 +713,7 @@ def admin_dashboard():
                             WHERE shift_id = ? AND status = 'sold'
                             AND created_at >= ?
                         """, (shift['shift_id'], (datetime.now() - timedelta(minutes=5)).isoformat()))
-                        recent_count = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+                        recent_count = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
                         if recent_count >= config.TICKET_ANOMALY_THRESHOLD:
                             anomaly = True
                 except:
@@ -750,7 +750,7 @@ def admin_dashboard():
         cursor.execute("""
             SELECT COUNT(*) as cnt, SUM(refund_amount) as amount
             FROM refunds
-            WHERE DATE(refund_time) = ?
+            WHERE DATE(created_at) = ?
         """, (today,))
         refund_row = cursor.fetchone()
         today_stats['total_refunds'] = refund_row['cnt'] if refund_row else 0
@@ -821,7 +821,7 @@ def admin_refund_approvals():
     if conn2:
         cursor = conn2.cursor()
         cursor.execute("SELECT COUNT(*) as cnt FROM pending_refunds WHERE status = 'pending'")
-        pending_count = cursor.fetchone()[0] if cursor.fetchone() else 0
+        pending_count = (lambda r: r[0] if r else 0)(cursor.fetchone())
         cursor.close()
         conn2.close()
     
@@ -872,7 +872,7 @@ def admin_logs():
         # 统计总数
         count_query = query.replace('SELECT *', 'SELECT COUNT(*) as cnt')
         cursor.execute(count_query, params)
-        total_logs = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        total_logs = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         # 分页查询
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -957,7 +957,7 @@ def admin_daily_reports():
         count_query = query.replace('SELECT s.*, u.employee_no, u.name as user_name, u.window_no', 
                                      'SELECT COUNT(*) as cnt')
         cursor.execute(count_query, params)
-        total_reports = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        total_reports = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         # 汇总统计
         cursor.execute(f"""
@@ -1170,7 +1170,7 @@ def admin_users():
         
         if search:
             query += " AND (employee_no LIKE ? OR name LIKE ?)"
-            params.extend([f'%{search}%', f'%{search}%', f'%{search}%'])
+            params.extend([f'%{search}%', f'%{search}%'])
         
         if role:
             query += " AND role = ?"
@@ -1183,7 +1183,7 @@ def admin_users():
         # 统计总数
         count_query = query.replace('SELECT *', 'SELECT COUNT(*) as cnt')
         cursor.execute(count_query, params)
-        total_users = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        total_users = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         # 分页查询
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -1194,7 +1194,7 @@ def admin_users():
         
         # 获取待审核数量
         cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'pending'")
-        pending_count = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
+        pending_count = (lambda r: r['cnt'] if r else 0)(cursor.fetchone())
         
         cursor.close()
         conn.close()

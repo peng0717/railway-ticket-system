@@ -1,39 +1,20 @@
 # -*- coding: utf-8 -*-
-"""修复数据库 - 重新生成密码hash"""
+"""修复数据库 - 使用werkzeug重新生成密码hash"""
 import sqlite3
-import hashlib
 import os
 import sys
 
+# 确保能导入项目依赖
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-def generate_password_hash(password):
-    """生成 werkzeug 兼容的密码 hash"""
-    # 使用 PBKDF2 + SHA256
-    salt = os.urandom(32)
-    key = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
-    return f"pbkdf2:sha256:100000${salt.hex()}${key.hex()}"
-
-def check_password_hash(password_hash, password):
-    """验证密码 hash"""
-    try:
-        if password_hash.startswith('pbkdf2:sha256:'):
-            parts = password_hash.split('$')
-            salt = bytes.fromhex(parts[1])
-            stored_key = parts[2]
-            key = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
-            return key.hex() == stored_key
-        elif password_hash.startswith('scrypt:'):
-            # scrypt格式
-            parts = password_hash.split('$')
-            return password_hash == generate_password_hash(password)
-        else:
-            # 可能是旧的简单hash
-            return hashlib.sha256(password.encode()).hexdigest() == password_hash
-    except:
-        return False
+from werkzeug.security import generate_password_hash, check_password_hash
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'railway.db')
+
+if not os.path.exists(DB_PATH):
+    print(f'数据库不存在: {DB_PATH}')
+    sys.exit(1)
+
 conn = sqlite3.connect(DB_PATH)
 c = conn.cursor()
 
@@ -44,8 +25,11 @@ users = [
 ]
 
 for emp_no, pwd in users:
+    # 使用werkzeug生成hash
     new_hash = generate_password_hash(pwd)
     c.execute('UPDATE users SET password_hash = ? WHERE employee_no = ?', (new_hash, emp_no))
+    
+    # 验证
     c.execute('SELECT password_hash FROM users WHERE employee_no = ?', (emp_no,))
     row = c.fetchone()
     if row and check_password_hash(row[0], pwd):
@@ -53,9 +37,27 @@ for emp_no, pwd in users:
     else:
         print(f'FAIL: {emp_no} 密码验证失败')
 
-# 确保admin状态正确
-c.execute("UPDATE users SET status = 'active' WHERE employee_no = 'admin'")
+# 确保admin状态正确，机器码清空
+c.execute("UPDATE users SET status = 'active' WHERE employee_no IN ('admin', 'seller001', 'seller002')")
 c.execute("UPDATE users SET machine_code = NULL WHERE employee_no IN ('admin', 'seller001', 'seller002')")
 conn.commit()
 conn.close()
-print('数据库修复完成')
+print('\n数据库修复完成！')
+
+# 修复operation_logs表缺失的列
+print('\n检查表结构...')
+c = conn.cursor()
+
+# 检查operation_logs是否有shift_id列
+c.execute("PRAGMA table_info(operation_logs)")
+cols = [row[1] for row in c.fetchall()]
+if 'shift_id' not in cols:
+    c.execute("ALTER TABLE operation_logs ADD COLUMN shift_id INTEGER")
+    print('OK: operation_logs 添加 shift_id 列')
+if 'ticket_id' not in cols:
+    c.execute("ALTER TABLE operation_logs ADD COLUMN ticket_id INTEGER")
+    print('OK: operation_logs 添加 ticket_id 列')
+
+conn.commit()
+conn.close()
+print('表结构修复完成！')

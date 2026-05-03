@@ -178,11 +178,13 @@ def init_database():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS operation_logs (
             log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shift_id INTEGER,
             employee_no TEXT NOT NULL,
             operation_type TEXT NOT NULL,
+            ticket_id INTEGER,
             details TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             ip_address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             user_id INTEGER,
             operation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
