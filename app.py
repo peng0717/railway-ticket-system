@@ -598,6 +598,9 @@ def login():
             else:
                 error = '工号或密码错误'
     
+    # 使用flash传递错误信息，避免表单重新提交问题
+    if error:
+        flash(error, 'error')
     return render_template('login.html', error=error, captcha_image=captcha_image, 
                            system_name=config.SYSTEM_NAME)
 
