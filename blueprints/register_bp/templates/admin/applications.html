@@ -82,12 +82,12 @@
                         {% for app in applications %}
                         <tr data-id="{{ app.id }}">
                             <td>{{ app.real_name }}</td>
-                            <td>{{ app.id_card[:6] }}****{{ app.id_card[-4:] }}</td>
+                            <td>{{ app.id_card }}</td>
                             <td>{{ app.email }}</td>
                             <td>{{ app.station_code }}</td>
                             <td class="highlight">{{ app.username }}</td>
                             <td>{{ app.window_no }}号</td>
-                            <td class="mono">{{ app.machine_code[:8] }}...</td>
+                            <td class="mono" title="{{ app.machine_code }}">{{ app.machine_code }}</td>
                             <td>
                                 <span class="status-badge status-{{ app.status }}">
                                     {% if app.status == 'pending' %}待审核{% elif app.status == 'approved' %}已通过{% else %}已拒绝{% endif %}

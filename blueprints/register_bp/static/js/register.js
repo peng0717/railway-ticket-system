@@ -359,75 +359,75 @@ function updateUsernamePreview() {
     }
 }
 
-// 步骤4: 注册工号
+// 步骤4: 注册工号 - 新结构化工号格式
 function initStep4() {
-    const usernameInput = document.getElementById('username');
-    const usernameHint = document.getElementById('username_hint');
+    const customLettersInput = document.getElementById('custom_letters');
+    const lettersHint = document.getElementById('letters_hint');
     const previewText = document.getElementById('preview_text');
+    const stationCodeDisplay = document.getElementById('station_code_display');
     const checkBtn = document.getElementById('btn-check-username');
+    const usernameHint = document.getElementById('username_hint');
     const nextBtn = document.getElementById('btn-step-4');
     let usernameAvailable = false;
     
-    // 实时预览
-    usernameInput.addEventListener('input', function() {
-        const val = this.value.trim();
-        previewText.textContent = val || '请输入工号';
+    // 自动填入电报码
+    if (registrationData.station_code) {
+        stationCodeDisplay.value = registrationData.station_code;
+        updatePreview();
+    }
+    
+    function updatePreview() {
+        const stationCode = registrationData.station_code || '---';
+        const letters = customLettersInput.value.trim().toUpperCase() || '??';
+        previewText.textContent = `${stationCode}-${letters}-****`;
+    }
+    
+    customLettersInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
         usernameAvailable = false;
         nextBtn.disabled = true;
+        updatePreview();
         
-        // 实时格式校验
-        if (val && !/^[a-zA-Z]/.test(val)) {
-            usernameHint.textContent = '工号必须以字母开头';
-            usernameHint.className = 'input-hint error';
-        } else if (val && !/^[a-zA-Z][a-zA-Z0-9_-]{3,19}$/.test(val)) {
-            usernameHint.textContent = '4-20位，字母开头，可含字母、数字、下划线、短横线';
-            usernameHint.className = 'input-hint error';
-        } else if (val) {
-            usernameHint.textContent = '格式正确，请检查可用性';
-            usernameHint.className = 'input-hint success';
+        if (this.value.length < 2) {
+            lettersHint.textContent = '请输入2-3位大写字母';
+            lettersHint.className = 'input-hint error';
         } else {
-            usernameHint.textContent = '字母开头，可包含字母、数字、下划线、短横线';
-            usernameHint.className = 'input-hint';
+            lettersHint.textContent = '格式正确';
+            lettersHint.className = 'input-hint success';
         }
     });
     
-    // 检查可用性
     checkBtn.addEventListener('click', async function() {
-        const val = usernameInput.value.trim();
-        if (!val || !/^[a-zA-Z][a-zA-Z0-9_-]{3,19}$/.test(val)) {
-            showNotification('请输入有效的工号格式', 'error');
-            return;
-        }
-        
-        // 检查保留词
-        const reserved = ['admin', 'root', 'system', 'test', 'administrator'];
-        if (reserved.includes(val.toLowerCase())) {
-            usernameHint.textContent = '该工号为系统保留词，不可使用';
-            usernameHint.className = 'input-hint error';
-            showNotification('该工号为系统保留词', 'error');
+        const letters = customLettersInput.value.trim().toUpperCase();
+        if (letters.length < 2 || letters.length > 3) {
+            showNotification('请输入2-3位大写字母缩写', 'error');
             return;
         }
         
         checkBtn.disabled = true;
-        checkBtn.textContent = '检查中...';
+        checkBtn.textContent = '生成中...';
         
-        const res = await fetch('/register/api/check-username', {
+        const res = await fetch('/register/api/generate-username', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: val})
+            body: JSON.stringify({
+                station_code: registrationData.station_code,
+                custom_letters: letters
+            })
         });
         const data = await res.json();
         
         checkBtn.disabled = false;
-        checkBtn.textContent = '检查可用性';
+        checkBtn.textContent = '生成工号并检查可用性';
         
         if (data.status === 'success') {
-            usernameHint.textContent = '工号可用';
+            registrationData.username = data.username;
+            previewText.textContent = data.username;
+            usernameHint.textContent = `工号可用: ${data.username}`;
             usernameHint.className = 'input-hint success';
             usernameAvailable = true;
             nextBtn.disabled = false;
-            registrationData.username = val;
-            showNotification('工号可用！', 'success');
+            showNotification(`工号生成成功: ${data.username}`, 'success');
         } else {
             usernameHint.textContent = data.message;
             usernameHint.className = 'input-hint error';

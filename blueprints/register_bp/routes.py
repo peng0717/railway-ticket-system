@@ -374,7 +374,7 @@ def check_username():
     
     # 验证格式
     if not validate_username(username):
-        return jsonify({'status': 'error', 'message': '工号格式不正确，应为4-20位，字母开头，可含字母、数字、下划线、短横线'})
+        return jsonify({'status': 'error', 'message': '工号格式不正确：新格式为XXX-YY-NNNN，旧格式为4-20位字母开头'})
     
     # 保留词检查（区分大小写存储，统一转小写比较）
     reserved = ['admin', 'root', 'system', 'test', 'administrator']
@@ -387,8 +387,8 @@ def check_username():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 检查已注册用户（不区分大小写）
-    cursor.execute("SELECT id FROM users WHERE LOWER(username) = ?", (username_lower,))
+    # 检查已注册用户（不区分大小写）- 同时检查username和employee_no字段
+    cursor.execute("SELECT id FROM users WHERE LOWER(username) = ? OR LOWER(employee_no) = ?", (username_lower, username_lower))
     if cursor.fetchone():
         cursor.close()
         conn.close()
@@ -405,6 +405,46 @@ def check_username():
     conn.close()
     
     return jsonify({'status': 'success', 'message': '工号可用'})
+
+
+@register_bp.route('/api/generate-username', methods=['POST'])
+def generate_username():
+    """生成结构化工号 XXX-YY-NNNN 或 XXX-YYY-NNNN"""
+    data = request.get_json()
+    station_code = data.get('station_code', '').strip().upper()
+    custom_letters = data.get('custom_letters', '').strip().upper()
+    
+    # 验证车站电报码
+    if not station_code or len(station_code) < 2:
+        return jsonify({'status': 'error', 'message': '车站电报码无效'})
+    
+    # 验证自定义缩写
+    if not custom_letters or len(custom_letters) < 2 or len(custom_letters) > 3:
+        return jsonify({'status': 'error', 'message': '自定义缩写需2-3位字母'})
+    if not re.match(r'^[A-Z]+$', custom_letters):
+        return jsonify({'status': 'error', 'message': '缩写只能包含大写字母'})
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 尝试生成不重复的随机4位数（最多10次）
+    for _ in range(10):
+        random_num = str(random.randint(1000, 9999))
+        username = f"{station_code}-{custom_letters}-{random_num}"
+        
+        # 检查是否已存在于users表
+        cursor.execute("SELECT id FROM users WHERE employee_no = ?", (username,))
+        if not cursor.fetchone():
+            # 检查是否存在于registration_applications表
+            cursor.execute("SELECT id FROM registration_applications WHERE username = ? AND status != 'rejected'", (username,))
+            if not cursor.fetchone():
+                cursor.close()
+                conn.close()
+                return jsonify({'status': 'success', 'username': username})
+    
+    cursor.close()
+    conn.close()
+    return jsonify({'status': 'error', 'message': '无法生成唯一工号，请更换缩写重试'})
 
 
 @register_bp.route('/api/check-window', methods=['POST'])
@@ -460,7 +500,7 @@ def submit_registration():
     # 验证工号格式
     username = data['username'].strip()
     if not validate_username(username):
-        return jsonify({'status': 'error', 'message': '工号格式不正确，应为4-20位，字母开头，可含字母、数字、下划线、短横线'})
+        return jsonify({'status': 'error', 'message': '工号格式不正确：新格式为XXX-YY-NNNN（如BJP-CZW-7283），旧格式为4-20位字母开头'})
     
     # 验证窗口号
     window_no = int(data['window_no'])
@@ -470,9 +510,11 @@ def submit_registration():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 检查重复 - 用户表
-    cursor.execute("SELECT id FROM users WHERE id_card = ? OR email = ? OR username = ?",
-                   (data['id_card'], data['email'].lower(), username))
+    # 检查重复 - 用户表（同时检查id_card, email, username, employee_no）
+    cursor.execute("""
+        SELECT id FROM users 
+        WHERE id_card = ? OR email = ? OR username = ? OR employee_no = ?
+    """, (data['id_card'], data['email'].lower(), username, username))
     if cursor.fetchone():
         cursor.close()
         conn.close()
@@ -683,15 +725,16 @@ def approve_application():
         return jsonify({'status': 'error', 'message': '申请不存在或已审核'})
     
     try:
-        # 创建用户
+        # 创建用户（同时设置username和employee_no字段，值相同）
         cursor.execute("""
             INSERT INTO users 
-            (username, password_hash, real_name, id_card, email, role, station_code, 
-             window_no, machine_code, status)
-            VALUES (?, ?, ?, ?, ?, 'seller', ?, ?, ?, 'active')
+            (username, employee_no, password_hash, real_name, id_card, email, role, station_code, 
+             window_no, machine_code, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'seller', ?, ?, ?, 'active', ?)
         """, (
-            app['username'], app['password_hash'], app['real_name'], app['id_card'],
-            app['email'], app['station_code'], app['window_no'], app['machine_code']
+            app['username'], app['username'], app['password_hash'], app['real_name'], app['id_card'],
+            app['email'], app['station_code'], app['window_no'], app['machine_code'],
+            datetime.now().isoformat()
         ))
         
         # 获取新创建用户的ID

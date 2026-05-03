@@ -156,20 +156,27 @@
         <!-- 步骤4: 注册工号 -->
         <div class="step-content hidden" id="step-4">
             <h2 class="step-title">注册工号</h2>
-            <p class="step-desc">请输入您的工号，4-20位，字母开头</p>
+            <p class="step-desc">工号格式: 车站电报码 + 自定义缩写 + 随机编号</p>
             
             <div class="preview-box" id="username_preview">
-                <span id="preview_text" style="color: #c9a84c; font-size: 24px; font-weight: bold;">请输入工号</span>
+                <span id="preview_text" style="color: #c9a84c; font-size: 24px; font-weight: bold; letter-spacing: 2px;">---</span>
             </div>
             
             <div class="form-group">
-                <label for="username">工号</label>
-                <input type="text" id="username" class="form-input" placeholder="请输入4-20位工号，字母开头" maxlength="20" autocomplete="off">
-                <span class="input-hint" id="username_hint">字母开头，可包含字母、数字、下划线、短横线</span>
+                <label>车站电报码</label>
+                <input type="text" id="station_code_display" class="form-input" value="" readonly style="background:#f5f5f5;color:#666;font-weight:bold;">
+                <span class="input-hint">已由上一步自动填入</span>
             </div>
             
             <div class="form-group">
-                <button type="button" class="btn btn-secondary" id="btn-check-username">检查可用性</button>
+                <label for="custom_letters">自定义缩写 (2-3位大写字母)</label>
+                <input type="text" id="custom_letters" class="form-input" placeholder="姓名或岗位缩写，如CZW" maxlength="3" autocomplete="off">
+                <span class="input-hint" id="letters_hint">使用您的姓名缩写或岗位缩写</span>
+            </div>
+            
+            <div class="form-group">
+                <button type="button" class="btn btn-secondary" id="btn-check-username">生成工号并检查可用性</button>
+                <span class="input-hint" id="username_hint"></span>
             </div>
             
             <div class="form-actions">

@@ -10,6 +10,7 @@ import os
 import json
 import random
 import sqlite3
+import time
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -22,6 +23,10 @@ import config
 # 创建Flask应用
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+
+# 配置会话有效期为30分钟（会话超时）
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 # 注册 Blueprint
 from blueprints.register_bp import register_bp
@@ -376,6 +381,54 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def generate_captcha():
+    """
+    生成简单数字验证码
+    返回: (code, image_base64)
+    code: 4位数字验证码
+    image_base64: base64编码的PNG图片数据URL
+    """
+    import base64
+    from io import BytesIO
+    
+    # 生成4位随机数字
+    code = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+    
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        width, height = 120, 40
+        img = Image.new('RGB', (width, height), (255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        
+        # 添加干扰线
+        for _ in range(3):
+            x1 = random.randint(0, width)
+            y1 = random.randint(0, height)
+            x2 = random.randint(0, width)
+            y2 = random.randint(0, height)
+            draw.line([(x1, y1), (x2, y2)], fill=(200, 200, 200))
+        
+        # 添加验证码文字
+        for i, char in enumerate(code):
+            x = 20 + i * 25
+            y = random.randint(5, 15)
+            draw.text((x, y), char, fill=(0, 82, 165))
+        
+        # 添加噪点
+        for _ in range(50):
+            x = random.randint(0, width-1)
+            y = random.randint(0, height-1)
+            draw.point((x, y), fill=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+        
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        return code, f'data:image/png;base64,{img_base64}'
+    except ImportError:
+        # 没有PIL就返回纯文本验证码
+        return code, None
+
 # ==================== 路由 ====================
 
 @app.route('/')
@@ -395,10 +448,45 @@ def login():
     
     error = None
     
+    # 生成图形验证码（每次访问登录页都生成新的）
+    captcha_code, captcha_image = generate_captcha()
+    session['captcha_code'] = captcha_code.lower()  # 存储时转为小写便于比较
+    
     if request.method == 'POST':
         employee_no = request.form.get('employee_no', '').strip()
-        password = request.form.get('password', '')
+        password = request.form.get('password', '').strip()
         machine_code = request.form.get('machine_code', '').strip()
+        captcha_input = request.form.get('captcha', '').strip().lower()
+        
+        # 验证图形验证码
+        stored_captcha = session.get('captcha_code', '')
+        if not captcha_input or captcha_input != stored_captcha:
+            error = '验证码错误，请重新输入'
+            captcha_code, captcha_image = generate_captcha()
+            session['captcha_code'] = captcha_code.lower()
+            return render_template('login.html', error=error, captcha_image=captcha_image, 
+                                   system_name=config.SYSTEM_NAME, employee_no=employee_no)
+        
+        # 清除已使用的验证码
+        session.pop('captcha_code', None)
+        
+        # 检查登录锁定状态
+        locked_key = f'login_locked_{employee_no}'
+        locked_time = session.get(locked_key)
+        if locked_time:
+            lock_elapsed = time.time() - locked_time
+            if lock_elapsed < 900:  # 15分钟锁定
+                remaining = int(900 - lock_elapsed)
+                error = f'账号已锁定，请{int(remaining//60)}分{remaining%60}秒后重试'
+                captcha_code, captcha_image = generate_captcha()
+                session['captcha_code'] = captcha_code.lower()
+                return render_template('login.html', error=error, captcha_image=captcha_image,
+                                       system_name=config.SYSTEM_NAME, employee_no=employee_no)
+            else:
+                # 锁定已过期，清除记录
+                session.pop(locked_key, None)
+                failed_key = f'login_failed_{employee_no}'
+                session.pop(failed_key, None)
         
         if not employee_no or not password:
             error = '请输入工号和密码'
@@ -435,24 +523,43 @@ def login():
                         
                         # 登录成功
                         session['user_id'] = user['id']
-                        session['employee_no'] = user['username']
+                        session['employee_no'] = user['username']  # 工号存储在username字段
                         session['user_name'] = user.get('real_name') or user.get('name', '')
                         session['window_no'] = user.get('window_no') or config.DEFAULT_WINDOW_NO
                         session['station_code'] = user.get('station_code') or 'ZZO'
-                        session['station_name'] = '郑州站'
+                        session['station_name'] = user.get('station_name', '郑州站')
+                        
+                        # 设置会话为永久会话（30分钟超时）
+                        session.permanent = True
                         
                         # 获取下一张票号
                         next_ticket = get_next_ticket_id()
                         session['next_ticket_id'] = next_ticket
                         
+                        # 清除登录失败记录
+                        failed_key = f'login_failed_{employee_no}'
+                        session.pop(failed_key, None)
+                        
                         log_operation('login')
                         return redirect(url_for('shift_select'))
                 else:
-                    error = '工号或密码错误'
+                    # 密码错误，记录失败次数
+                    failed_key = f'login_failed_{employee_no}'
+                    failed_count = session.get(failed_key, 0) + 1
+                    session[failed_key] = failed_count
+                    
+                    if failed_count >= 3:
+                        # 锁定15分钟
+                        session[locked_key] = time.time()
+                        session.pop(failed_key, None)
+                        error = '连续输错3次密码，账号锁定15分钟'
+                    else:
+                        error = f'工号或密码错误，还可尝试{3-failed_count}次'
             else:
                 error = '工号或密码错误'
     
-    return render_template('login.html', error=error, system_name=config.SYSTEM_NAME)
+    return render_template('login.html', error=error, captcha_image=captcha_image, 
+                           system_name=config.SYSTEM_NAME)
 
 @app.route('/logout')
 def logout():
@@ -504,6 +611,7 @@ def shift_select():
     
     return render_template('shift_select.html', 
                            default_shift=default_shift,
+                           shift_types=config.SHIFT_TYPES,
                            system_name=config.SYSTEM_NAME)
 
 @app.route('/main')
@@ -586,6 +694,94 @@ def api_stations():
     query = request.args.get('q', '').strip()
     stations = search_stations(query)
     return jsonify({'status': 'success', 'data': stations})
+
+@app.route('/api/captcha')
+def api_captcha():
+    """获取新的验证码图片"""
+    captcha_code, captcha_image = generate_captcha()
+    session['captcha_code'] = captcha_code.lower()
+    return jsonify({'code': captcha_code, 'image': captcha_image})
+
+@app.route('/daily_report')
+@login_required
+def daily_report():
+    """售票员每日对账单"""
+    if 'shift_id' not in session:
+        return redirect(url_for('shift_select'))
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return render_template('error.html', error='数据库连接失败', system_name=config.SYSTEM_NAME)
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 获取当前班次信息
+        cursor.execute("""
+            SELECT * FROM shifts WHERE shift_id = ?
+        """, (session['shift_id'],))
+        shift = cursor.fetchone()
+        
+        if not shift:
+            return render_template('error.html', error='班次不存在', system_name=config.SYSTEM_NAME)
+        
+        # 获取班次内的所有售票记录
+        cursor.execute("""
+            SELECT * FROM tickets 
+            WHERE shift_id = ? AND status = 'sold'
+            ORDER BY created_at DESC
+        """, (session['shift_id'],))
+        tickets = cursor.fetchall()
+        
+        # 获取班次内的所有退票记录
+        cursor.execute("""
+            SELECT * FROM tickets 
+            WHERE shift_id = ? AND status = 'refunded'
+            ORDER BY created_at DESC
+        """, (session['shift_id'],))
+        refunds = cursor.fetchall()
+        
+        # 计算统计
+        total_tickets = len(tickets)
+        total_refunds = len(refunds)
+        total_amount = sum(float(t.get('price', 0) or 0) for t in tickets)
+        refund_amount = sum(float(t.get('refund_fee', 0) or 0) for t in refunds)
+        cash_amount = sum(float(t.get('price', 0) or 0) for t in tickets if t.get('payment_method') == 'cash')
+        electronic_amount = total_amount - cash_amount
+        net_amount = total_amount - refund_amount
+        
+        # 按席别统计
+        seat_stats = {}
+        for t in tickets:
+            seat_type = t.get('seat_type', 'unknown')
+            if seat_type not in seat_stats:
+                seat_stats[seat_type] = {'count': 0, 'amount': 0}
+            seat_stats[seat_type]['count'] += 1
+            seat_stats[seat_type]['amount'] += float(t.get('price', 0) or 0)
+        
+        report_data = {
+            'shift': shift,
+            'total_tickets': total_tickets,
+            'total_refunds': total_refunds,
+            'total_amount': round(total_amount, 2),
+            'refund_amount': round(refund_amount, 2),
+            'cash_amount': round(cash_amount, 2),
+            'electronic_amount': round(electronic_amount, 2),
+            'net_amount': round(net_amount, 2),
+            'seat_stats': seat_stats,
+            'tickets': tickets[:20] if tickets else [],  # 只显示最近20条
+            'refunds': refunds[:10] if refunds else []
+        }
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('daily_report.html', report=report_data, system_name=config.SYSTEM_NAME)
+    except Exception as e:
+        print(f"生成对账单失败: {e}")
+        if conn:
+            conn.close()
+        return render_template('error.html', error=f'生成对账单失败: {str(e)}', system_name=config.SYSTEM_NAME)
 
 @app.route('/api/search-trains')
 @login_required

@@ -133,6 +133,34 @@
             text-align: center;
             margin-top: 10px;
         }
+        
+        .captcha-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .captcha-input {
+            flex: 1;
+        }
+        
+        .captcha-image {
+            height: 40px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+        }
+        
+        .captcha-placeholder {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            font-family: monospace;
+            font-size: 18px;
+            letter-spacing: 3px;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -159,6 +187,20 @@
                         <label for="password">密码</label>
                         <input type="password" class="form-control" id="password" name="password" 
                                placeholder="请输入密码" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="captcha">验证码</label>
+                        <div class="captcha-group">
+                            <input type="text" class="form-control captcha-input" id="captcha" name="captcha" 
+                                   placeholder="请输入验证码" maxlength="4" required>
+                            {% if captcha_image %}
+                            <img src="{{ captcha_image }}" alt="验证码" class="captcha-image" id="captchaImage" 
+                                 title="点击刷新验证码" onclick="refreshCaptcha()">
+                            {% else %}
+                            <span class="captcha-placeholder" id="captchaCode"></span>
+                            {% endif %}
+                        </div>
                     </div>
                     
                     <!-- 隐藏字段：机器码 -->
@@ -199,6 +241,20 @@
                 setTimeout(() => this.submit(), 100);
             }
         });
+        
+        // 刷新验证码
+        function refreshCaptcha() {
+            fetch('/api/captcha')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('captchaImage').src = data.image;
+                });
+        }
+        
+        // 如果有预填充的工号
+        {% if employee_no %}
+        document.getElementById('employee_no').value = '{{ employee_no }}';
+        {% endif %}
     </script>
 </body>
 </html>

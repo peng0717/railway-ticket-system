@@ -62,19 +62,28 @@ def validate_password(password):
 
 def validate_username(username):
     """
-    验证工号格式：字母开头，4-20位，允许字母、数字、下划线、短横线
+    验证工号格式：
+    - 新格式：XXX-YY-NNNN 或 XXX-YYY-NNNN（电报码-2/3位字母-4位数字）
+    - 旧格式：字母开头，4-20位，允许字母、数字、下划线、短横线
     返回: True/False
     """
     if not username:
         return False
-    # 字母开头，4-20位，允许字母、数字、下划线、短横线
-    if not re.match(r'^[a-zA-Z][a-zA-Z0-9_-]{3,19}$', username):
-        return False
-    # 保留词检查
-    reserved = ['admin', 'root', 'system', 'test', 'administrator']
-    if username.lower() in reserved:
-        return False
-    return True
+    
+    # 新格式：电报码-2/3位字母-4位数字
+    # 例如：BJP-CZW-7283, ZJW-ABC-1234
+    if re.match(r'^[A-Z]{2,4}-[A-Z]{2,3}-\d{4}$', username):
+        return True
+    
+    # 旧格式（保持兼容）：字母开头，4-20位，允许字母、数字、下划线、短横线
+    if re.match(r'^[a-zA-Z][a-zA-Z0-9_-]{3,19}$', username):
+        # 保留词检查
+        reserved = ['admin', 'root', 'system', 'test', 'administrator']
+        if username.lower() in reserved:
+            return False
+        return True
+    
+    return False
 
 
 def generate_verification_code():
