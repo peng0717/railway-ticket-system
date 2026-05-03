@@ -1,0 +1,86 @@
+<!-- 对账单详情局部模板 -->
+<div class="report-detail">
+    <div class="text-center mb-4">
+        <h4>铁路客票系统 对账单</h4>
+        <hr>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-6">
+            <strong>售票员:</strong> {{ shift.username or shift.employee_no }}
+        </div>
+        <div class="col-6">
+            <strong>工号:</strong> {{ shift.employee_no }}
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-6">
+            <strong>班次:</strong> {{ '白班' if shift.shift_type == 'day' else '夜班' }}
+        </div>
+        <div class="col-6">
+            <strong>窗口:</strong> {{ shift.window_no or '-' }}
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-6">
+            <strong>开始时间:</strong> {{ shift.start_time[:16] if shift.start_time else '-' }}
+        </div>
+        <div class="col-6">
+            <strong>结束时间:</strong> {{ shift.end_time[:16] if shift.end_time else '-' }}
+        </div>
+    </div>
+    
+    <hr>
+    
+    <h5 class="mb-3">一、售票统计</h5>
+    <table class="table table-bordered table-sm">
+        <tr>
+            <td width="50%">总售票数</td>
+            <td><strong>{{ tickets|length }} 张</strong></td>
+        </tr>
+        <tr>
+            <td>售票金额合计</td>
+            <td><strong class="text-success">¥{{ "%.2f"|format(tickets|sum(attribute='price')|float) if tickets else '0.00' }}</strong></td>
+        </tr>
+    </table>
+    
+    <h5 class="mb-3 mt-4">二、退票统计</h5>
+    <table class="table table-bordered table-sm">
+        <tr>
+            <td width="50%">总退票数</td>
+            <td><strong>{{ refunds|length }} 张</strong></td>
+        </tr>
+        <tr>
+            <td>退票手续费</td>
+            <td><strong class="text-warning">¥{{ "%.2f"|format(refunds|sum(attribute='refund_fee')|float) if refunds else '0.00' }}</strong></td>
+        </tr>
+    </table>
+    
+    <h5 class="mb-3 mt-4">三、净收入</h5>
+    <div class="text-center p-3" style="background: #f8f9fa; border-radius: 8px;">
+        <h3 class="text-primary mb-0">
+            ¥{{ "%.2f"|format((tickets|sum(attribute='price')|float if tickets else 0) - (refunds|sum(attribute='refund_fee')|float if refunds else 0)) }}
+        </h3>
+    </div>
+    
+    <hr class="my-4">
+    
+    <div class="row">
+        <div class="col-6">
+            <p>售票员签名: _______________</p>
+        </div>
+        <div class="col-6 text-end">
+            <p>日期: _______________</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.report-detail {
+    font-family: "Microsoft YaHei", "SimSun", sans-serif;
+}
+.report-detail h4 {
+    color: #1a4a7a;
+    letter-spacing: 3px;
+}
+</style>

@@ -1,0 +1,271 @@
+{% extends "admin/base.html" %}
+
+{% block title %}对账管理 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="admin-breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><i class="fas fa-home"></i> 首页</li>
+        <li class="breadcrumb-item">对账管理</li>
+        <li class="breadcrumb-item active">对账单列表</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-file-alt me-2"></i>对账单列表</h4>
+        <button class="btn btn-outline-primary" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> 打印
+        </button>
+    </div>
+
+    <!-- 筛选表单 -->
+    <div class="admin-card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">工号</label>
+                    <input type="text" class="form-control" name="employee_no" 
+                           value="{{ filters.employee_no }}" placeholder="工号">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">日期范围</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control" name="start_date" 
+                               value="{{ filters.start_date }}">
+                        <span class="input-group-text">至</span>
+                        <input type="date" class="form-control" name="end_date" 
+                               value="{{ filters.end_date }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">班次</label>
+                    <select class="form-select" name="shift_type">
+                        <option value="">全部</option>
+                        <option value="day" {% if filters.shift_type == 'day' %}selected{% endif %}>白班</option>
+                        <option value="night" {% if filters.shift_type == 'night' %}selected{% endif %}>夜班</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> 筛选
+                        </button>
+                        <a href="{{ url_for('admin_daily_reports') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 汇总统计 -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-value">{{ summary.total_shifts }}</div>
+                <div class="stat-label">班次数</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card stat-card-success">
+                <div class="stat-value">{{ summary.total_tickets }}</div>
+                <div class="stat-label">总售票</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card stat-card-warning">
+                <div class="stat-value">{{ summary.total_refunds }}</div>
+                <div class="stat-label">总退票</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card stat-card-info">
+                <div class="stat-value">¥{{ "%.2f"|format(summary.total_amount) }}</div>
+                <div class="stat-label">售票金额</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card stat-card-danger">
+                <div class="stat-value">¥{{ "%.2f"|format(summary.refund_amount) }}</div>
+                <div class="stat-label">退款金额</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card stat-card-purple">
+                <div class="stat-value">¥{{ "%.2f"|format(summary.net_amount) }}</div>
+                <div class="stat-label">净收入</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 对账单列表 -->
+    <div class="admin-card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>日期</th>
+                            <th>工号</th>
+                            <th>姓名</th>
+                            <th>窗口</th>
+                            <th>班次</th>
+                            <th>售票数</th>
+                            <th>退票数</th>
+                            <th>售票金额</th>
+                            <th>退款金额</th>
+                            <th>净收入</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td>{{ loop.index + (page - 1) * per_page }}</td>
+                            <td>{{ report.report_date }}</td>
+                            <td>{{ report.employee_no }}</td>
+                            <td>{{ report.user_name or '-' }}</td>
+                            <td>{{ report.window_no or '-' }}</td>
+                            <td>
+                                {% if report.shift_type == 'day' %}
+                                <span class="badge bg-warning text-dark">白班</span>
+                                {% else %}
+                                <span class="badge bg-info">夜班</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ report.total_tickets }}</td>
+                            <td>{{ report.total_refunds }}</td>
+                            <td class="text-success fw-bold">¥{{ "%.2f"|format(report.total_amount) }}</td>
+                            <td class="text-danger">¥{{ "%.2f"|format(report.refund_amount) }}</td>
+                            <td class="text-primary fw-bold">¥{{ "%.2f"|format(report.net_amount) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewReport({{ report.id }})">
+                                    <i class="fas fa-eye"></i> 查看
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="printReport({{ report.id }})">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="12" class="text-center text-muted py-5">
+                                <i class="fas fa-file-alt fa-3x mb-3"></i>
+                                <p>暂无对账单记录</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            {% if total_pages > 1 %}
+            <nav aria-label="分页导航" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page - 1 }}&{{ query_string }}">上一页</a>
+                    </li>
+                    {% for p in range(1, total_pages + 1) %}
+                    {% if p >= page - 2 and p <= page + 2 %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}&{{ query_string }}">{{ p }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page + 1 }}&{{ query_string }}">下一页</a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="text-center text-muted">
+                共 {{ total_reports }} 条记录，第 {{ page }}/{{ total_pages }} 页
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 对账单详情模态框 -->
+<div class="modal fade" id="reportDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>对账单详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reportDetailContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="printReportContent()">
+                    <i class="fas fa-print me-1"></i> 打印
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let reportDetailModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    reportDetailModal = new bootstrap.Modal(document.getElementById('reportDetailModal'));
+});
+
+function viewReport(id) {
+    fetch(`/admin/api/report/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('reportDetailContent').innerHTML = data.html;
+                reportDetailModal.show();
+            }
+        });
+}
+
+function printReport(id) {
+    window.open(`/admin/api/report/${id}/print`, '_blank');
+}
+
+function printReportContent() {
+    const content = document.getElementById('reportDetailContent').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>对账单打印</title>
+            <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body { font-family: 'Microsoft YaHei', sans-serif; padding: 20px; }
+                @media print { .no-print { display: none; } }
+            </style>
+        </head>
+        <body>${content}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+</script>
+
+<style>
+@media print {
+    .admin-navbar, .admin-sidebar, .modal-header .btn-close, .modal-footer, .no-print { display: none !important; }
+    .modal-dialog { max-width: 100% !important; margin: 0 !important; }
+    .modal-content { border: none !important; box-shadow: none !important; }
+    .modal-body { padding: 0 !important; }
+}
+</style>
+{% endblock %}

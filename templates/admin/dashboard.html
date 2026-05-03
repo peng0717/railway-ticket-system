@@ -1,0 +1,242 @@
+{% extends "admin/base.html" %}
+
+{% block title %}管理首页 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="admin-breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><i class="fas fa-home"></i> 首页</li>
+        <li class="breadcrumb-item active">管理首页</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.total_users }}</div>
+                    <div class="stat-label">总用户数</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.active_users }}</div>
+                    <div class="stat-label">在职人员</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.pending_registrations }}</div>
+                    <div class="stat-label">待审核注册</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card stat-card-danger">
+                <div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ stats.pending_refunds }}</div>
+                    <div class="stat-label">待审批退票</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 实时监控 -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="admin-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-desktop me-2"></i>实时监控</h5>
+                    <span class="text-muted"><i class="fas fa-sync fa-spin me-1"></i>每{{ refresh_interval }}秒自动刷新</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>窗口</th>
+                                    <th>工号</th>
+                                    <th>班次</th>
+                                    <th>售票数</th>
+                                    <th>金额</th>
+                                    <th>状态</th>
+                                    <th>最后出票</th>
+                                </tr>
+                            </thead>
+                            <tbody id="realtimeTable">
+                                {% for seller in active_sellers %}
+                                <tr class="{% if seller.anomaly %}table-warning{% endif %}">
+                                    <td>{{ seller.window_no }}</td>
+                                    <td>{{ seller.employee_no }}</td>
+                                    <td><span class="badge bg-{% if seller.shift_type == 'day' %}warning{% else %}info{% endif %}">{{ seller.shift_name }}</span></td>
+                                    <td>{{ seller.ticket_count }}<span class="text-muted">/ {{ seller.ticket_limit }}</span></td>
+                                    <td>¥{{ "%.2f"|format(seller.total_amount) }}</td>
+                                    <td>
+                                        {% if seller.ticket_count >= seller.ticket_limit %}
+                                        <span class="badge bg-danger">已达上限</span>
+                                        {% elif seller.ticket_count >= seller.ticket_limit * 0.8 %}
+                                        <span class="badge bg-warning text-dark">预警</span>
+                                        {% else %}
+                                        <span class="badge bg-success">正常</span>
+                                        {% endif %}
+                                        {% if seller.anomaly %}
+                                        <span class="badge bg-danger ms-1">异常</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ seller.last_ticket_time or '-' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">当前无活跃售票员</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- 今日统计 -->
+            <div class="admin-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>今日概况</h5>
+                </div>
+                <div class="card-body">
+                    <div class="today-stats">
+                        <div class="today-stat-item">
+                            <span class="today-stat-label">总售票</span>
+                            <span class="today-stat-value text-primary">{{ today_stats.total_tickets }} 张</span>
+                        </div>
+                        <div class="today-stat-item">
+                            <span class="today-stat-label">总退票</span>
+                            <span class="today-stat-value text-warning">{{ today_stats.total_refunds }} 张</span>
+                        </div>
+                        <div class="today-stat-item">
+                            <span class="today-stat-label">售票金额</span>
+                            <span class="today-stat-value text-success">¥{{ "%.2f"|format(today_stats.total_amount) }}</span>
+                        </div>
+                        <div class="today-stat-item">
+                            <span class="today-stat-label">退票金额</span>
+                            <span class="today-stat-value text-danger">¥{{ "%.2f"|format(today_stats.refund_amount) }}</span>
+                        </div>
+                        <div class="today-stat-item highlight">
+                            <span class="today-stat-label">净收入</span>
+                            <span class="today-stat-value">¥{{ "%.2f"|format(today_stats.net_amount) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 待办事项 -->
+            <div class="admin-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>待办事项</h5>
+                </div>
+                <div class="card-body">
+                    <div class="todo-list">
+                        <a href="{{ url_for('admin_registrations') }}" class="todo-item">
+                            <i class="fas fa-user-plus"></i>
+                            <span>注册审核</span>
+                            {% if stats.pending_registrations > 0 %}
+                            <span class="badge bg-danger">{{ stats.pending_registrations }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="{{ url_for('admin_refund_approvals') }}" class="todo-item">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                            <span>退票审批</span>
+                            {% if stats.pending_refunds > 0 %}
+                            <span class="badge bg-danger">{{ stats.pending_refunds }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="{{ url_for('admin_logs') }}" class="todo-item">
+                            <i class="fas fa-history"></i>
+                            <span>查看操作日志</span>
+                        </a>
+                        <a href="{{ url_for('admin_daily_reports') }}" class="todo-item">
+                            <i class="fas fa-file-alt"></i>
+                            <span>对账单管理</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近操作日志 -->
+    <div class="admin-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-history me-2"></i>最近操作日志</h5>
+            <a href="{{ url_for('admin_logs') }}" class="btn btn-sm btn-outline-primary">查看全部</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>操作人</th>
+                            <th>操作类型</th>
+                            <th>详情</th>
+                            <th>IP地址</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_logs %}
+                        <tr>
+                            <td>{{ log.created_at[:16] if log.created_at else '-' }}</td>
+                            <td>{{ log.employee_no }}</td>
+                            <td>
+                                {% if log.operation_type == 'login' %}
+                                <span class="badge bg-primary">登录</span>
+                                {% elif log.operation_type == 'logout' %}
+                                <span class="badge bg-secondary">登出</span>
+                                {% elif log.operation_type == 'sell' %}
+                                <span class="badge bg-success">售票</span>
+                                {% elif log.operation_type == 'refund' %}
+                                <span class="badge bg-warning">退票</span>
+                                {% elif log.operation_type == 'shift_open' %}
+                                <span class="badge bg-info">开班</span>
+                                {% elif log.operation_type == 'shift_close' %}
+                                <span class="badge bg-dark">结班</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{{ log.operation_type }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.details[:50] if log.details else '-' }}{% if log.details and log.details|length > 50 %}...{% endif %}</td>
+                            <td>{{ log.ip_address or '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">暂无操作记录</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 自动刷新页面
+setTimeout(function() {
+    location.reload();
+}, {{ refresh_interval * 1000 }});
+</script>
+{% endblock %}

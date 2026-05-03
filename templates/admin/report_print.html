@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>对账单打印 - {{ system_name }}</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "SimSun", "Microsoft YaHei", sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .report-header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+            color: #1a4a7a;
+        }
+        
+        .report-header h2 {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+        }
+        
+        .info-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .info-table td {
+            padding: 5px 10px;
+        }
+        
+        .section {
+            margin: 20px 0;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 2px solid #1a4a7a;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+        
+        .highlight-box {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .highlight-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a4a7a;
+        }
+        
+        .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-item {
+            width: 45%;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <h1>{{ system_name }}</h1>
+        <h2>班次对账单</h2>
+    </div>
+    
+    <table class="info-table">
+        <tr>
+            <td width="25%"><strong>售票员:</strong> {{ shift.username or shift.employee_no }}</td>
+            <td width="25%"><strong>工号:</strong> {{ shift.employee_no }}</td>
+            <td width="25%"><strong>窗口:</strong> {{ shift.window_no or '-' }}</td>
+            <td width="25%"><strong>班次:</strong> {{ '白班' if shift.shift_type == 'day' else '夜班' }}</td>
+        </tr>
+        <tr>
+            <td><strong>开始时间:</strong> {{ shift.start_time[:16] if shift.start_time else '-' }}</td>
+            <td><strong>结束时间:</strong> {{ shift.end_time[:16] if shift.end_time else '-' }}</td>
+            <td colspan="2"></td>
+        </tr>
+    </table>
+    
+    <div class="section">
+        <div class="section-title">一、售票统计</div>
+        <div class="stat-row">
+            <span>总售票数</span>
+            <span><strong>{{ tickets|length }} 张</strong></span>
+        </div>
+        {% if tickets %}
+        {% for seat_type, count in tickets|groupby('seat_type')|list %}
+        <div class="stat-row">
+            <span style="padding-left: 20px;">其中: {{ seat_type }}</span>
+            <span>{{ count|length }} 张</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+        <div class="stat-row">
+            <span>票款合计</span>
+            <span class="text-success"><strong>¥{{ "%.2f"|format(tickets|sum(attribute='price')|float) if tickets else 0 }}</strong></span>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">二、退票统计</div>
+        <div class="stat-row">
+            <span>总退票数</span>
+            <span><strong>{{ refunds|length }} 张</strong></span>
+        </div>
+        <div class="stat-row">
+            <span>退票手续费</span>
+            <span class="text-warning"><strong>¥{{ "%.2f"|format(refunds|sum(attribute='refund_fee')|float) if refunds else 0 }}</strong></span>
+        </div>
+        <div class="stat-row">
+            <span>实际退款</span>
+            <span class="text-danger"><strong>¥{{ "%.2f"|format(refunds|sum(attribute='refund_amount')|float) if refunds else 0 }}</strong></span>
+        </div>
+    </div>
+    
+    <div class="highlight-box">
+        <div>三、净收入</div>
+        <div class="highlight-amount">¥{{ "%.2f"|format((tickets|sum(attribute='price')|float if tickets else 0) - (refunds|sum(attribute='refund_amount')|float if refunds else 0)) }}</div>
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-item">
+            <p>售票员签名: ________________</p>
+        </div>
+        <div class="signature-item text-end">
+            <p>日期: ________________</p>
+        </div>
+    </div>
+    
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+{% extends "admin/base.html" %}
+
+{% block title %}票额限售 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="admin-breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><i class="fas fa-home"></i> 首页</li>
+        <li class="breadcrumb-item">系统设置</li>
+        <li class="breadcrumb-item active">票额限售</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-ticket-alt me-2"></i>票额限售管理</h4>
+        <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle me-1"></i>
+            全局默认票额上限: <strong>{{ default_limit }}</strong> 张/班次
+        </div>
+    </div>
+
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>售票员票额配置</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>工号</th>
+                            <th>姓名</th>
+                            <th>车站</th>
+                            <th>窗口</th>
+                            <th>当前班次</th>
+                            <th>已售/上限</th>
+                            <th>个人限额</th>
+                            <th>使用率</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seller in sellers %}
+                        <tr>
+                            <td><code>{{ seller.username or seller.employee_no }}</code></td>
+                            <td>{{ seller.name or seller.real_name or '-' }}</td>
+                            <td>{{ seller.station_name or seller.station_code or '-' }}</td>
+                            <td>{{ seller.window_no or '-' }}</td>
+                            <td>
+                                {% if seller.current_shift %}
+                                <span class="badge bg-{% if seller.shift_type == 'day' %}warning{% else %}info{% endif %}">
+                                    {{ seller.shift_name }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">未在岗</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if seller.current_shift %}
+                                {{ seller.current_tickets }} / {{ seller.ticket_limit or default_limit }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" class="form-control form-control-sm" 
+                                           style="width: 80px;" 
+                                           value="{{ seller.ticket_limit or default_limit }}"
+                                           id="limit_{{ seller.id }}"
+                                           min="1" max="1000">
+                                    <span class="ms-1">张</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if seller.current_shift and seller.ticket_limit %}
+                                {% set usage = (seller.current_tickets / seller.ticket_limit * 100)|round|int %}
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if usage >= 100 %}bg-danger{% elif usage >= 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         style="width: {{ [usage, 100]|min }}%">
+                                        {{ usage }}%
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if seller.current_shift %}
+                                    {% if seller.current_tickets >= seller.ticket_limit %} 
+                                    <span class="badge bg-danger">已达上限</span>
+                                    {% elif seller.current_tickets >= (seller.ticket_limit or default_limit) * 0.8 %}
+                                    <span class="badge bg-warning text-dark">预警</span>
+                                    {% else %}
+                                    <span class="badge bg-success">正常</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-secondary">休息中</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="updateLimit({{ seller.id }})">
+                                    <i class="fas fa-save"></i> 保存
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-5">
+                                <i class="fas fa-users fa-3x mb-3"></i>
+                                <p>暂无售票员数据</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局设置 -->
+    <div class="admin-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-cog me-2"></i>全局票额设置</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">默认票额上限 (张/班次)</label>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="number" class="form-control" id="globalLimit" 
+                                   value="{{ default_limit }}" min="1" max="1000">
+                            <button class="btn btn-primary" onclick="updateGlobalLimit()">
+                                <i class="fas fa-save me-1"></i> 保存
+                            </button>
+                        </div>
+                        <div class="form-text">设置所有售票员的默认票额上限</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">预警比例 (%)</label>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="number" class="form-control" id="warningRatio" 
+                                   value="{{ (warning_ratio * 100)|int }}" min="0" max="100">
+                            <span class="input-group-text">%</span>
+                            <button class="btn btn-primary" onclick="updateWarningRatio()">
+                                <i class="fas fa-save me-1"></i> 保存
+                            </button>
+                        </div>
+                        <div class="form-text">达到此比例时显示预警</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateLimit(userId) {
+    const newLimit = document.getElementById('limit_' + userId).value;
+    
+    fetch(`/admin/api/user/${userId}/ticket_limit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ticket_limit: parseInt(newLimit) })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('票额限制已更新', 'success');
+        } else {
+            showToast(data.message || '更新失败', 'error');
+        }
+    });
+}
+
+function updateGlobalLimit() {
+    const newLimit = document.getElementById('globalLimit').value;
+    
+    fetch('/admin/api/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ 
+            key: 'ticket_limit_per_shift',
+            value: parseInt(newLimit)
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('全局票额限制已更新', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message || '更新失败', 'error');
+        }
+    });
+}
+
+function updateWarningRatio() {
+    const ratio = document.getElementById('warningRatio').value;
+    
+    fetch('/admin/api/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ 
+            key: 'ticket_warning_ratio',
+            value: parseFloat(ratio) / 100
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('预警比例已更新', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message || '更新失败', 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

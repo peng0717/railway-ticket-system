@@ -1,0 +1,279 @@
+{% extends "admin/base.html" %}
+
+{% block title %}收入统计 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="admin-breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><i class="fas fa-home"></i> 首页</li>
+        <li class="breadcrumb-item">对账管理</li>
+        <li class="breadcrumb-item active">收入统计</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <h4 class="mb-4"><i class="fas fa-chart-bar me-2"></i>收入统计</h4>
+
+    <!-- 筛选表单 -->
+    <div class="admin-card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">日期范围</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control" name="start_date" 
+                               value="{{ filters.start_date }}">
+                        <span class="input-group-text">至</span>
+                        <input type="date" class="form-control" name="end_date" 
+                               value="{{ filters.end_date }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">统计维度</label>
+                    <select class="form-select" name="group_by">
+                        <option value="daily" {% if filters.group_by == 'daily' %}selected{% endif %}>按日</option>
+                        <option value="monthly" {% if filters.group_by == 'monthly' %}selected{% endif %}>按月</option>
+                        <option value="seller" {% if filters.group_by == 'seller' %}selected{% endif %}>按售票员</option>
+                        <option value="seat_type" {% if filters.group_by == 'seat_type' %}selected{% endif %}>按席别</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> 统计
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 汇总卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value">{{ summary.total_tickets }}</div>
+                    <div class="stat-label">总售票数</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card stat-card-success">
+                <div class="stat-value">¥{{ "%.2f"|format(summary.total_amount) }}</div>
+                <div class="stat-label">总售票金额</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card stat-card-danger">
+                <div class="stat-value">¥{{ "%.2f"|format(summary.refund_amount) }}</div>
+                <div class="stat-label">总退款金额</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card stat-card-purple">
+                <div class="stat-value">¥{{ "%.2f"|format(summary.net_amount) }}</div>
+                <div class="stat-label">净收入</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计图表 -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="admin-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>收入趋势</h5>
+                </div>
+                <div class="card-body">
+                    <div id="chartContainer" style="height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="admin-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>收款方式占比</h5>
+                </div>
+                <div class="card-body">
+                    <div class="payment-stats">
+                        <div class="payment-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="fas fa-money-bill-wave text-success me-2"></i>现金</span>
+                                <strong>¥{{ "%.2f"|format(summary.cash_amount) }}</strong>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" 
+                                     style="width: {{ (summary.cash_amount / summary.total_amount * 100) if summary.total_amount > 0 else 0 }}%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="payment-item mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="fas fa-credit-card text-primary me-2"></i>电子支付</span>
+                                <strong>¥{{ "%.2f"|format(summary.electronic_amount) }}</strong>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" 
+                                     style="width: {{ (summary.electronic_amount / summary.total_amount * 100) if summary.total_amount > 0 else 0 }}%">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详细数据表格 -->
+    <div class="admin-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>详细数据</h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="exportStats()">
+                <i class="fas fa-download me-1"></i> 导出
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            {% if filters.group_by == 'daily' %}
+                            <th>日期</th>
+                            {% elif filters.group_by == 'monthly' %}
+                            <th>月份</th>
+                            {% elif filters.group_by == 'seller' %}
+                            <th>工号</th>
+                            <th>姓名</th>
+                            {% elif filters.group_by == 'seat_type' %}
+                            <th>席别</th>
+                            {% endif %}
+                            <th>售票数</th>
+                            <th>退票数</th>
+                            <th>售票金额</th>
+                            <th>退款金额</th>
+                            <th>净收入</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stats %}
+                        <tr>
+                            {% if filters.group_by == 'daily' %}
+                            <td>{{ item.period }}</td>
+                            {% elif filters.group_by == 'monthly' %}
+                            <td>{{ item.period }}</td>
+                            {% elif filters.group_by == 'seller' %}
+                            <td><code>{{ item.employee_no }}</code></td>
+                            <td>{{ item.name or '-' }}</td>
+                            {% elif filters.group_by == 'seat_type' %}
+                            <td>{{ item.seat_type }}</td>
+                            {% endif %}
+                            <td>{{ item.total_tickets }}</td>
+                            <td>{{ item.total_refunds }}</td>
+                            <td class="text-success">¥{{ "%.2f"|format(item.total_amount) }}</td>
+                            <td class="text-danger">¥{{ "%.2f"|format(item.refund_amount) }}</td>
+                            <td class="text-primary fw-bold">¥{{ "%.2f"|format(item.net_amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                                <p>暂无统计数据</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 绘制趋势图
+    const ctx = document.getElementById('trendChart');
+    if (ctx) {
+        const labels = {{ chart_labels | tojson }};
+        const ticketData = {{ chart_ticket_data | tojson }};
+        const refundData = {{ chart_refund_data | tojson }};
+        const amountData = {{ chart_amount_data | tojson }};
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '售票数',
+                        data: ticketData,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '售票金额',
+                        data: amountData,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                stacked: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '售票数'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '金额 (元)'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+
+function exportStats() {
+    const params = new URLSearchParams(window.location.search);
+    window.open('/admin/api/stats/export?' + params.toString(), '_blank');
+    showToast('正在导出统计数据...', 'success');
+}
+</script>
+{% endblock %}

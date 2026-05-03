@@ -76,10 +76,31 @@ TICKET_PURPOSE = {
 
 # 班次类型
 SHIFT_TYPES = {
-    'day': {'name': '白班', 'start': '00:00', 'end': '12:00'},
-    'night': {'name': '夜班', 'start': '12:00', 'end': '24:00'},
+    'day': {'name': '白班', 'start': '08:00', 'end': '20:00'},
+    'night': {'name': '夜班', 'start': '20:00', 'end': '08:00'},
 }
 
 # 管理员配置
 ADMIN_USERNAME = 'admin'
 ADMIN_PASSWORD = 'admin123'
+
+# ==================== 新增配置项 ====================
+
+# 退票审批阈值（超过此金额需要管理员审批）
+REFUND_APPROVAL_THRESHOLD = 500
+
+# 每班次票额限售（默认200张）
+TICKET_LIMIT_PER_SHIFT = 200
+
+# 票额预警比例（80%）
+TICKET_WARNING_RATIO = 0.8
+
+# 出票频率异常阈值（5分钟内超过此数量）
+TICKET_ANOMALY_THRESHOLD = 20
+
+# 登录锁定配置
+LOGIN_MAX_FAILURES = 3
+LOGIN_LOCKOUT_SECONDS = 900  # 15分钟
+
+# 实时监控刷新间隔（秒）
+MONITOR_REFRESH_INTERVAL = 30

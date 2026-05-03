@@ -1,0 +1,304 @@
+{% extends "admin/base.html" %}
+
+{% block title %}用户管理 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="admin-breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><i class="fas fa-home"></i> 首页</li>
+        <li class="breadcrumb-item">用户管理</li>
+        <li class="breadcrumb-item active">用户列表</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-users me-2"></i>用户管理</h4>
+        <a href="{{ url_for('admin_registrations') }}" class="btn btn-success">
+            <i class="fas fa-user-plus me-1"></i> 待审核 ({{ pending_count }})
+        </a>
+    </div>
+
+    <!-- 筛选表单 -->
+    <div class="admin-card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">搜索</label>
+                    <input type="text" class="form-control" name="search" 
+                           value="{{ filters.search }}" placeholder="工号/姓名/车站">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">角色</label>
+                    <select class="form-select" name="role">
+                        <option value="">全部</option>
+                        <option value="admin" {% if filters.role == 'admin' %}selected{% endif %}>管理员</option>
+                        <option value="seller" {% if filters.role == 'seller' %}selected{% endif %}>售票员</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">状态</label>
+                    <select class="form-select" name="status">
+                        <option value="">全部</option>
+                        <option value="active" {% if filters.status == 'active' %}selected{% endif %}>正常</option>
+                        <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>禁用</option>
+                        <option value="frozen" {% if filters.status == 'frozen' %}selected{% endif %}>冻结</option>
+                        <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>待审核</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> 筛选
+                        </button>
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i> 重置
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="admin-card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>工号</th>
+                            <th>姓名</th>
+                            <th>角色</th>
+                            <th>车站</th>
+                            <th>窗口</th>
+                            <th>票额上限</th>
+                            <th>状态</th>
+                            <th>最后登录</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><code>{{ user.username or user.employee_no }}</code></td>
+                            <td>{{ user.name or user.real_name or '-' }}</td>
+                            <td>
+                                {% if user.role == 'admin' %}
+                                <span class="badge bg-danger">管理员</span>
+                                {% else %}
+                                <span class="badge bg-primary">售票员</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.station_name or user.station_code or '-' }}</td>
+                            <td>{{ user.window_no or '-' }}</td>
+                            <td>
+                                <span class="text-muted">{{ user.ticket_limit or 200 }}</span>
+                                <button class="btn btn-sm btn-link p-0 ms-1" onclick="editTicketLimit({{ user.id }}, {{ user.ticket_limit or 200 }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                            <td>
+                                {% if user.status == 'active' %}
+                                <span class="badge bg-success">正常</span>
+                                {% elif user.status == 'inactive' %}
+                                <span class="badge bg-secondary">禁用</span>
+                                {% elif user.status == 'frozen' %}
+                                <span class="badge bg-danger">冻结</span>
+                                {% elif user.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">待审核</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">{{ user.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.last_login[:16] if user.last_login else '-' }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="viewUser({{ user.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if user.role != 'admin' %}
+                                    <button class="btn btn-outline-warning" onclick="editUser({{ user.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if user.status == 'active' %}
+                                    <button class="btn btn-outline-danger" onclick="toggleUserStatus({{ user.id }}, 'inactive')">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    {% elif user.status == 'inactive' %}
+                                    <button class="btn btn-outline-success" onclick="toggleUserStatus({{ user.id }}, 'active')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5">
+                                <i class="fas fa-users fa-3x mb-3"></i>
+                                <p>暂无用户数据</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            {% if total_pages > 1 %}
+            <nav aria-label="分页导航" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page - 1 }}&{{ query_string }}">上一页</a>
+                    </li>
+                    {% for p in range(1, total_pages + 1) %}
+                    {% if p >= page - 2 and p <= page + 2 %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ p }}&{{ query_string }}">{{ p }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="?page={{ page + 1 }}&{{ query_string }}">下一页</a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="text-center text-muted">
+                共 {{ total_users }} 条记录，第 {{ page }}/{{ total_pages }} 页
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 用户详情模态框 -->
+<div class="modal fade" id="userDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user me-2"></i>用户详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userDetailContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 票额调整模态框 -->
+<div class="modal fade" id="ticketLimitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-ticket-alt me-2"></i>调整票额上限</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="limitUserId">
+                <div class="mb-3">
+                    <label class="form-label">票额上限 (张/班次)</label>
+                    <input type="number" class="form-control" id="newTicketLimit" min="1" max="1000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveTicketLimit()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let userDetailModal, ticketLimitModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    userDetailModal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+    ticketLimitModal = new bootstrap.Modal(document.getElementById('ticketLimitModal'));
+});
+
+function viewUser(id) {
+    fetch(`/admin/api/user/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('userDetailContent').innerHTML = `
+                    <table class="table table-bordered">
+                        <tr><th width="30%">工号</th><td>${data.user.username || data.user.employee_no}</td></tr>
+                        <tr><th>姓名</th><td>${data.user.name || data.user.real_name || '-'}</td></tr>
+                        <tr><th>角色</th><td>${data.user.role === 'admin' ? '管理员' : '售票员'}</td></tr>
+                        <tr><th>车站</th><td>${data.user.station_name || data.user.station_code || '-'}</td></tr>
+                        <tr><th>窗口</th><td>${data.user.window_no || '-'}</td></tr>
+                        <tr><th>邮箱</th><td>${data.user.email || '-'}</td></tr>
+                        <tr><th>身份证</th><td>${data.user.id_card || '-'}</td></tr>
+                        <tr><th>机器码</th><td>${data.user.machine_code || '-'}</td></tr>
+                        <tr><th>状态</th><td>${data.user.status}</td></tr>
+                        <tr><th>创建时间</th><td>${data.user.created_at || '-'}</td></tr>
+                        <tr><th>最后登录</th><td>${data.user.last_login || '-'}</td></tr>
+                    </table>
+                `;
+                userDetailModal.show();
+            }
+        });
+}
+
+function editTicketLimit(userId, currentLimit) {
+    document.getElementById('limitUserId').value = userId;
+    document.getElementById('newTicketLimit').value = currentLimit || 200;
+    ticketLimitModal.show();
+}
+
+function saveTicketLimit() {
+    const userId = document.getElementById('limitUserId').value;
+    const newLimit = document.getElementById('newTicketLimit').value;
+    
+    fetch(`/admin/api/user/${userId}/ticket_limit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ ticket_limit: parseInt(newLimit) })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('票额上限已更新', 'success');
+            ticketLimitModal.hide();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message || '更新失败', 'error');
+        }
+    });
+}
+
+function toggleUserStatus(userId, newStatus) {
+    const action = newStatus === 'inactive' ? '禁用' : '启用';
+    if (!confirm(`确定要${action}该用户吗？`)) return;
+    
+    fetch(`/admin/api/user/${userId}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast(`用户已${action}`, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.message || '操作失败', 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

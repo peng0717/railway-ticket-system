@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ system_name }} - 管理端{% endblock %}</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <style>
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="admin-navbar">
+        <div class="navbar-brand">
+            <i class="fas fa-train"></i>
+            <span>{{ system_name }}</span>
+            <span class="badge bg-warning text-dark ms-2">管理端</span>
+        </div>
+        <div class="navbar-user">
+            <span class="user-info">
+                <i class="fas fa-user-circle"></i>
+                {{ session.get('admin_username', '管理员') }}
+            </span>
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-sm btn-outline-light">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </a>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <!-- 侧边栏 -->
+        <aside class="admin-sidebar">
+            <ul class="sidebar-menu">
+                <li class="sidebar-header">导航菜单</li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('admin_dashboard') }}">
+                        <i class="fas fa-chart-line"></i>
+                        <span>管理首页</span>
+                    </a>
+                </li>
+                
+                <li class="sidebar-header">审核管理</li>
+                <li class="sidebar-item {% if request.endpoint and 'registration' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('admin_registrations') }}">
+                        <i class="fas fa-user-check"></i>
+                        <span>注册审核</span>
+                        {% if pending_registrations > 0 %}
+                        <span class="badge bg-danger">{{ pending_registrations }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_refund_approvals' %}active{% endif %}">
+                    <a href="{{ url_for('admin_refund_approvals') }}">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>退票审批</span>
+                        {% if pending_refunds > 0 %}
+                        <span class="badge bg-danger">{{ pending_refunds }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                
+                <li class="sidebar-header">用户管理</li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
+                    <a href="{{ url_for('admin_users') }}">
+                        <i class="fas fa-users"></i>
+                        <span>用户管理</span>
+                    </a>
+                </li>
+                
+                <li class="sidebar-header">对账管理</li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_daily_reports' %}active{% endif %}">
+                    <a href="{{ url_for('admin_daily_reports') }}">
+                        <i class="fas fa-file-alt"></i>
+                        <span>对账单列表</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_income_stats' %}active{% endif %}">
+                    <a href="{{ url_for('admin_income_stats') }}">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>收入统计</span>
+                    </a>
+                </li>
+                
+                <li class="sidebar-header">系统设置</li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_ticket_limits' %}active{% endif %}">
+                    <a href="{{ url_for('admin_ticket_limits') }}">
+                        <i class="fas fa-ticket-alt"></i>
+                        <span>票额限售</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_settings' %}active{% endif %}">
+                    <a href="{{ url_for('admin_settings') }}">
+                        <i class="fas fa-cog"></i>
+                        <span>系统配置</span>
+                    </a>
+                </li>
+                
+                <li class="sidebar-header">日志审计</li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_logs' %}active{% endif %}">
+                    <a href="{{ url_for('admin_logs') }}">
+                        <i class="fas fa-history"></i>
+                        <span>操作日志</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="admin-content">
+            <!-- 面包屑导航 -->
+            {% block breadcrumb %}{% endblock %}
+            
+            <!-- 页面内容 -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- 网络状态提示 -->
+    <div id="networkStatus" class="network-status hidden">
+        <i class="fas fa-wifi"></i>
+        <span id="networkMessage">网络连接已断开</span>
+    </div>
+
+    <!-- 快捷键提示 -->
+    <div id="shortcutHint" class="shortcut-hint">
+        <div class="shortcut-item"><kbd>F2</kbd> 售票</div>
+        <div class="shortcut-item"><kbd>F3</kbd> 退票</div>
+        <div class="shortcut-item"><kbd>F4</kbd> 查询</div>
+        <div class="shortcut-item"><kbd>F5</kbd> 刷新</div>
+        <div class="shortcut-item"><kbd>Esc</kbd> 返回</div>
+    </div>
+
+    <!-- Toast 提示容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+        // 显示Flash消息
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        showToast('{{ message }}', '{{ category }}');
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
