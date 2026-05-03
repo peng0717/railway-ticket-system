@@ -904,8 +904,8 @@ def freeze_user():
         
         # 记录风控
         cursor.execute("""
-            INSERT INTO risk_controls (user_id, original_machine_code, new_machine_code, action, reason, created_at)
-            SELECT user_id, machine_code, '', 'manual_freeze', '管理员手动冻结', ?
+            INSERT INTO risk_controls (user_id, username, original_machine_code, new_machine_code, action, reason, operated_by, created_at)
+            SELECT user_id, employee_no, machine_code, '', 'manual_freeze', '管理员手动冻结', 0, ?
             FROM users WHERE user_id = ?
         """, (datetime.now().isoformat(), user_id))
         
@@ -918,4 +918,4 @@ def freeze_user():
         conn.rollback()
         cursor.close()
         conn.close()
-        return jsonify({'status': 'error', 'message': f'操作失败: {s
+        return jsonify({'status': 'error', 'message': f'操作失败: {str(e)}'})
