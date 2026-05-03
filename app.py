@@ -751,7 +751,7 @@ def admin_dashboard():
         today_stats['total_amount'] = (today_row['total_amount'] or 0) if today_row else 0
         
         cursor.execute("""
-            SELECT COUNT(*) as cnt, SUM(refund_amount) as amount
+            SELECT COUNT(*) as cnt, SUM(actual_refund) as amount
             FROM refunds
             WHERE DATE(created_at) = ?
         """, (today,))
@@ -969,7 +969,7 @@ def admin_daily_reports():
                 COALESCE(SUM(total_tickets), 0) as total_tickets,
                 COALESCE(SUM(total_refunds), 0) as total_refunds,
                 COALESCE(SUM(total_amount), 0) as total_amount,
-                COALESCE(SUM(refund_amount), 0) as refund_amount
+                COALESCE(SUM(actual_refund), 0) as refund_amount
             FROM shifts WHERE status = 'closed'
         """)
         sum_row = cursor.fetchone()
@@ -1364,7 +1364,7 @@ def api_approve_refund(refund_id):
             
             # 添加退款记录
             cursor.execute("""
-                INSERT INTO refunds (ticket_id, refund_amount, refund_fee, refund_reason, created_at)
+                INSERT INTO refunds (ticket_id, actual_refund, refund_fee, reason, created_at)
                 VALUES (?, ?, ?, ?, ?)
             """, (refund['ticket_id'], refund['refund_amount'], refund['refund_fee'], refund['reason'], datetime.now().isoformat()))
             
@@ -1818,7 +1818,7 @@ def close_shift():
             ticket_stats = cursor.fetchone()
             
             cursor.execute("""
-                SELECT COUNT(*) as cnt, SUM(refund_amount) as amount
+                SELECT COUNT(*) as cnt, SUM(actual_refund) as amount
                 FROM refunds WHERE shift_id = ?
             """, (session['shift_id'],))
             refund_stats = cursor.fetchone()
@@ -1831,7 +1831,7 @@ def close_shift():
                     total_tickets = ?,
                     total_amount = ?,
                     total_refunds = ?,
-                    refund_amount = ?
+                    actual_refund = ?
                 WHERE shift_id = ?
             """, (
                 datetime.now().isoformat(),
@@ -1895,9 +1895,9 @@ def api_search_trains():
         cursor.execute("""
             SELECT DISTINCT t.train_id, t.train_number, t.train_type, t.start_station, t.end_station
             FROM trains t
-            JOIN train_stops ts1 ON t.train_id = ts1.train_id AND ts1.station_code = ?
-            JOIN train_stops ts2 ON t.train_id = ts2.train_id AND ts2.station_code = ?
-            WHERE ts1.stop_sequence < ts2.stop_sequence
+            JOIN train_stops ts1 ON t.train_number = ts1.train_number AND ts1.station_code = ?
+            JOIN train_stops ts2 ON t.train_number = ts2.train_number AND ts2.station_code = ?
+            WHERE ts1.stop_order < ts2.stop_order
             LIMIT 20
         """, (from_station, to_station))
         
