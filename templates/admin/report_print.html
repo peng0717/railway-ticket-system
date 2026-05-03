@@ -105,7 +105,7 @@
     
     <table class="info-table">
         <tr>
-            <td width="25%"><strong>售票员:</strong> {{ shift.username or shift.employee_no }}</td>
+            <td width="25%"><strong>售票员:</strong> {{ shift.employee_no }}</td>
             <td width="25%"><strong>工号:</strong> {{ shift.employee_no }}</td>
             <td width="25%"><strong>窗口:</strong> {{ shift.window_no or '-' }}</td>
             <td width="25%"><strong>班次:</strong> {{ '白班' if shift.shift_type == 'day' else '夜班' }}</td>

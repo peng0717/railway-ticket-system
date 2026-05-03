@@ -84,8 +84,8 @@
                     <tbody>
                         {% for user in users %}
                         <tr>
-                            <td><code>{{ user.username or user.employee_no }}</code></td>
-                            <td>{{ user.name or user.real_name or '-' }}</td>
+                            <td><code>{{ user.employee_no }}</code></td>
+                            <td>{{ user.name or '-' }}</td>
                             <td>
                                 {% if user.role == 'admin' %}
                                 <span class="badge bg-danger">管理员</span>

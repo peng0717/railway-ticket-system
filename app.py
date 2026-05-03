@@ -687,12 +687,12 @@ def admin_dashboard():
         
         # 获取活跃售票员
         cursor.execute("""
-            SELECT s.*, u.username, u.name, u.window_no, u.ticket_limit,
+            SELECT s.*, u.employee_no, u.name, u.window_no, u.ticket_limit,
                    COUNT(t.id) as ticket_count,
                    COALESCE(SUM(t.price), 0) as total_amount,
                    MAX(t.created_at) as last_ticket_time
             FROM shifts s
-            LEFT JOIN users u ON s.employee_no = u.username OR s.employee_no = u.employee_no
+            LEFT JOIN users u ON s.employee_no = u.employee_no
             LEFT JOIN tickets t ON s.shift_id = t.shift_id AND t.status = 'sold'
             WHERE s.status = 'active'
             GROUP BY s.shift_id
@@ -954,7 +954,7 @@ def admin_daily_reports():
             params.append(shift_type)
         
         # 统计汇总
-        count_query = query.replace('SELECT s.*, u.username, u.name as user_name, u.window_no', 
+        count_query = query.replace('SELECT s.*, u.employee_no, u.name as user_name, u.window_no', 
                                      'SELECT COUNT(*) as cnt')
         cursor.execute(count_query, params)
         total_reports = cursor.fetchone()['cnt'] if cursor.fetchone() is not None else 0
@@ -1091,7 +1091,7 @@ def admin_income_stats():
                        SUM(t.price) as total_amount
                 FROM shifts s
                 LEFT JOIN tickets t ON s.shift_id = t.shift_id AND t.status = 'sold'
-                LEFT JOIN users u ON s.employee_no = u.username OR s.employee_no = u.employee_no
+                LEFT JOIN users u ON s.employee_no = u.employee_no
                 GROUP BY s.employee_no
                 ORDER BY total_amount DESC
             """)
@@ -1169,7 +1169,7 @@ def admin_users():
         params = []
         
         if search:
-            query += " AND (username LIKE ? OR employee_no LIKE ? OR name LIKE ?)"
+            query += " AND (employee_no LIKE ? OR name LIKE ?)"
             params.extend([f'%{search}%', f'%{search}%', f'%{search}%'])
         
         if role:
@@ -1251,11 +1251,11 @@ def admin_ticket_limits():
     
     # 获取所有售票员及其当前班次状态
     cursor.execute("""
-        SELECT u.id, u.username, u.employee_no, u.name, u.station_name, u.station_code,
+        SELECT u.user_id, u.employee_no, u.name, u.station_code,
                u.window_no, u.ticket_limit, u.role,
                s.shift_id as current_shift, s.shift_type
         FROM users u
-        LEFT JOIN shifts s ON (u.username = s.employee_no OR u.employee_no = s.employee_no) AND s.status = 'active'
+        LEFT JOIN shifts s ON u.employee_no = s.employee_no AND s.status = 'active'
         WHERE u.role != 'admin' OR u.role IS NULL
     """)
     rows = cursor.fetchall()

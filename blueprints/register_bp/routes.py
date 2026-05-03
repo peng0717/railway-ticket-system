@@ -231,7 +231,7 @@ def check_email():
     cursor = conn.cursor()
     
     # 检查已注册用户
-    cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+    cursor.execute("SELECT user_id FROM users WHERE email = ?", (email,))
     if cursor.fetchone():
         cursor.close()
         conn.close()
@@ -388,7 +388,7 @@ def check_username():
     cursor = conn.cursor()
     
     # 检查已注册用户（不区分大小写）- 同时检查username和employee_no字段
-    cursor.execute("SELECT id FROM users WHERE LOWER(username) = ? OR LOWER(employee_no) = ?", (username_lower, username_lower))
+    cursor.execute("SELECT user_id FROM users WHERE LOWER(employee_no) = ?", (username_lower,))
     if cursor.fetchone():
         cursor.close()
         conn.close()
@@ -433,7 +433,7 @@ def generate_username():
         username = f"{station_code}-{custom_letters}-{random_num}"
         
         # 检查是否已存在于users表
-        cursor.execute("SELECT id FROM users WHERE employee_no = ?", (username,))
+        cursor.execute("SELECT user_id FROM users WHERE employee_no = ?", (username,))
         if not cursor.fetchone():
             # 检查是否存在于registration_applications表
             cursor.execute("SELECT id FROM registration_applications WHERE username = ? AND status != 'rejected'", (username,))
@@ -458,7 +458,7 @@ def check_window():
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT id FROM users 
+        SELECT user_id FROM users 
         WHERE station_code = ? AND window_no = ? AND status = 'active'
     """, (station_code, window_no))
     exists = cursor.fetchone()
@@ -532,7 +532,7 @@ def submit_registration():
     
     # 检查窗口号占用
     cursor.execute("""
-        SELECT id FROM users 
+        SELECT user_id FROM users 
         WHERE station_code = ? AND window_no = ? AND status = 'active'
     """, (data['station_code'], window_no))
     if cursor.fetchone():
@@ -811,7 +811,7 @@ def admin_risk():
     if conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT rc.*, u.real_name, u.username
+            SELECT rc.*, u.name, u.employee_no
             FROM risk_controls rc
             LEFT JOIN users u ON rc.user_id = u.id
             ORDER BY rc.created_at DESC
@@ -865,15 +865,15 @@ def admin_users():
         
         if search:
             cursor.execute("""
-                SELECT id, username, real_name, station_code, window_no, role, status, machine_code, last_login
+                SELECT user_id, employee_no, name, station_code, window_no, role, status, machine_code, last_login
                 FROM users
-                WHERE username LIKE ? OR real_name LIKE ? OR station_code LIKE ?
+                WHERE employee_no LIKE ? OR name LIKE ? OR station_code LIKE ?
                 ORDER BY id DESC
                 LIMIT 100
             """, (f'%{search}%', f'%{search}%', f'%{search}%'))
         else:
             cursor.execute("""
-                SELECT id, username, real_name, station_code, window_no, role, status, machine_code, last_login
+                SELECT user_id, employee_no, name, station_code, window_no, role, status, machine_code, last_login
                 FROM users
                 ORDER BY id DESC
                 LIMIT 100
