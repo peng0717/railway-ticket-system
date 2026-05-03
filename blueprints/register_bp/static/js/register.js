@@ -352,67 +352,92 @@ function initStep3() {
 
 // 更新工号预览
 function updateUsernamePreview() {
-    const suffix = document.getElementById('username_suffix').value.toUpperCase() || 'XX';
-    const seq = document.getElementById('username_seq').value || '000';
-    const code = registrationData.station_code || 'XXX';
-    document.getElementById('username_preview').textContent = `${code}-${suffix}-${seq.padStart(3, '0')}`;
+    const previewText = document.getElementById('preview_text');
+    const val = document.getElementById('username')?.value?.trim() || '';
+    if (previewText) {
+        previewText.textContent = val || '请输入工号';
+    }
 }
 
 // 步骤4: 注册工号
 function initStep4() {
-    const suffixInput = document.getElementById('username_suffix');
-    const seqInput = document.getElementById('username_seq');
-    const checkBtn = document.getElementById('btn-check-username');
+    const usernameInput = document.getElementById('username');
     const usernameHint = document.getElementById('username_hint');
+    const previewText = document.getElementById('preview_text');
+    const checkBtn = document.getElementById('btn-check-username');
     const nextBtn = document.getElementById('btn-step-4');
+    let usernameAvailable = false;
     
-    function updatePreview() {
-        const suffix = suffixInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
-        suffixInput.value = suffix;
-        updateUsernamePreview();
-    }
+    // 实时预览
+    usernameInput.addEventListener('input', function() {
+        const val = this.value.trim();
+        previewText.textContent = val || '请输入工号';
+        usernameAvailable = false;
+        nextBtn.disabled = true;
+        
+        // 实时格式校验
+        if (val && !/^[a-zA-Z]/.test(val)) {
+            usernameHint.textContent = '工号必须以字母开头';
+            usernameHint.className = 'input-hint error';
+        } else if (val && !/^[a-zA-Z][a-zA-Z0-9_-]{3,19}$/.test(val)) {
+            usernameHint.textContent = '4-20位，字母开头，可含字母、数字、下划线、短横线';
+            usernameHint.className = 'input-hint error';
+        } else if (val) {
+            usernameHint.textContent = '格式正确，请检查可用性';
+            usernameHint.className = 'input-hint success';
+        } else {
+            usernameHint.textContent = '字母开头，可包含字母、数字、下划线、短横线';
+            usernameHint.className = 'input-hint';
+        }
+    });
     
-    suffixInput.addEventListener('input', updatePreview);
-    seqInput.addEventListener('input', updatePreview);
-    
+    // 检查可用性
     checkBtn.addEventListener('click', async function() {
-        const suffix = suffixInput.value.toUpperCase();
-        const seq = seqInput.value.padStart(3, '0');
-        
-        if (!suffix || suffix.length < 2) {
-            usernameHint.textContent = '请输入2-3位字母';
-            usernameHint.className = 'input-hint error';
+        const val = usernameInput.value.trim();
+        if (!val || !/^[a-zA-Z][a-zA-Z0-9_-]{3,19}$/.test(val)) {
+            showNotification('请输入有效的工号格式', 'error');
             return;
         }
         
-        if (!seq || parseInt(seq) < 1 || parseInt(seq) > 999) {
-            usernameHint.textContent = '请输入1-999的序号';
+        // 检查保留词
+        const reserved = ['admin', 'root', 'system', 'test', 'administrator'];
+        if (reserved.includes(val.toLowerCase())) {
+            usernameHint.textContent = '该工号为系统保留词，不可使用';
             usernameHint.className = 'input-hint error';
+            showNotification('该工号为系统保留词', 'error');
             return;
         }
         
-        const username = `${registrationData.station_code}-${suffix}-${seq}`;
+        checkBtn.disabled = true;
+        checkBtn.textContent = '检查中...';
         
         const res = await fetch('/register/api/check-username', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username})
+            body: JSON.stringify({username: val})
         });
         const data = await res.json();
+        
+        checkBtn.disabled = false;
+        checkBtn.textContent = '检查可用性';
         
         if (data.status === 'success') {
             usernameHint.textContent = '工号可用';
             usernameHint.className = 'input-hint success';
-            registrationData.username = username;
+            usernameAvailable = true;
             nextBtn.disabled = false;
+            registrationData.username = val;
+            showNotification('工号可用！', 'success');
         } else {
             usernameHint.textContent = data.message;
             usernameHint.className = 'input-hint error';
+            showNotification(data.message, 'error');
         }
     });
     
+    // 下一步
     nextBtn.addEventListener('click', function() {
-        if (registrationData.username) {
+        if (usernameAvailable) {
             // 更新摘要中的车站信息
             document.getElementById('window_station').textContent = `${registrationData.station_name} (${registrationData.station_code})`;
             showStep(5);

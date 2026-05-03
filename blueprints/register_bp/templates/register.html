@@ -156,30 +156,21 @@
         <!-- 步骤4: 注册工号 -->
         <div class="step-content hidden" id="step-4">
             <h2 class="step-title">注册工号</h2>
-            <p class="step-desc">工号格式: 车站电报码 + 自定义字母 + 序号</p>
+            <p class="step-desc">请输入您的工号，4-20位，字母开头</p>
             
-            <div class="username-preview">
-                <div class="preview-label">工号预览</div>
-                <div class="preview-value" id="username_preview">XXX-XX-000</div>
+            <div class="preview-box" id="username_preview">
+                <span id="preview_text" style="color: #c9a84c; font-size: 24px; font-weight: bold;">请输入工号</span>
             </div>
             
             <div class="form-group">
-                <label for="username_suffix">自定义字母（2-3位大写）</label>
-                <input type="text" id="username_suffix" class="form-input" placeholder="例如: ZW、ABC" maxlength="3">
-                <span class="input-hint">使用您的姓名缩写或岗位缩写</span>
+                <label for="username">工号</label>
+                <input type="text" id="username" class="form-input" placeholder="请输入4-20位工号，字母开头" maxlength="20" autocomplete="off">
+                <span class="input-hint" id="username_hint">字母开头，可包含字母、数字、下划线、短横线</span>
             </div>
             
             <div class="form-group">
-                <label for="username_seq">序号（3位）</label>
-                <input type="number" id="username_seq" class="form-input" placeholder="001-999" min="1" max="999">
-                <span class="input-hint">系统将自动检测可用序号</span>
+                <button type="button" class="btn btn-secondary" id="btn-check-username">检查可用性</button>
             </div>
-            
-            <div class="form-group">
-                <button type="button" class="btn btn-secondary" id="btn-check-username">检查工号可用性</button>
-            </div>
-            
-            <span class="input-hint" id="username_hint"></span>
             
             <div class="form-actions">
                 <button type="button" class="btn btn-outline" id="btn-back-4">上一步</button>

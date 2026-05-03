@@ -1092,3 +1092,84 @@ select.form-input option {
         padding: 8px 10px;
     }
 }
+
+/* ========== 禁止非输入区域文本选择 ========== */
+
+/* 全局：禁止非输入区域文本选择 */
+body {
+    cursor: default;
+}
+
+/* 按钮可点击 */
+button, .btn {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 标题、标签、提示、预览区禁止选中文本 */
+h1, h2, h3, h4, h5, h6, label, .section-title, .preview-box, .preview-value, .step-label, .input-hint, .step-title, .step-desc {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 进度条 */
+.step-indicator, .step-progress, .step, .step-line, .step-number, .step-label {
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+
+/* 通知条 */
+.notification {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 选中站点/窗口展示区 */
+.selected-station, .selected-window, .station-info, .window-info {
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+
+/* 车站搜索结果项、窗口选择项 */
+.station-item, .window-item {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 输入框保持文本光标 */
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], textarea, select {
+    cursor: text;
+}
+
+/* 工号预览框（新样式） */
+.preview-box {
+    background: var(--bg-input);
+    border: 2px dashed var(--accent-gold);
+    border-radius: 8px;
+    padding: 25px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* 管理端禁止选中文本 */
+.nav-item, .stat-card, .panel-header h2, .stat-value, .stat-label, .sidebar-header, .header-info, .tab-btn {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 数据表格行悬停 */
+.data-table tbody tr {
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 状态徽章 */
+.status-badge, .risk-badge {
+    user-select: none;
+    -webkit-user-select: none;
+}

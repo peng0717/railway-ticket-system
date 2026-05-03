@@ -59,21 +59,61 @@ def send_email_code(to_email, code):
     msg['To'] = to_email
     
     html = f'''
-    <div style="max-width:500px;margin:0 auto;font-family:Arial,sans-serif;background:#f5f5f5;padding:20px;">
-      <div style="background:#0052a5;color:#fff;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
-        <h2 style="margin:0;">🚄 铁路客票系统</h2>
-      </div>
-      <div style="background:#fff;padding:30px;border-radius:0 0 8px 8px;">
-        <p>您好，</p>
-        <p>您正在注册铁路客票系统工号，验证码为：</p>
-        <div style="background:#f0f7ff;border:2px dashed #0052a5;border-radius:8px;padding:15px;text-align:center;margin:20px 0;">
-          <span style="font-size:32px;font-weight:bold;color:#0052a5;letter-spacing:8px;">{code}</span>
-        </div>
-        <p style="color:#666;font-size:14px;">验证码5分钟内有效，请勿泄露给他人。</p>
-        <p style="color:#999;font-size:12px;">如非本人操作，请忽略此邮件。</p>
+<div style="max-width:500px;margin:0 auto;font-family:'Microsoft YaHei',Arial,sans-serif;">
+  <!-- 票面头部 -->
+  <div style="background:#c0392b;color:#fff;padding:15px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-size:18px;font-weight:bold;letter-spacing:2px;">🚄 铁路客票系统</div>
+    <div style="font-size:12px;opacity:0.8;">注册验证</div>
+  </div>
+  
+  <!-- 票面主体 -->
+  <div style="background:#fff;border:1px solid #ddd;border-top:none;padding:25px 30px;position:relative;">
+    <!-- 左侧半圆撕口 -->
+    <div style="position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:20px;height:20px;background:#f5f5f5;border-radius:50%;border:1px solid #ddd;"></div>
+    <!-- 右侧半圆撕口 -->
+    <div style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);width:20px;height:20px;background:#f5f5f5;border-radius:50%;border:1px solid #ddd;"></div>
+    
+    <!-- 虚线分割 -->
+    <div style="border-top:2px dashed #ccc;margin:15px 0;position:relative;">
+      <div style="position:absolute;left:-40px;top:-8px;font-size:12px;color:#999;">✂</div>
+    </div>
+    
+    <!-- 验证码区域 -->
+    <div style="text-align:center;margin:20px 0;">
+      <p style="color:#333;font-size:14px;margin-bottom:10px;">您的验证码为</p>
+      <div style="display:inline-block;background:#fef9f0;border:2px solid #c9a84c;border-radius:6px;padding:12px 30px;">
+        <span style="font-size:32px;font-weight:bold;color:#c0392b;letter-spacing:8px;font-family:'Courier New',monospace;">{code}</span>
       </div>
     </div>
-    '''
+    
+    <!-- 信息区 -->
+    <div style="background:#fafafa;border-radius:4px;padding:15px;margin:15px 0;font-size:13px;color:#666;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span>有效期</span>
+        <span style="color:#c0392b;font-weight:bold;">5分钟</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span>用途</span>
+        <span>工号注册验证</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span>安全提示</span>
+        <span>请勿泄露给他人</span>
+      </div>
+    </div>
+    
+    <p style="color:#999;font-size:12px;text-align:center;margin:10px 0 0;">如非本人操作，请忽略此邮件</p>
+  </div>
+  
+  <!-- 底部条形码装饰 -->
+  <div style="background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;padding:12px 20px;text-align:center;">
+    <div style="font-family:'Courier New',monospace;font-size:11px;color:#ccc;letter-spacing:2px;">
+      ║║║║ ║║║ ║║║║║ ║║ ║║║║ ║║║ ║║║║ ║║ ║║║║ ║║║ ║║║║║
+    </div>
+    <div style="font-size:10px;color:#999;margin-top:4px;">RAWAY-VERIFY-{code}</div>
+  </div>
+</div>
+'''
     msg.attach(MIMEText(html, 'html', 'utf-8'))
     
     try:
@@ -330,24 +370,32 @@ def search_stations():
 def check_username():
     """检查工号是否可用"""
     data = request.get_json()
-    username = data.get('username', '').strip().upper()
+    username = data.get('username', '').strip()
     
     # 验证格式
     if not validate_username(username):
-        return jsonify({'status': 'error', 'message': '工号格式不正确，应为 XXX-XX-000 格式'})
+        return jsonify({'status': 'error', 'message': '工号格式不正确，应为4-20位，字母开头，可含字母、数字、下划线、短横线'})
+    
+    # 保留词检查（区分大小写存储，统一转小写比较）
+    reserved = ['admin', 'root', 'system', 'test', 'administrator']
+    if username.lower() in reserved:
+        return jsonify({'status': 'error', 'message': '该工号为系统保留词，不可使用'})
+    
+    # 统一转小写存储
+    username_lower = username.lower()
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 检查已注册用户
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    # 检查已注册用户（不区分大小写）
+    cursor.execute("SELECT id FROM users WHERE LOWER(username) = ?", (username_lower,))
     if cursor.fetchone():
         cursor.close()
         conn.close()
         return jsonify({'status': 'error', 'message': '该工号已被使用'})
     
-    # 检查待审核申请
-    cursor.execute("SELECT id FROM registration_applications WHERE username = ? AND status != 'rejected'", (username,))
+    # 检查待审核申请（不区分大小写）
+    cursor.execute("SELECT id FROM registration_applications WHERE LOWER(username) = ? AND status != 'rejected'", (username_lower,))
     if cursor.fetchone():
         cursor.close()
         conn.close()
@@ -410,9 +458,9 @@ def submit_registration():
         return jsonify({'status': 'error', 'message': '密码必须8-20位，包含字母和数字'})
     
     # 验证工号格式
-    username = data['username'].strip().upper()
+    username = data['username'].strip()
     if not validate_username(username):
-        return jsonify({'status': 'error', 'message': '工号格式不正确，应为 XXX-XX-000 格式'})
+        return jsonify({'status': 'error', 'message': '工号格式不正确，应为4-20位，字母开头，可含字母、数字、下划线、短横线'})
     
     # 验证窗口号
     window_no = int(data['window_no'])
