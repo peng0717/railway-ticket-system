@@ -319,6 +319,28 @@ def ensure_database_initialized():
                     conn.commit()
                     print("✅ 多站测试账号创建完成")
                 
+                # 自动创建 simulation_config 表
+                if 'simulation_config' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS simulation_config (
+                            key TEXT PRIMARY KEY,
+                            value TEXT,
+                            description TEXT
+                        )
+                    ''')
+                    default_config = [
+                        ('speed', 'normal', '模拟速度: slow/normal/fast'),
+                        ('sell_weight', '80', '售票概率权重'),
+                        ('refund_weight', '15', '退票概率权重'),
+                        ('shift_weight', '5', '开班概率权重'),
+                        ('auto_start', 'false', '应用启动时是否自动开始模拟'),
+                    ]
+                    for key, value, desc in default_config:
+                        cursor.execute('INSERT OR IGNORE INTO simulation_config (key, value, description) VALUES (?, ?, ?)',
+                                     (key, value, desc))
+                    conn.commit()
+                    print("✅ 自动补表: simulation_config")
+                
                 cursor.close()
                 conn.close()
                 return
@@ -3777,6 +3799,706 @@ def admin_api_sync_status():
         'history': history,
         'cached_trains': cached_trains
     })
+
+# ==================== 模拟售票器 ====================
+
+import threading
+import time as time_module
+
+# 百家姓
+SIMUL_SURNAMES = [
+    '王', '李', '张', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高',
+    '林', '何', '郭', '马', '罗', '梁', '宋', '郑', '谢', '韩', '唐', '冯', '于', '董', '萧',
+    '程', '曹', '袁', '邓', '许', '傅', '沈', '曾', '彭', '吕', '苏', '卢', '蒋', '蔡', '贾',
+    '丁', '魏', '薛', '叶', '阎', '余', '潘', '杜', '戴', '夏', '钟', '汪', '田', '任', '姜'
+]
+
+# 常用名
+SIMUL_GIVEN_NAMES = [
+    '伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '涛',
+    '明', '超', '秀兰', '霞', '平', '刚', '桂英', '芬', '玲', '建国', '建华', '志强', '欣', '怡',
+    '宇', '翔', '鑫', '雅', '诗', '涵', '子轩', '梓涵', '欣悦', '子瑶', '梦琪', '语汐', '俊杰',
+    '子豪', '天宇', '宇航', '晨曦', '子墨', '嘉兴', '思琪', '雨桐', '雨涵', '欣怡', '佳怡', '可欣'
+]
+
+# 退票原因
+SIMUL_REFUND_REASONS = [
+    '旅客个人原因', '行程变更', '改签其他车次', '身体不适', '工作安排变化', '天气原因'
+]
+
+# 地区码
+SIMUL_AREA_CODES = [
+    '110100', '310100', '320100', '330100', '440100', '420100', '500100', '610100'
+]
+
+# 模拟器全局状态
+simulation_state = {
+    'running': False,
+    'thread': None,
+    'total_sold': 0,
+    'total_refunded': 0,
+    'total_revenue': 0.0,
+    'started_at': None,
+    'recent_operations': [],
+    'lock': threading.Lock()
+}
+
+def generate_sim_passenger_name():
+    """生成随机中文姓名"""
+    surname = random.choice(SIMUL_SURNAMES)
+    given_name = random.choice(SIMUL_GIVEN_NAMES)
+    if len(given_name) == 1 and random.random() > 0.3:
+        given_name += random.choice(SIMUL_GIVEN_NAMES[:20])
+    return surname + given_name
+
+def calculate_sim_id_checksum(id17):
+    """计算身份证校验码"""
+    weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
+    check_codes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2']
+    total = sum(int(id17[i]) * weights[i] for i in range(17))
+    return check_codes[total % 11]
+
+def generate_sim_id_number():
+    """生成随机身份证号"""
+    area_code = random.choice(SIMUL_AREA_CODES)
+    year = random.randint(1980, 2005)
+    month = random.randint(1, 12)
+    day = random.randint(1, 28)
+    birth_date = f"{year:04d}{month:02d}{day:02d}"
+    seq_code = f"{random.randint(1, 500):03d}"
+    id17 = area_code + birth_date + seq_code
+    return id17 + calculate_sim_id_checksum(id17)
+
+def generate_sim_ticket_id():
+    """生成票号"""
+    now = datetime.now()
+    return f"TK{now.strftime('%Y%m%d%H%M%S')}{random.randint(100, 999)}"
+
+def get_seat_type_name_cn(seat_type):
+    """席别中文名"""
+    names = {
+        'business': '商务座', 'first': '一等座', 'second': '二等座',
+        'soft_seat': '软座', 'hard_seat': '硬座',
+        'soft_sleeper': '软卧', 'hard_sleeper': '硬卧'
+    }
+    return names.get(seat_type, seat_type)
+
+def get_sim_active_sellers():
+    """获取活跃售票员"""
+    conn = get_db_dict_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT user_id, employee_no, name, station_code, window_no 
+            FROM users WHERE role = 'seller' AND status = 'active'
+        """)
+        sellers = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return sellers
+    except:
+        if conn:
+            conn.close()
+        return []
+
+def get_sim_random_train():
+    """随机选择车次"""
+    conn = get_db_dict_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT train_id, train_number, train_type FROM trains 
+            WHERE train_type IN ('G', 'D', 'C', 'Z', 'T', 'K')
+            ORDER BY RANDOM() LIMIT 1
+        """)
+        train = cursor.fetchone()
+        if not train:
+            cursor.close()
+            conn.close()
+            return None
+        
+        cursor.execute("""
+            SELECT station_code, station_name, arrival_time, departure_time
+            FROM train_stops WHERE train_id = ? ORDER BY stop_order
+        """, (train['train_id'],))
+        stops = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        if len(stops) < 2:
+            return None
+        
+        from_idx = random.randint(0, len(stops) - 2)
+        to_idx = random.randint(from_idx + 1, len(stops) - 1)
+        
+        return {'train': train, 'from_stop': stops[from_idx], 'to_stop': stops[to_idx]}
+    except:
+        if conn:
+            conn.close()
+        return None
+
+def get_sim_random_seat_type(train_type):
+    """随机席别"""
+    seat_types = {
+        'G': ['business', 'first', 'second'],
+        'D': ['first', 'second'],
+        'C': ['first', 'second'],
+        'Z': ['soft_sleeper', 'hard_sleeper', 'soft_seat', 'hard_seat'],
+        'T': ['soft_sleeper', 'hard_sleeper', 'soft_seat', 'hard_seat'],
+        'K': ['soft_sleeper', 'hard_sleeper', 'hard_seat']
+    }
+    return random.choice(seat_types.get(train_type, ['second']))
+
+def get_sim_price(from_station, to_station, seat_type, train_type=None):
+    """计算票价"""
+    conn = get_db_dict_connection()
+    if not conn:
+        return 300.0
+    try:
+        cursor = conn.cursor()
+        if train_type:
+            cursor.execute("""
+                SELECT base_price FROM ticket_prices
+                WHERE from_station = ? AND to_station = ? AND seat_type = ? AND train_type = ?
+            """, (from_station, to_station, seat_type, train_type))
+            row = cursor.fetchone()
+            if row:
+                cursor.close()
+                conn.close()
+                return float(row['base_price'])
+        
+        cursor.execute("""
+            SELECT base_price FROM ticket_prices
+            WHERE from_station = ? AND to_station = ? AND seat_type = ?
+        """, (from_station, to_station, seat_type))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if row:
+            return float(row['base_price'])
+        
+        defaults = {'business': 800, 'first': 500, 'second': 300,
+                   'soft_seat': 250, 'hard_seat': 150, 'soft_sleeper': 400, 'hard_sleeper': 280}
+        return defaults.get(seat_type, 200)
+    except:
+        if conn:
+            conn.close()
+        return 200.0
+
+def calc_sim_refund_fee(price):
+    """计算退票费"""
+    fee_ratio = random.choice([0, 0.05, 0.10, 0.20])
+    return round(price * fee_ratio, 2)
+
+def sim_open_shift(seller):
+    """开班"""
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        now = datetime.now()
+        cursor.execute("""
+            INSERT INTO shifts (seller_id, seller_name, employee_no, station_code, 
+                window_no, shift_date, start_time, status, ticket_count, revenue)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (seller['user_id'], seller['name'], seller['employee_no'], seller['station_code'],
+              seller['window_no'], now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S'),
+              'open', 0, 0.0))
+        shift_id = cursor.lastrowid
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return shift_id
+    except:
+        if conn:
+            conn.rollback()
+            conn.close()
+        return None
+
+def sim_close_shift(shift_id):
+    """结班"""
+    conn = get_db_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE shifts SET status = 'closed', end_time = ?
+            WHERE shift_id = ?
+        """, (datetime.now().strftime('%H:%M:%S'), shift_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except:
+        if conn:
+            conn.rollback()
+            conn.close()
+
+def sim_update_shift(shift_id, ticket_delta=0, revenue_delta=0.0):
+    """更新班次统计"""
+    conn = get_db_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE shifts SET ticket_count = ticket_count + ?, revenue = revenue + ?
+            WHERE shift_id = ?
+        """, (ticket_delta, revenue_delta, shift_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except:
+        if conn:
+            conn.rollback()
+            conn.close()
+
+def sim_sell_ticket(seller, shift_id):
+    """模拟售票"""
+    train_info = get_sim_random_train()
+    if not train_info:
+        return None
+    
+    train = train_info['train']
+    from_stop = train_info['from_stop']
+    to_stop = train_info['to_stop']
+    seat_type = get_sim_random_seat_type(train['train_type'])
+    price = get_sim_price(from_stop['station_code'], to_stop['station_code'], seat_type, train['train_type'])
+    
+    passenger_name = generate_sim_passenger_name()
+    id_number = generate_sim_id_number()
+    ticket_id = generate_sim_ticket_id()
+    travel_date = (datetime.now() + timedelta(days=random.randint(0, 3))).strftime('%Y-%m-%d')
+    
+    conn = get_db_connection()
+    if not conn:
+        return None
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO tickets (
+                ticket_id, shift_id, train_number, train_id,
+                from_station, to_station, from_station_name, to_station_name,
+                travel_date, departure_time, arrival_time,
+                seat_type, seat_number, ticket_type, 
+                passenger_name, id_number, phone,
+                price, status, seller_id, window_no, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ticket_id, shift_id, train['train_number'], train['train_id'],
+            from_stop['station_code'], to_stop['station_code'],
+            from_stop['station_name'], to_stop['station_name'],
+            travel_date, from_stop['departure_time'], to_stop['arrival_time'],
+            seat_type, f"{random.randint(1, 16):02d}{random.randint(1, 20):02d}{random.choice('ABCDF')}",
+            'simulation', passenger_name, id_number, f"1{random.randint(3,9)}{random.randint(10000000, 99999999)}",
+            price, 'sold', seller['user_id'], seller['window_no'], datetime.now().isoformat()
+        ))
+        
+        cursor.execute("""
+            INSERT INTO operation_logs (shift_id, employee_no, operation_type, ticket_id, details, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (shift_id, seller['employee_no'], 'simulation_sell', ticket_id,
+              json.dumps({'train': train['train_number'], 'from': from_stop['station_name'],
+                         'to': to_stop['station_name'], 'seat': seat_type, 'price': price,
+                         'passenger': passenger_name}, ensure_ascii=False),
+              datetime.now().isoformat()))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        sim_update_shift(shift_id, 1, price)
+        
+        return {
+            'type': 'sell', 'seller': seller['employee_no'], 'seller_name': seller['name'],
+            'ticket_id': ticket_id, 'train_number': train['train_number'],
+            'from_station': from_stop['station_name'], 'to_station': to_stop['station_name'],
+            'seat_type': seat_type, 'price': price, 'passenger': passenger_name
+        }
+    except Exception as e:
+        print(f"模拟售票失败: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return None
+
+def sim_refund_ticket(seller, shift_id):
+    """模拟退票"""
+    conn = get_db_dict_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT ticket_id, train_number, from_station, to_station,
+                   from_station_name, to_station_name, seat_type, price, train_id, travel_date
+            FROM tickets WHERE status = 'sold' AND ticket_type = 'simulation'
+            ORDER BY RANDOM() LIMIT 1
+        """)
+        ticket = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not ticket:
+            return None
+        
+        refund_fee = calc_sim_refund_fee(ticket['price'])
+        refund_amount = ticket['price'] - refund_fee
+        
+        conn2 = get_db_connection()
+        if not conn2:
+            return None
+        try:
+            cursor = conn2.cursor()
+            cursor.execute("""
+                INSERT INTO refunds (ticket_id, shift_id, refund_amount, refund_fee,
+                    refund_reason, refund_type, status, operated_by, operated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (ticket['ticket_id'], shift_id, refund_amount, refund_fee,
+                  random.choice(SIMUL_REFUND_REASONS), 'simulation', 'approved',
+                  seller['user_id'], datetime.now().isoformat()))
+            
+            cursor.execute("UPDATE tickets SET status = 'refunded' WHERE ticket_id = ?",
+                          (ticket['ticket_id'],))
+            
+            cursor.execute("""
+                INSERT INTO operation_logs (shift_id, employee_no, operation_type, ticket_id, details, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (shift_id, seller['employee_no'], 'simulation_refund', ticket['ticket_id'],
+                  json.dumps({'train': ticket['train_number'], 'from': ticket['from_station_name'],
+                             'to': ticket['to_station_name'], 'seat': ticket['seat_type'],
+                             'price': ticket['price'], 'refund_fee': refund_fee}, ensure_ascii=False),
+                  datetime.now().isoformat()))
+            
+            conn2.commit()
+            cursor.close()
+            conn2.close()
+            
+            sim_update_shift(shift_id, 0, -refund_amount)
+            
+            return {
+                'type': 'refund', 'seller': seller['employee_no'], 'seller_name': seller['name'],
+                'ticket_id': ticket['ticket_id'], 'train_number': ticket['train_number'],
+                'from_station': ticket['from_station_name'], 'to_station': ticket['to_station_name'],
+                'seat_type': ticket['seat_type'], 'price': ticket['price'],
+                'refund_fee': refund_fee, 'refund_amount': refund_amount
+            }
+        except:
+            if conn2:
+                conn2.rollback()
+                conn2.close()
+            return None
+    except:
+        if conn:
+            conn.close()
+        return None
+
+def simulation_worker():
+    """模拟工作线程"""
+    sellers = get_sim_active_sellers()
+    if not sellers:
+        print("❌ 模拟器: 没有活跃售票员")
+        simulation_state['running'] = False
+        return
+    
+    print(f"✅ 模拟器: 找到 {len(sellers)} 个活跃售票员")
+    
+    # 获取速度配置
+    conn = get_db_dict_connection()
+    speed = 'normal'
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM simulation_config WHERE key = 'speed'")
+            row = cursor.fetchone()
+            if row:
+                speed = row.get('value', 'normal')
+            cursor.close()
+            conn.close()
+        except:
+            if conn:
+                conn.close()
+    
+    speed_config = {
+        'slow': {'sell': (12, 20), 'refund': (40, 70)},
+        'normal': {'sell': (4, 10), 'refund': (20, 45)},
+        'fast': {'sell': (1, 3), 'refund': (8, 18)}
+    }
+    cfg = speed_config.get(speed, speed_config['normal'])
+    
+    current_shifts = {}
+    ticket_counts = {}
+    
+    while simulation_state['running']:
+        try:
+            seller = random.choice(sellers)
+            
+            # 确保开班
+            if seller['user_id'] not in current_shifts:
+                sid = sim_open_shift(seller)
+                if sid:
+                    current_shifts[seller['user_id']] = sid
+                    ticket_counts[seller['user_id']] = 0
+                    record_sim_op('simulation_shift_open', seller['employee_no'])
+                    print(f"🚂 模拟器: [{seller['employee_no']}] 开班")
+            
+            if seller['user_id'] not in current_shifts:
+                time_module.sleep(1)
+                continue
+            
+            shift_id = current_shifts[seller['user_id']]
+            
+            # 选择操作
+            action = random.choices(['sell', 'sell', 'sell', 'sell', 'refund', 'shift'],
+                                   weights=[40, 40, 40, 40, 15, 5])[0]
+            
+            if action == 'sell':
+                result = sim_sell_ticket(seller, shift_id)
+                if result:
+                    ticket_counts[seller['user_id']] += 1
+                    simulation_state['total_sold'] += 1
+                    simulation_state['total_revenue'] += result['price']
+                    record_sim_op('simulation_sell', seller['employee_no'], result)
+                    print(f"🎫 模拟器: [{datetime.now().strftime('%H:%M:%S')}] {seller['employee_no']} "
+                          f"售 {result['train_number']} {result['from_station']}→{result['to_station']} "
+                          f"{get_seat_type_name_cn(result['seat_type'])} ¥{result['price']:.0f}")
+                    
+                    if ticket_counts[seller['user_id']] >= random.randint(30, 80):
+                        sim_close_shift(shift_id)
+                        record_sim_op('simulation_shift_close', seller['employee_no'],
+                                     {'ticket_count': ticket_counts[seller['user_id']]})
+                        print(f"🏁 模拟器: [{seller['employee_no']}] 结班({ticket_counts[seller['user_id']]}张)")
+                        del current_shifts[seller['user_id']]
+                        del ticket_counts[seller['user_id']]
+                time_module.sleep(random.uniform(*cfg['sell']))
+            
+            elif action == 'refund':
+                result = sim_refund_ticket(seller, shift_id)
+                if result:
+                    simulation_state['total_refunded'] += 1
+                    simulation_state['total_revenue'] -= result['refund_fee']
+                    record_sim_op('simulation_refund', seller['employee_no'], result)
+                    print(f"💰 模拟器: [{datetime.now().strftime('%H:%M:%S')}] {seller['employee_no']} "
+                          f"退 {result['train_number']} 退票费¥{result['refund_fee']:.0f}")
+                time_module.sleep(random.uniform(*cfg['refund']))
+            
+            else:  # shift
+                if seller['user_id'] in current_shifts:
+                    sim_close_shift(current_shifts[seller['user_id']])
+                    record_sim_op('simulation_shift_close', seller['employee_no'],
+                                 {'ticket_count': ticket_counts[seller['user_id']]})
+                    print(f"🏁 模拟器: [{seller['employee_no']}] 主动结班")
+                    del current_shifts[seller['user_id']]
+                    del ticket_counts[seller['user_id']]
+                sid = sim_open_shift(seller)
+                if sid:
+                    current_shifts[seller['user_id']] = sid
+                    ticket_counts[seller['user_id']] = 0
+                    record_sim_op('simulation_shift_open', seller['employee_no'])
+                    print(f"🚂 模拟器: [{seller['employee_no']}] 重新开班")
+                time_module.sleep(2)
+                
+        except Exception as e:
+            print(f"模拟线程异常: {e}")
+            time_module.sleep(5)
+    
+    # 退出时结班
+    for sid in current_shifts.values():
+        sim_close_shift(sid)
+    print("🏁 模拟器已停止")
+
+def record_sim_op(op_type, seller_no, data=None):
+    """记录最近操作"""
+    with simulation_state['lock']:
+        op = {
+            'type': op_type,
+            'seller': seller_no,
+            'time': datetime.now().strftime('%H:%M:%S'),
+            'data': data or {}
+        }
+        simulation_state['recent_operations'].insert(0, op)
+        simulation_state['recent_operations'] = simulation_state['recent_operations'][:20]
+
+@app.route('/admin/simulation')
+@admin_required
+def admin_simulation():
+    """模拟监控页面"""
+    return render_template('admin/simulation.html', running=simulation_state['running'])
+
+@app.route('/admin/api/simulation/start', methods=['POST'])
+@admin_required
+def admin_simulation_start():
+    """启动模拟"""
+    speed = request.json.get('speed', 'normal') if request.is_json else 'normal'
+    
+    with simulation_state['lock']:
+        if simulation_state['running']:
+            return jsonify({'status': 'error', 'message': '模拟已在运行'})
+        
+        simulation_state['running'] = True
+        simulation_state['thread'] = threading.Thread(target=simulation_worker, daemon=True)
+        simulation_state['thread'].start()
+        simulation_state['started_at'] = datetime.now().isoformat()
+        simulation_state['total_sold'] = 0
+        simulation_state['total_refunded'] = 0
+        simulation_state['total_revenue'] = 0.0
+        simulation_state['recent_operations'] = []
+    
+    return jsonify({'status': 'success', 'message': f'模拟已启动(速度:{speed})'})
+
+@app.route('/admin/api/simulation/stop', methods=['POST'])
+@admin_required
+def admin_simulation_stop():
+    """停止模拟"""
+    with simulation_state['lock']:
+        if not simulation_state['running']:
+            return jsonify({'status': 'error', 'message': '模拟未在运行'})
+        simulation_state['running'] = False
+    
+    return jsonify({'status': 'success', 'message': '模拟已停止'})
+
+@app.route('/admin/api/simulation/status')
+@admin_required
+def admin_simulation_status():
+    """获取模拟状态"""
+    return jsonify({
+        'status': 'success',
+        'running': simulation_state['running'],
+        'total_sold': simulation_state['total_sold'],
+        'total_refunded': simulation_state['total_refunded'],
+        'total_revenue': simulation_state['total_revenue'],
+        'started_at': simulation_state['started_at'],
+        'recent_operations': simulation_state['recent_operations']
+    })
+
+@app.route('/admin/api/simulation/stats')
+@admin_required
+def admin_simulation_stats():
+    """获取模拟统计数据"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 今日统计
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM tickets 
+            WHERE ticket_type = 'simulation' AND DATE(created_at) = ?
+        """, (today,))
+        today_sold = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM refunds 
+            WHERE refund_type = 'simulation' AND DATE(operated_at) = ?
+        """, (today,))
+        today_refunded = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT COALESCE(SUM(price), 0) FROM tickets 
+            WHERE ticket_type = 'simulation' AND DATE(created_at) = ?
+        """, (today,))
+        today_revenue = cursor.fetchone()[0] or 0
+        
+        cursor.execute("""
+            SELECT COALESCE(SUM(refund_fee), 0) FROM refunds 
+            WHERE refund_type = 'simulation' AND DATE(operated_at) = ?
+        """, (today,))
+        today_refund_fee = cursor.fetchone()[0] or 0
+        
+        # 活跃售票员
+        cursor.execute("""
+            SELECT COUNT(DISTINCT seller_id) FROM shifts 
+            WHERE DATE(shift_date) = ? AND status = 'open'
+        """, (today,))
+        active_sellers = cursor.fetchone()[0] or 0
+        
+        # 车次热度TOP10
+        cursor.execute("""
+            SELECT train_number, COUNT(*) as cnt 
+            FROM tickets 
+            WHERE ticket_type = 'simulation' AND DATE(created_at) = ?
+            GROUP BY train_number 
+            ORDER BY cnt DESC LIMIT 10
+        """, (today,))
+        top_trains = [{'train': row[0], 'count': row[1]} for row in cursor.fetchall()]
+        
+        # 班次状态
+        cursor.execute("""
+            SELECT s.employee_no, s.seller_name, s.window_no, s.ticket_count, s.revenue, s.status
+            FROM shifts s
+            WHERE DATE(s.shift_date) = ?
+            ORDER BY s.start_time DESC
+            LIMIT 20
+        """, (today,))
+        shifts = [{'employee_no': row[0], 'name': row[1], 'window': row[2],
+                  'tickets': row[3], 'revenue': row[4], 'status': row[5]} for row in cursor.fetchall()]
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'today_sold': today_sold,
+            'today_refunded': today_refunded,
+            'today_revenue': today_revenue - today_refund_fee,
+            'active_sellers': active_sellers,
+            'top_trains': top_trains,
+            'shifts': shifts
+        })
+    except Exception as e:
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/admin/api/simulation/config', methods=['GET', 'POST'])
+@admin_required
+def admin_simulation_config():
+    """模拟器配置"""
+    if request.method == 'POST':
+        key = request.form.get('key')
+        value = request.form.get('value')
+        if key and value:
+            conn = get_db_connection()
+            if conn:
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO simulation_config (key, value) VALUES (?, ?)
+                    """, (key, value))
+                    conn.commit()
+                    cursor.close()
+                    conn.close()
+                    return jsonify({'status': 'success', 'message': '配置已更新'})
+                except:
+                    if conn:
+                        conn.close()
+        return jsonify({'status': 'error', 'message': '更新失败'})
+    
+    # GET
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT key, value, description FROM simulation_config")
+            config = [{'key': row[0], 'value': row[1], 'desc': row[2]} for row in cursor.fetchall()]
+            cursor.close()
+            conn.close()
+            return jsonify({'status': 'success', 'config': config})
+        except:
+            if conn:
+                conn.close()
+    return jsonify({'status': 'error', 'message': '获取配置失败'})
 
 # ==================== 启动应用 ====================
 
