@@ -852,7 +852,52 @@ def admin_dashboard():
 @admin_required
 def admin_registrations():
     """注册审核列表"""
-    return redirect(url_for('register_bp.admin_applications'))
+    status_filter = request.args.get('status', 'all')
+    search = request.args.get('search', '').strip()
+    
+    conn = get_db_dict_connection()
+    applications = []
+    pending_count = 0
+    
+    if conn:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT id, real_name, id_card, email, station_code, username, window_no,
+                   machine_code, created_at, status, reject_reason, reviewed_at
+            FROM registration_applications
+            WHERE 1=1
+        """
+        params = []
+        
+        if status_filter != 'all':
+            query += " AND status = ?"
+            params.append(status_filter)
+        
+        if search:
+            query += " AND (real_name LIKE ? OR id_card LIKE ? OR email LIKE ? OR username LIKE ?)"
+            search_pattern = f'%{search}%'
+            params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+        
+        query += " ORDER BY created_at DESC"
+        
+        cursor.execute(query, params)
+        applications = cursor.fetchall()
+        
+        cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'pending'")
+        row = cursor.fetchone()
+        pending_count = row['cnt'] if row else 0
+        
+        cursor.close()
+        conn.close()
+    
+    return render_template('admin/registrations.html',
+                           system_name=config.SYSTEM_NAME,
+                           applications=applications,
+                           status_filter=status_filter,
+                           search=search,
+                           pending_registrations=pending_count,
+                           pending_refunds=0)
 
 @app.route('/admin/refund-approvals')
 @admin_required
@@ -1397,6 +1442,210 @@ def admin_settings():
                            settings=settings,
                            pending_registrations=0,
                            pending_refunds=0)
+
+# ==================== 注册审核 & 风控 API ====================
+
+@app.route('/admin/risk')
+@admin_required
+def admin_risk():
+    """风控管理页面"""
+    conn = get_db_dict_connection()
+    records = []
+    pending_count = 0
+    
+    if conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT rc.*, u.name, u.employee_no
+            FROM risk_controls rc
+            LEFT JOIN users u ON rc.user_id = u.user_id
+            ORDER BY rc.created_at DESC
+            LIMIT 100
+        """)
+        records = cursor.fetchall()
+        
+        cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'pending'")
+        row = cursor.fetchone()
+        pending_count = row['cnt'] if row else 0
+        
+        cursor.close()
+        conn.close()
+    
+    return render_template('admin/risk.html',
+                           system_name=config.SYSTEM_NAME,
+                           records=records,
+                           pending_registrations=pending_count,
+                           pending_refunds=0)
+
+
+@app.route('/admin/api/approve-application', methods=['POST'])
+@admin_required
+def api_approve_application():
+    """审核通过注册申请"""
+    data = request.get_json()
+    application_id = data.get('id')
+    
+    if not application_id:
+        return jsonify({'status': 'error', 'message': '缺少申请ID'})
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT real_name, id_card, email, station_code, username, window_no, 
+               password_hash, machine_code
+        FROM registration_applications
+        WHERE id = ? AND status = 'pending'
+    """, (application_id,))
+    app = cursor.fetchone()
+    
+    if not app:
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': '申请不存在或已审核'})
+    
+    try:
+        cursor.execute("""
+            INSERT INTO users 
+            (employee_no, name, password_hash, id_card, email, role, station_code, 
+             window_no, machine_code, status, created_at)
+            VALUES (?, ?, ?, ?, ?, 'seller', ?, ?, ?, 'active', ?)
+        """, (
+            app['username'], app['real_name'], app['password_hash'], app['id_card'],
+            app['email'], app['station_code'], app['window_no'], app['machine_code'],
+            datetime.now().isoformat()
+        ))
+        
+        user_id = cursor.lastrowid
+        
+        cursor.execute("""
+            UPDATE registration_applications
+            SET status = 'approved', reviewed_at = ?, reviewed_by = 0
+            WHERE id = ?
+        """, (datetime.now().isoformat(), application_id))
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO machine_bindings (user_id, machine_code, bound_at, updated_at)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, app['machine_code'], datetime.now().isoformat(), datetime.now().isoformat()))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'message': '申请已通过，用户已创建'})
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': f'操作失败: {str(e)}'})
+
+
+@app.route('/admin/api/reject-application', methods=['POST'])
+@admin_required
+def api_reject_application():
+    """拒绝注册申请"""
+    data = request.get_json()
+    application_id = data.get('id')
+    reason = data.get('reason', '').strip()
+    
+    if not application_id:
+        return jsonify({'status': 'error', 'message': '缺少申请ID'})
+    
+    if not reason:
+        return jsonify({'status': 'error', 'message': '请输入拒绝原因'})
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE registration_applications
+            SET status = 'rejected', reject_reason = ?, reviewed_at = ?, reviewed_by = 0
+            WHERE id = ? AND status = 'pending'
+        """, (reason, datetime.now().isoformat(), application_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'message': '申请已拒绝'})
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': f'操作失败: {str(e)}'})
+
+
+@app.route('/admin/api/freeze-user', methods=['POST'])
+@admin_required
+def api_freeze_user():
+    """冻结用户"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'status': 'error', 'message': '缺少用户ID'})
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET status = 'frozen' WHERE user_id = ?", (user_id,))
+        
+        cursor.execute("""
+            INSERT INTO risk_controls (user_id, username, original_machine_code, new_machine_code, action, reason, operated_by, created_at)
+            SELECT user_id, employee_no, machine_code, '', 'manual_freeze', '管理员手动冻结', 0, ?
+            FROM users WHERE user_id = ?
+        """, (datetime.now().isoformat(), user_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'message': '用户已冻结'})
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': f'操作失败: {str(e)}'})
+
+
+@app.route('/admin/api/unfreeze-user', methods=['POST'])
+@admin_required
+def api_unfreeze_user():
+    """解冻用户"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'status': 'error', 'message': '缺少用户ID'})
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET status = 'active' WHERE user_id = ?", (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'message': '用户已解冻'})
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': f'操作失败: {str(e)}'})
+
 
 # ==================== 管理端 API 路由 ====================
 

@@ -69,6 +69,12 @@
                         <span>用户管理</span>
                     </a>
                 </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_risk' %}active{% endif %}">
+                    <a href="{{ url_for('admin_risk') }}">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>风控管理</span>
+                    </a>
+                </li>
                 
                 <li class="sidebar-header">对账管理</li>
                 <li class="sidebar-item {% if request.endpoint == 'admin_daily_reports' %}active{% endif %}">
