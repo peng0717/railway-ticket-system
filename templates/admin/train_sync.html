@@ -124,6 +124,23 @@
                             <i class="fas fa-sync"></i> 立即同步
                         </button>
                     </form>
+                    
+                    <hr class="my-4">
+                    
+                    <h5><i class="fas fa-chair"></i> 数据修复</h5>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>注意：</strong>以下操作用于修复历史数据中的缺失信息
+                    </div>
+                    <button type="button" class="btn btn-warning" id="fillSeatsBtn" onclick="fillSeatInventory()">
+                        <i class="fas fa-fill"></i> 一键填充默认票额
+                    </button>
+                    <button type="button" class="btn btn-info" id="fillDaysBtn" onclick="fillRunningDays()">
+                        <i class="fas fa-calendar"></i> 填充开行日期
+                    </button>
+                    <button type="button" class="btn btn-success" id="createUsersBtn" onclick="createTestUsers()">
+                        <i class="fas fa-user-plus"></i> 创建多站测试账号
+                    </button>
                 </div>
             </div>
         </div>
@@ -268,6 +285,63 @@ $('#syncForm').on('submit', function() {
     $('#syncBtn').html('<i class="fas fa-spinner fa-spin"></i> 同步中...').prop('disabled', true);
     return true;
 });
+
+// 一键填充默认票额
+function fillSeatInventory() {
+    if (!confirm('确定要填充所有车次的默认座席票额吗？')) return;
+    
+    $('#fillSeatsBtn').html('<i class="fas fa-spinner fa-spin"></i> 填充中...').prop('disabled', true);
+    
+    $.post('/admin/api/fill-seats', function(res) {
+        if (res.status === 'success') {
+            alert('✅ 填充成功！\\n• 处理车次: ' + res.train_count + '\\n• 填充车次数: ' + res.updated_count);
+        } else {
+            alert('❌ 填充失败: ' + res.message);
+        }
+        $('#fillSeatsBtn').html('<i class="fas fa-fill"></i> 一键填充默认票额').prop('disabled', false);
+    }).fail(function() {
+        alert('❌ 请求失败，请重试');
+        $('#fillSeatsBtn').html('<i class="fas fa-fill"></i> 一键填充默认票额').prop('disabled', false);
+    });
+}
+
+// 填充开行日期
+function fillRunningDays() {
+    if (!confirm('确定要将所有车次的开行日期设为"每日开行"吗？')) return;
+    
+    $('#fillDaysBtn').html('<i class="fas fa-spinner fa-spin"></i> 填充中...').prop('disabled', true);
+    
+    $.post('/admin/api/fill-running-days', function(res) {
+        if (res.status === 'success') {
+            alert('✅ 填充成功！共处理 ' + res.count + ' 个车次');
+        } else {
+            alert('❌ 填充失败: ' + res.message);
+        }
+        $('#fillDaysBtn').html('<i class="fas fa-calendar"></i> 填充开行日期').prop('disabled', false);
+    }).fail(function() {
+        alert('❌ 请求失败，请重试');
+        $('#fillDaysBtn').html('<i class="fas fa-calendar"></i> 填充开行日期').prop('disabled', false);
+    });
+}
+
+// 创建多站测试账号
+function createTestUsers() {
+    if (!confirm('确定要创建多站测试账号吗？\\n将创建：seller003-006（上海、北京、广州、武汉）')) return;
+    
+    $('#createUsersBtn').html('<i class="fas fa-spinner fa-spin"></i> 创建中...').prop('disabled', true);
+    
+    $.post('/admin/api/create-test-users', function(res) {
+        if (res.status === 'success') {
+            alert('✅ 创建成功！\\n新增 ' + res.created + ' 个账号\\n\\n账号信息：\\n' + res.users.join('\\n'));
+        } else {
+            alert('❌ 创建失败: ' + res.message);
+        }
+        $('#createUsersBtn').html('<i class="fas fa-user-plus"></i> 创建多站测试账号').prop('disabled', false);
+    }).fail(function() {
+        alert('❌ 请求失败，请重试');
+        $('#createUsersBtn').html('<i class="fas fa-user-plus"></i> 创建多站测试账号').prop('disabled', false);
+    });
+}
 
 // 自动刷新同步状态
 setInterval(function() {

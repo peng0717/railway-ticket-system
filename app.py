@@ -241,6 +241,84 @@ def ensure_database_initialized():
                     conn.commit()
                     print("✅ 自动补表: train_seat_inventory")
                 
+                # 自动填充座席默认票额（如果全是NULL）
+                cursor.execute("""
+                    SELECT COUNT(DISTINCT train_id) FROM train_stops 
+                    WHERE seat_business IS NULL AND seat_first IS NULL AND seat_second IS NULL 
+                        AND seat_soft IS NULL AND seat_hard IS NULL AND seat_soft_sleeper IS NULL AND seat_hard_sleeper IS NULL
+                """)
+                null_seats_count = cursor.fetchone()[0]
+                
+                if null_seats_count > 0:
+                    print(f"⚠️  发现 {null_seats_count} 个车次座席数据为空，正在自动填充...")
+                    # 车型默认票额配置
+                    seat_defaults = {
+                        'G': {'seat_business': 20, 'seat_first': 50, 'seat_second': 500},
+                        'D': {'seat_first': 60, 'seat_second': 600},
+                        'C': {'seat_first': 40, 'seat_second': 400},
+                        'Z': {'seat_soft_sleeper': 30, 'seat_hard_sleeper': 200, 'seat_hard': 500},
+                        'T': {'seat_soft_sleeper': 20, 'seat_hard_sleeper': 150, 'seat_hard': 400},
+                        'K': {'seat_soft_sleeper': 15, 'seat_hard_sleeper': 100, 'seat_hard': 300},
+                    }
+                    
+                    cursor.execute("SELECT train_id, train_number, train_type FROM trains")
+                    for train_id, train_number, train_type in cursor.fetchall():
+                        defaults = seat_defaults.get(train_type, seat_defaults.get(train_number[0] if train_number else 'K', {}))
+                        if not defaults:
+                            defaults = {'seat_hard': 200}
+                        for seat_field, seat_count in defaults.items():
+                            cursor.execute(f"""
+                                UPDATE train_stops SET {seat_field} = ?
+                                WHERE train_id = ? AND ({seat_field} IS NULL OR {seat_field} = 0)
+                            """, (seat_count, train_id))
+                    
+                    conn.commit()
+                    print("✅ 座席数据自动填充完成")
+                
+                # 自动填充running_days（如果全是NULL）
+                cursor.execute("SELECT COUNT(*) FROM trains WHERE running_days IS NULL OR running_days = ''")
+                null_days_count = cursor.fetchone()[0]
+                
+                if null_days_count > 0:
+                    print(f"⚠️  发现 {null_days_count} 个车次开行日期为空，正在自动填充...")
+                    cursor.execute("""
+                        UPDATE trains SET running_days = '1234567' 
+                        WHERE running_days IS NULL OR running_days = ''
+                    """)
+                    conn.commit()
+                    print("✅ 开行日期自动填充完成")
+                
+                # 自动为ticket_prices添加train_type字段
+                cursor.execute("PRAGMA table_info(ticket_prices)")
+                columns = [col[1] for col in cursor.fetchall()]
+                if 'train_type' not in columns:
+                    cursor.execute("ALTER TABLE ticket_prices ADD COLUMN train_type VARCHAR(10)")
+                    conn.commit()
+                    print("✅ ticket_prices表已添加train_type字段")
+                
+                # 自动创建多站测试账号（如果只有少量用户）
+                cursor.execute("SELECT COUNT(*) FROM users")
+                user_count = cursor.fetchone()[0]
+                
+                if user_count <= 3:
+                    print(f"⚠️  只有 {user_count} 个用户，正在创建多站测试账号...")
+                    test_users = [
+                        ('seller003', '上海站售票员', 'SHH', '201号口'),
+                        ('seller004', '北京站售票员', 'BJP', '301号口'),
+                        ('seller005', '广州站售票员', 'GZQ', '401号口'),
+                        ('seller006', '武汉站售票员', 'WHN', '501号口'),
+                    ]
+                    for emp_no, name, station_code, window_no in test_users:
+                        cursor.execute("SELECT user_id FROM users WHERE employee_no = ?", (emp_no,))
+                        if not cursor.fetchone():
+                            password_hash = generate_password_hash('123456')
+                            cursor.execute("""
+                                INSERT INTO users (employee_no, password_hash, name, role, window_no, station_code, status, ticket_limit)
+                                VALUES (?, ?, ?, 'seller', ?, ?, 'active', 200)
+                            """, (emp_no, password_hash, name, window_no, station_code))
+                    conn.commit()
+                    print("✅ 多站测试账号创建完成")
+                
                 cursor.close()
                 conn.close()
                 return
@@ -467,14 +545,35 @@ def search_stations(pinyin_code):
             conn.close()
         return []
 
-def calculate_price(from_station, to_station, seat_type):
-    """计算票价"""
+def calculate_price(from_station, to_station, seat_type, train_type=None):
+    """计算票价
+    
+    Args:
+        from_station: 出发站station_code
+        to_station: 到达站station_code
+        seat_type: 席别类型
+        train_type: 车型（可选，用于精确匹配票价）
+    """
     conn = get_db_dict_connection()
     if not conn:
         return 200
     
     try:
         cursor = conn.cursor()
+        
+        # 优先按 train_type + from_station + to_station + seat_type 查询
+        if train_type:
+            cursor.execute("""
+                SELECT base_price FROM ticket_prices
+                WHERE from_station = ? AND to_station = ? AND seat_type = ? AND train_type = ?
+            """, (from_station, to_station, seat_type, train_type))
+            price = cursor.fetchone()
+            if price:
+                cursor.close()
+                conn.close()
+                return price['base_price']
+        
+        # 退化为按 from_station + to_station + seat_type 查询
         cursor.execute("""
             SELECT base_price FROM ticket_prices
             WHERE from_station = ? AND to_station = ? AND seat_type = ?
@@ -2200,6 +2299,152 @@ def api_export_logs():
         conn.close()
         return f"导出失败: {str(e)}", 500
 
+# ==================== 数据修复 API ====================
+
+@app.route('/admin/api/fill-seats', methods=['POST'])
+@admin_required
+def api_fill_seats():
+    """一键填充默认票额"""
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    try:
+        # 车型默认票额配置
+        seat_defaults = {
+            'G': {'seat_business': 20, 'seat_first': 50, 'seat_second': 500},
+            'D': {'seat_first': 60, 'seat_second': 600},
+            'C': {'seat_first': 40, 'seat_second': 400},
+            'Z': {'seat_soft_sleeper': 30, 'seat_hard_sleeper': 200, 'seat_hard': 500},
+            'T': {'seat_soft_sleeper': 20, 'seat_hard_sleeper': 150, 'seat_hard': 400},
+            'K': {'seat_soft_sleeper': 15, 'seat_hard_sleeper': 100, 'seat_hard': 300},
+        }
+        
+        cursor.execute("SELECT train_id, train_number, train_type FROM trains")
+        trains = cursor.fetchall()
+        train_count = len(trains)
+        updated_count = 0
+        
+        for train_id, train_number, train_type in trains:
+            defaults = seat_defaults.get(train_type, seat_defaults.get(train_number[0] if train_number else 'K', {}))
+            if not defaults:
+                defaults = {'seat_hard': 200}
+            
+            # 检查是否需要更新
+            cursor.execute("""
+                SELECT COUNT(*) FROM train_stops 
+                WHERE train_id = ? AND (seat_business > 0 OR seat_first > 0 OR seat_second > 0 
+                    OR seat_soft > 0 OR seat_hard > 0 OR seat_soft_sleeper > 0 OR seat_hard_sleeper > 0)
+            """, (train_id,))
+            has_seats = cursor.fetchone()[0]
+            
+            if has_seats == 0:
+                for seat_field, seat_count in defaults.items():
+                    cursor.execute(f"""
+                        UPDATE train_stops SET {seat_field} = ?
+                        WHERE train_id = ? AND ({seat_field} IS NULL OR {seat_field} = 0)
+                    """, (seat_count, train_id))
+                updated_count += 1
+        
+        conn.commit()
+        
+        # 记录日志
+        log_operation('admin_fill_seats', details={'train_count': train_count, 'updated_count': updated_count})
+        
+        return jsonify({
+            'status': 'success',
+            'train_count': train_count,
+            'updated_count': updated_count,
+            'message': f'处理 {train_count} 个车次，填充 {updated_count} 个车次的座席'
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/api/fill-running-days', methods=['POST'])
+@admin_required
+def api_fill_running_days():
+    """填充开行日期"""
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            UPDATE trains SET running_days = '1234567' 
+            WHERE running_days IS NULL OR running_days = ''
+        """)
+        count = cursor.rowcount
+        conn.commit()
+        
+        # 记录日志
+        log_operation('admin_fill_days', details={'count': count})
+        
+        return jsonify({
+            'status': 'success',
+            'count': count,
+            'message': f'已为 {count} 个车次设置每日开行'
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/admin/api/create-test-users', methods=['POST'])
+@admin_required
+def api_create_test_users():
+    """创建多站测试账号"""
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    test_users = [
+        ('seller003', '上海站售票员', 'SHH', '201号口'),
+        ('seller004', '北京站售票员', 'BJP', '301号口'),
+        ('seller005', '广州站售票员', 'GZQ', '401号口'),
+        ('seller006', '武汉站售票员', 'WHN', '501号口'),
+    ]
+    
+    try:
+        created = 0
+        users_info = []
+        
+        for emp_no, name, station_code, window_no in test_users:
+            cursor.execute("SELECT user_id FROM users WHERE employee_no = ?", (emp_no,))
+            if cursor.fetchone():
+                continue
+            
+            password_hash = generate_password_hash('123456')
+            cursor.execute("""
+                INSERT INTO users (employee_no, password_hash, name, role, window_no, station_code, status, ticket_limit)
+                VALUES (?, ?, ?, 'seller', ?, ?, 'active', 200)
+            """, (emp_no, password_hash, name, window_no, station_code))
+            created += 1
+            users_info.append(f'{emp_no}/123456 ({name})')
+        
+        conn.commit()
+        
+        # 记录日志
+        log_operation('admin_create_users', details={'created': created})
+        
+        return jsonify({
+            'status': 'success',
+            'created': created,
+            'users': users_info,
+            'message': f'成功创建 {created} 个测试账号'
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
 
 # ==================== 售票端路由 ====================
 
@@ -2377,6 +2622,7 @@ def api_captcha():
     return jsonify({'code': captcha_code, 'image': captcha_image})
 
 @app.route('/api/search-stations')
+@login_required
 def api_search_stations():
     """搜索车站（支持拼音首字母）"""
     query = request.args.get('q', '').strip()
@@ -2725,7 +2971,8 @@ def api_sell_ticket():
 @login_required
 def api_query_ticket():
     """查询票信息"""
-    ticket_no = request.args.get('ticket_no', '').strip()
+    # 同时支持 ticket_no 和 ticket_id 参数名
+    ticket_no = request.args.get('ticket_no', request.args.get('ticket_id', '')).strip()
     
     if not ticket_no:
         return jsonify({'status': 'error', 'message': '请提供票号'})
