@@ -2519,6 +2519,221 @@ def daily_report():
             conn.close()
         return render_template('error.html', error=f'生成对账单失败: {str(e)}', system_name=config.SYSTEM_NAME)
 
+# ==================== 旅客副屏路由 ====================
+
+@app.route('/passenger-display')
+def passenger_display():
+    """旅客副屏（无需登录）"""
+    return render_template('passenger_display.html')
+
+# ==================== 售票/退票 API ====================
+
+@app.route('/api/sell-ticket', methods=['POST'])
+@login_required
+def api_sell_ticket():
+    """售票 API"""
+    if 'shift_id' not in session:
+        return jsonify({'status': 'error', 'message': '请先选择班次'})
+    
+    train_number = request.form.get('train_number', '').strip()
+    train_id = request.form.get('train_id', '').strip()
+    date = request.form.get('date', '').strip()
+    from_station = request.form.get('from_station', '').strip()
+    from_station_name = request.form.get('from_station_name', '').strip()
+    to_station = request.form.get('to_station', '').strip()
+    to_station_name = request.form.get('to_station_name', '').strip()
+    seat_type = request.form.get('seat_type', '').strip()
+    ticket_type = request.form.get('ticket_type', 'adult').strip()
+    price = float(request.form.get('price', 0))
+    payment = float(request.form.get('payment', 0))
+    
+    if not all([train_number, date, from_station, to_station, seat_type]):
+        return jsonify({'status': 'error', 'message': '信息不完整'})
+    
+    if payment < price:
+        return jsonify({'status': 'error', 'message': '收款金额不足'})
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 生成票号
+        ticket_no = get_next_ticket_id()
+        
+        # 插入票记录 - 使用实际数据库字段
+        cursor.execute("""
+            INSERT INTO tickets (
+                ticket_id, shift_id, train_number, train_id,
+                from_station, to_station,
+                travel_date, departure_time,
+                seat_type, ticket_type, price,
+                passenger_name, id_number,
+                status, payment_method, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ticket_no,
+            session['shift_id'],
+            train_number,
+            train_id or None,
+            from_station,
+            to_station,
+            date,
+            '',  # departure_time
+            seat_type,
+            ticket_type,
+            price,
+            '',  # passenger_name
+            '',  # id_number
+            'sold',
+            'cash' if payment > price else 'electronic',
+            datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # 记录日志
+        log_operation('sell', ticket_id=ticket_no, details={
+            'train': train_number,
+            'from': from_station,
+            'to': to_station,
+            'seat': seat_type,
+            'price': price,
+            'payment': payment
+        })
+        
+        return jsonify({
+            'status': 'success',
+            'message': '出票成功',
+            'ticket_no': ticket_no
+        })
+        
+    except Exception as e:
+        print(f"售票失败: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({'status': 'error', 'message': f'售票失败: {str(e)}'})
+
+@app.route('/api/query-ticket')
+@login_required
+def api_query_ticket():
+    """查询票信息"""
+    ticket_no = request.args.get('ticket_no', '').strip()
+    
+    if not ticket_no:
+        return jsonify({'status': 'error', 'message': '请提供票号'})
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM tickets WHERE ticket_id = ?
+        """, (ticket_no,))
+        ticket = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not ticket:
+            return jsonify({'status': 'error', 'message': '未找到该票'})
+        
+        return jsonify({'status': 'success', 'data': ticket})
+        
+    except Exception as e:
+        print(f"查询票失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '查询失败'})
+
+@app.route('/api/process-refund', methods=['POST'])
+@login_required
+def api_process_refund():
+    """处理退票"""
+    if 'shift_id' not in session:
+        return jsonify({'status': 'error', 'message': '请先选择班次'})
+    
+    ticket_no = request.form.get('ticket_no', '').strip()
+    reason = request.form.get('reason', '').strip()
+    refund_fee = float(request.form.get('refund_fee', 0))
+    actual_refund = float(request.form.get('actual_refund', 0))
+    
+    if not ticket_no:
+        return jsonify({'status': 'error', 'message': '请提供票号'})
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 获取原票信息
+        cursor.execute("SELECT * FROM tickets WHERE ticket_id = ?", (ticket_no,))
+        ticket = cursor.fetchone()
+        
+        if not ticket:
+            cursor.close()
+            conn.close()
+            return jsonify({'status': 'error', 'message': '未找到该票'})
+        
+        if ticket['status'] == 'refunded':
+            cursor.close()
+            conn.close()
+            return jsonify({'status': 'error', 'message': '该票已退过'})
+        
+        # 更新票状态
+        cursor.execute("""
+            UPDATE tickets SET status = 'refunded' WHERE ticket_id = ?
+        """, (ticket_no,))
+        
+        # 插入退款记录 - 使用实际数据库字段
+        cursor.execute("""
+            INSERT INTO refunds (
+                ticket_id, shift_id, refund_amount, refund_fee,
+                refund_reason, refund_type, refund_time
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ticket_no,
+            session['shift_id'],
+            actual_refund,
+            refund_fee,
+            reason,
+            'window',  # refund_type
+            datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # 记录日志
+        log_operation('refund', ticket_id=ticket_no, details={
+            'original_price': ticket['price'],
+            'refund_fee': refund_fee,
+            'actual_refund': actual_refund,
+            'reason': reason
+        })
+        
+        return jsonify({
+            'status': 'success',
+            'message': '退票成功',
+            'actual_refund': actual_refund
+        })
+        
+    except Exception as e:
+        print(f"退票失败: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({'status': 'error', 'message': f'退票失败: {str(e)}'})
+
 # ==================== 启动应用 ====================
 
 if __name__ == '__main__':

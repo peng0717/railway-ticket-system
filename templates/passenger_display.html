@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅客显示屏</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: #000000;
+            color: #FFFFFF;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        /* 主显示区 */
+        .display-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+        }
+        /* 待机状态 */
+        .idle-state {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .idle-title {
+            font-size: 72px;
+            font-weight: bold;
+            color: #FFFFFF;
+            margin-bottom: 30px;
+            letter-spacing: 8px;
+        }
+        .idle-subtitle {
+            font-size: 36px;
+            color: #888888;
+            letter-spacing: 4px;
+        }
+        /* 票面信息 */
+        .ticket-info {
+            width: 100%;
+            max-width: 900px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            margin: 20px 0;
+        }
+        .info-label {
+            font-size: 36px;
+            color: #888888;
+            margin-right: 20px;
+        }
+        .info-value {
+            font-size: 56px;
+            font-weight: bold;
+            color: #FFFFFF;
+        }
+        .info-value.highlight {
+            font-size: 72px;
+            color: #FFD700;
+        }
+        .info-value.small {
+            font-size: 36px;
+        }
+        .route-arrow {
+            font-size: 64px;
+            color: #FFD700;
+            margin: 0 30px;
+        }
+        /* 席别和价格 */
+        .seat-price {
+            margin-top: 40px;
+        }
+        .seat-name {
+            font-size: 48px;
+            color: #FFFFFF;
+        }
+        .price-display {
+            font-size: 120px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-top: 20px;
+        }
+        .price-unit {
+            font-size: 48px;
+            color: #FFD700;
+        }
+        /* 确认状态 */
+        .confirm-state {
+            border: 4px solid #FFD700;
+            padding: 40px 60px;
+            background: rgba(255, 215, 0, 0.05);
+        }
+        .confirm-text {
+            font-size: 48px;
+            color: #FFD700;
+        }
+        /* 收款状态 */
+        .payment-state {
+            margin-top: 30px;
+        }
+        /* 成功状态 */
+        .success-state {
+            animation: successPulse 1s ease-out;
+        }
+        @keyframes successPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .success-text {
+            font-size: 72px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .success-sub {
+            font-size: 48px;
+            color: #FFFFFF;
+            margin-top: 30px;
+        }
+        /* 退票状态 */
+        .refund-info {
+            width: 100%;
+            max-width: 800px;
+        }
+        .refund-title {
+            font-size: 56px;
+            color: #FF6B6B;
+            margin-bottom: 30px;
+        }
+        /* 分隔线 */
+        .divider {
+            width: 200px;
+            height: 4px;
+            background: #FFD700;
+            margin: 30px auto;
+        }
+        /* 底部提示 */
+        .bottom-hint {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 24px;
+            color: #666666;
+        }
+        /* 隐藏 */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="display-container" id="display-container">
+        <!-- 待机状态 -->
+        <div class="idle-state" id="idle-state">
+            <div class="idle-title">欢迎光临</div>
+            <div class="idle-subtitle">铁路客票售票窗口</div>
+        </div>
+
+        <!-- 票面信息 -->
+        <div class="ticket-info hidden" id="ticket-info-state">
+            <div class="info-row">
+                <span class="info-value" id="ti-from">北京南</span>
+                <span class="route-arrow">→</span>
+                <span class="info-value" id="ti-to">上海虹桥</span>
+            </div>
+            <div class="divider"></div>
+            <div class="info-row">
+                <span class="info-label">车次</span>
+                <span class="info-value highlight" id="ti-train">G1</span>
+            </div>
+            <div class="info-row seat-price">
+                <span class="seat-name" id="ti-seat">二等座</span>
+                <span class="price-display" id="ti-price">553</span>
+                <span class="price-unit">元</span>
+            </div>
+        </div>
+
+        <!-- 确认状态 -->
+        <div class="confirm-state hidden" id="confirm-state">
+            <div class="confirm-text">请确认以上信息</div>
+        </div>
+
+        <!-- 收款状态 -->
+        <div class="payment-state hidden" id="payment-state">
+            <div class="info-label">请支付</div>
+            <div class="price-display" id="pay-price">¥553</div>
+        </div>
+
+        <!-- 成功状态 -->
+        <div class="success-state hidden" id="success-state">
+            <div class="success-text">出票成功</div>
+            <div class="success-sub">请取票 祝您旅途愉快</div>
+        </div>
+
+        <!-- 退票状态 -->
+        <div class="refund-info hidden" id="refund-state">
+            <div class="refund-title">退票信息</div>
+            <div class="info-row">
+                <span class="info-value" id="ref-train">G1</span>
+            </div>
+            <div class="info-row">
+                <span class="info-value small" id="ref-route">北京南 → 上海虹桥</span>
+            </div>
+            <div class="divider"></div>
+            <div class="info-row">
+                <span class="info-label">退款金额</span>
+                <span class="info-value highlight" id="ref-amount">¥500</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部提示 -->
+    <div class="bottom-hint" id="bottom-hint">
+        显示屏 | 铁路客票系统
+    </div>
+
+    <script>
+        // BroadcastChannel 接收
+        const channel = new BroadcastChannel('trs-display');
+        
+        // 所有状态元素
+        const states = {
+            idle: document.getElementById('idle-state'),
+            ticket_info: document.getElementById('ticket-info-state'),
+            confirm: document.getElementById('confirm-state'),
+            payment: document.getElementById('payment-state'),
+            success: document.getElementById('success-state'),
+            refund: document.getElementById('refund-state')
+        };
+        
+        // 当前状态数据
+        let currentData = {};
+
+        // 自动返回待机时间（毫秒）
+        const IDLE_TIMEOUT = 10000; // 10秒
+
+        let idleTimer = null;
+
+        // 显示指定状态
+        function showState(stateName, data = {}) {
+            // 清除所有状态
+            Object.values(states).forEach(el => el.classList.add('hidden'));
+            
+            // 显示目标状态
+            if (states[stateName]) {
+                states[stateName].classList.remove('hidden');
+            }
+            
+            // 更新数据
+            currentData = data;
+            
+            // 根据状态更新内容
+            updateDisplayContent(stateName, data);
+            
+            // 重置待机计时器
+            resetIdleTimer();
+        }
+
+        // 更新显示内容
+        function updateDisplayContent(stateName, data) {
+            switch (stateName) {
+                case 'ticket_info':
+                case 'confirm':
+                    document.getElementById('ti-from').textContent = data.from || '---';
+                    document.getElementById('ti-to').textContent = data.to || '---';
+                    document.getElementById('ti-train').textContent = data.train || '---';
+                    document.getElementById('ti-seat').textContent = data.seat || '二等座';
+                    document.getElementById('ti-price').textContent = data.price || '0';
+                    break;
+                    
+                case 'payment':
+                    const payPrice = data.amount || currentData.price || 0;
+                    document.getElementById('pay-price').textContent = `¥${payPrice}`;
+                    break;
+                    
+                case 'refund':
+                    document.getElementById('ref-train').textContent = data.train || '---';
+                    document.getElementById('ref-route').textContent = 
+                        `${data.from || '---'} → ${data.to || '---'}`;
+                    document.getElementById('ref-amount').textContent = 
+                        `¥${data.refundAmount || '0'}`;
+                    break;
+            }
+        }
+
+        // 重置待机计时器
+        function resetIdleTimer() {
+            if (idleTimer) {
+                clearTimeout(idleTimer);
+            }
+            
+            // 除了idle和success状态外，其他状态都设置自动返回
+            if (currentData.type !== 'idle' && currentData.type !== 'success') {
+                idleTimer = setTimeout(() => {
+                    showState('idle');
+                }, IDLE_TIMEOUT);
+            }
+        }
+
+        // 接收消息
+        channel.onmessage = function(e) {
+            const { type, data } = e.data;
+            console.log('Received:', type, data);
+            showState(type, data);
+        };
+
+        // 启动时显示待机状态
+        showState('idle');
+
+        // 每秒更新底部提示时间（仅在待机状态）
+        function updateHint() {
+            const hint = document.getElementById('bottom-hint');
+            if (!states.idle.classList.contains('hidden')) {
+                const now = new Date();
+                const timeStr = now.toLocaleString('zh-CN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                }).replace(/\//g, '-');
+                hint.textContent = `显示屏 | ${timeStr} | 铁路客票系统`;
+            }
+        }
+        setInterval(updateHint, 1000);
+    </script>
+</body>
+</html>
