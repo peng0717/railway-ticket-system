@@ -343,6 +343,38 @@ def ensure_database_initialized():
                 
                 # ========== 自动补列：确保所有关键列都存在 ==========
                 alter_statements = {
+                    'stations': {
+                        'status': "ALTER TABLE stations ADD COLUMN status TEXT DEFAULT 'active'",
+                        'station_pinyin': "ALTER TABLE stations ADD COLUMN station_pinyin VARCHAR(100)",
+                        'pinyin_code': "ALTER TABLE stations ADD COLUMN pinyin_code VARCHAR(10)",
+                        'telecode': "ALTER TABLE stations ADD COLUMN telecode VARCHAR(6)",
+                        'region': "ALTER TABLE stations ADD COLUMN region VARCHAR(20)",
+                        'line_name': "ALTER TABLE stations ADD COLUMN line_name VARCHAR(50)",
+                        'is_major': "ALTER TABLE stations ADD COLUMN is_major BOOLEAN DEFAULT 0",
+                        'created_at': "ALTER TABLE stations ADD COLUMN created_at DATETIME",
+                    },
+                    'trains': {
+                        'status': "ALTER TABLE trains ADD COLUMN status TEXT DEFAULT 'active'",
+                        'running_days': "ALTER TABLE trains ADD COLUMN running_days VARCHAR(7)",
+                        'total_distance': "ALTER TABLE trains ADD COLUMN total_distance INTEGER DEFAULT 0",
+                        'created_at': "ALTER TABLE trains ADD COLUMN created_at DATETIME",
+                    },
+                    'shifts': {
+                        'ticket_count': "ALTER TABLE shifts ADD COLUMN ticket_count INTEGER DEFAULT 0",
+                        'refund_count': "ALTER TABLE shifts ADD COLUMN refund_count INTEGER DEFAULT 0",
+                        'waste_count': "ALTER TABLE shifts ADD COLUMN waste_count INTEGER DEFAULT 0",
+                        'revenue': "ALTER TABLE shifts ADD COLUMN revenue FLOAT DEFAULT 0",
+                        'refund_amount': "ALTER TABLE shifts ADD COLUMN refund_amount FLOAT DEFAULT 0",
+                        'actual_amount': "ALTER TABLE shifts ADD COLUMN actual_amount FLOAT DEFAULT 0",
+                        'status': "ALTER TABLE shifts ADD COLUMN status VARCHAR(20) DEFAULT 'open'",
+                        'closed_by': "ALTER TABLE shifts ADD COLUMN closed_by VARCHAR(20)",
+                        'user_id': "ALTER TABLE shifts ADD COLUMN user_id INTEGER",
+                        'total_tickets': "ALTER TABLE shifts ADD COLUMN total_tickets INTEGER DEFAULT 0",
+                        'total_amount': "ALTER TABLE shifts ADD COLUMN total_amount REAL DEFAULT 0",
+                        'cash_amount': "ALTER TABLE shifts ADD COLUMN cash_amount REAL DEFAULT 0",
+                        'electronic_amount': "ALTER TABLE shifts ADD COLUMN electronic_amount REAL DEFAULT 0",
+                        'total_refunds': "ALTER TABLE shifts ADD COLUMN total_refunds INTEGER DEFAULT 0",
+                    },
                     'users': {
                         'status': "ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'",
                         'id_card': "ALTER TABLE users ADD COLUMN id_card TEXT",
@@ -365,14 +397,6 @@ def ensure_database_initialized():
                     },
                     'operation_logs': {
                         'user_id': "ALTER TABLE operation_logs ADD COLUMN user_id INTEGER",
-                    },
-                    'shifts': {
-                        'user_id': "ALTER TABLE shifts ADD COLUMN user_id INTEGER",
-                        'total_tickets': "ALTER TABLE shifts ADD COLUMN total_tickets INTEGER DEFAULT 0",
-                        'total_amount': "ALTER TABLE shifts ADD COLUMN total_amount REAL DEFAULT 0",
-                        'cash_amount': "ALTER TABLE shifts ADD COLUMN cash_amount REAL DEFAULT 0",
-                        'electronic_amount': "ALTER TABLE shifts ADD COLUMN electronic_amount REAL DEFAULT 0",
-                        'total_refunds': "ALTER TABLE shifts ADD COLUMN total_refunds INTEGER DEFAULT 0",
                     },
                     'system_settings': {
                         'description': "ALTER TABLE system_settings ADD COLUMN description TEXT",
