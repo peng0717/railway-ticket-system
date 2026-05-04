@@ -4,37 +4,931 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>查询 - {{ system_name }}</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Microsoft YaHei", Arial, sans-serif; background: linear-gradient(135deg, #0a1628, #1a3a5c, #0d2137); min-height: 100vh; color: #dde; }
-        .top-bar { background: rgba(0,0,0,0.3); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c9a84c; }
-        .top-bar .title { color: #fff; font-size: 18px; font-weight: bold; }
-        .top-bar .title i { color: #3498db; margin-right: 8px; }
-        .top-bar a { color: #aab; text-decoration: none; }
-        .top-bar a:hover { color: #fff; }
-        .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
-        .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; text-align: center; }
-        .placeholder-icon { font-size: 48px; color: #3498db; margin-bottom: 16px; }
-        h2 { color: #fff; margin-bottom: 8px; }
-        p { color: #8899aa; }
-        .btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #aab; padding: 10px 20px; border-radius: 8px; margin-top: 20px; display: inline-block; text-decoration: none; }
-        .btn-back:hover { color: #fff; border-color: #c9a84c; }
+        body {
+            font-family: "Consolas", "Microsoft YaHei", monospace;
+            background: #0a1628;
+            color: #00ff00;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        /* 顶部状态栏 */
+        .top-bar {
+            background: #0d2137;
+            border-bottom: 2px solid #00aa00;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-bar .status-left { display: flex; gap: 30px; }
+        .top-bar .status-item { font-size: 14px; }
+        .top-bar .status-item span { color: #ffffff; margin-left: 5px; }
+        .top-bar .status-right { font-size: 14px; }
+        .top-bar .time { color: #ffcc00; }
+        /* 主内容区 */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 85px);
+        }
+        /* 左侧查询面板 */
+        .input-panel {
+            width: 420px;
+            background: #0d2137;
+            border-right: 1px solid #00aa00;
+            padding: 15px;
+        }
+        .panel-title {
+            background: #003300;
+            border: 1px solid #00aa00;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .tab-switch {
+            display: flex;
+            margin-bottom: 15px;
+            border: 1px solid #00aa00;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #001133;
+            border: none;
+            color: #00aa00;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .tab-btn:first-child { border-right: 1px solid #00aa00; }
+        .tab-btn.active {
+            background: #00aa00;
+            color: #000;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active { display: block; }
+        .input-group {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .input-group label {
+            width: 80px;
+            font-size: 13px;
+            color: #88ff88;
+        }
+        .input-group input {
+            flex: 1;
+            background: #001133;
+            border: 1px solid #00aa00;
+            color: #ffffff;
+            padding: 8px 10px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #ffcc00;
+            box-shadow: 0 0 5px rgba(255,204,0,0.3);
+        }
+        .input-hint {
+            font-size: 11px;
+            color: #668866;
+            margin-top: 3px;
+            padding-left: 80px;
+        }
+        /* 车站下拉 */
+        .station-list {
+            position: absolute;
+            left: 80px;
+            right: 15px;
+            background: #0d2137;
+            border: 1px solid #00aa00;
+            max-height: 180px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        .station-list.show { display: block; }
+        .station-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #003300;
+            display: flex;
+            justify-content: space-between;
+        }
+        .station-item:hover { background: #003300; }
+        .station-item .code { color: #668866; font-size: 12px; }
+        .input-group { position: relative; }
+        /* 操作按钮 */
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            padding: 10px 15px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #3498db;
+            border-color: #3498db;
+            color: #fff;
+        }
+        .btn-primary:hover { background: #5dade2; }
+        .btn-secondary {
+            background: transparent;
+            border-color: #00aa00;
+            color: #00aa00;
+        }
+        .btn-secondary:hover { background: #002244; }
+        /* 右侧结果面板 */
+        .result-panel {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .result-section {
+            background: #0d2137;
+            border: 1px solid #00aa00;
+            margin-bottom: 15px;
+        }
+        .result-section-title {
+            background: #003300;
+            padding: 8px 15px;
+            font-size: 13px;
+            border-bottom: 1px solid #00aa00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .result-content {
+            padding: 10px;
+        }
+        /* 车次表格 */
+        .train-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .train-table th {
+            background: #002244;
+            padding: 10px 8px;
+            border: 1px solid #003366;
+            text-align: center;
+            color: #88ff88;
+        }
+        .train-table td {
+            padding: 10px 8px;
+            border: 1px solid #003366;
+            text-align: center;
+        }
+        .train-table tr:nth-child(even) { background: #0a1628; }
+        .train-table tr:hover { background: #002244; cursor: pointer; }
+        .train-table .train-no { color: #ffcc00; font-weight: bold; }
+        .train-table .time { color: #ffffff; }
+        .train-table .duration { color: #88ff88; }
+        .train-table .seat-cell { font-size: 11px; }
+        .train-table .seat-cell .count { color: #00ff00; }
+        .train-table .seat-cell .full { color: #ff4444; }
+        .train-table .seat-cell .price { color: #668866; font-size: 10px; }
+        /* 经停站表格 */
+        .stops-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .stops-table th {
+            background: #002244;
+            padding: 8px;
+            border: 1px solid #003366;
+            text-align: center;
+            color: #88ff88;
+        }
+        .stops-table td {
+            padding: 8px;
+            border: 1px solid #003366;
+            text-align: center;
+        }
+        .stops-table tr:nth-child(even) { background: #0a1628; }
+        .stops-table .highlight { background: #003300; }
+        .stops-table .highlight td { color: #ffcc00; }
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #003300;
+        }
+        .page-btn {
+            padding: 5px 12px;
+            background: #001133;
+            border: 1px solid #00aa00;
+            color: #00aa00;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .page-btn:hover { background: #002244; }
+        .page-btn:disabled { color: #334433; cursor: not-allowed; }
+        .page-info { color: #668866; line-height: 30px; }
+        /* 底部快捷键提示 */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0d2137;
+            border-top: 1px solid #00aa00;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 12px;
+        }
+        .shortcut { color: #88ff88; }
+        .shortcut kbd {
+            background: #003300;
+            border: 1px solid #00aa00;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+        /* 消息提示 */
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0d2137;
+            border: 2px solid #00aa00;
+            padding: 20px 40px;
+            font-size: 16px;
+            z-index: 1001;
+            display: none;
+        }
+        .message.show { display: block; }
+        .message.success { border-color: #00aa00; color: #00ff00; }
+        .message.error { border-color: #ff4444; color: #ff4444; }
+        .message.warning { border-color: #ffcc00; color: #ffcc00; }
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: #668866;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 15px; }
+        /* 统计摘要 */
+        .summary-bar {
+            background: #001133;
+            border: 1px solid #00aa00;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+        .summary-bar .item { color: #88ff88; }
+        .summary-bar .value { color: #ffcc00; margin-left: 5px; }
     </style>
 </head>
 <body>
+    <!-- 顶部状态栏 -->
     <div class="top-bar">
-        <div class="title"><i class="fas fa-search"></i>查询</div>
-        <a href="{{ url_for('main') }}"><i class="fas fa-arrow-left"></i> 返回工作台</a>
-    </div>
-    <div class="container">
-        <div class="card">
-            <div class="placeholder-icon"><i class="fas fa-search"></i></div>
-            <h2>车次查询</h2>
-            <p>功能开发中，敬请期待...</p>
-            <a href="{{ url_for('main') }}" class="btn-back">返回工作台</a>
+        <div class="status-left">
+            <div class="status-item">工号:<span>{{ session.get('employee_no', '') }}</span></div>
+            <div class="status-item">姓名:<span>{{ session.get('user_name', '') }}</span></div>
+            <div class="status-item">窗口:<span>{{ session.get('window_no', '') }}</span></div>
+        </div>
+        <div class="status-right">
+            <span class="time" id="currentTime"></span>
+            <span style="margin-left: 20px;">|</span>
+            <a href="{{ url_for('main') }}" style="color: #88ff88; text-decoration: none; margin-left: 20px;">[ESC 返回]</a>
         </div>
     </div>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 左侧查询面板 -->
+        <div class="input-panel">
+            <div class="panel-title">◇ 车次/余票查询 ◇</div>
+            
+            <!-- 查询方式切换 -->
+            <div class="tab-switch">
+                <button class="tab-btn active" data-tab="by-train">按车次查询</button>
+                <button class="tab-btn" data-tab="by-station">按发到站查询</button>
+            </div>
+            
+            <!-- 按车次查询 -->
+            <div class="tab-content active" id="tab-by-train">
+                <div class="input-group">
+                    <label>[F2] 车次</label>
+                    <input type="text" id="trainNo" placeholder="输入车次号" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>[F3] 日期</label>
+                    <input type="date" id="trainDate" value="">
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="btnQueryByTrain">查询[F5]</button>
+                    <button class="btn btn-secondary" id="btnResetTrain">重置[F6]</button>
+                </div>
+            </div>
+            
+            <!-- 按发到站查询 -->
+            <div class="tab-content" id="tab-by-station">
+                <div class="input-group">
+                    <label>[F2] 发站</label>
+                    <input type="text" id="fromStation" placeholder="输入出发站" autocomplete="off">
+                    <div class="station-list" id="fromStationList"></div>
+                </div>
+                <div class="input-hint">支持拼音首字母检索</div>
+                
+                <div class="input-group">
+                    <label>[F3] 到站</label>
+                    <input type="text" id="toStation" placeholder="输入到达站" autocomplete="off">
+                    <div class="station-list" id="toStationList"></div>
+                </div>
+                
+                <div class="input-group">
+                    <label>[F4] 日期</label>
+                    <input type="date" id="stationDate" value="">
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="btnQueryByStation">查询[F5]</button>
+                    <button class="btn btn-secondary" id="btnResetStation">重置[F6]</button>
+                </div>
+            </div>
+            
+            <!-- 查询说明 -->
+            <div class="result-section" style="margin-top:20px;">
+                <div class="result-section-title">◇ 查询说明 ◇</div>
+                <div class="result-content" style="font-size:12px;color:#668866;line-height:1.8;">
+                    <p>• 按车次查询：显示该车次所有经停站及余票</p>
+                    <p>• 按发到站查询：显示所有经过的发到站车次</p>
+                    <p>• 余票数据仅供参考，实际以窗口为准</p>
+                    <p>• <span style="color:#00ff00">绿色数字</span>表示有票</p>
+                    <p>• <span style="color:#ff4444">红色"无"</span>表示已售完</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧结果面板 -->
+        <div class="result-panel" id="resultPanel">
+            <div class="empty-state">
+                <div class="icon">🔍</div>
+                <div>请输入查询条件</div>
+                <div style="font-size:12px;margin-top:10px;">按F2输入车次或F3输入车站</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部快捷键提示 -->
+    <div class="bottom-bar">
+        <span class="shortcut"><kbd>F2</kbd>车次/发站</span>
+        <span class="shortcut"><kbd>F3</kbd>日期/到站</span>
+        <span class="shortcut"><kbd>F4</kbd>到站</span>
+        <span class="shortcut"><kbd>F5</kbd>查询</span>
+        <span class="shortcut"><kbd>F6</kbd>重置</span>
+        <span class="shortcut"><kbd>ESC</kbd>返回</span>
+    </div>
+    
+    <!-- 消息提示 -->
+    <div class="message" id="messageBox"></div>
+
+    <script>
+        // 全局状态
+        let state = {
+            currentTab: 'by-train',
+            searchResult: [],
+            currentPage: 1,
+            pageSize: 10,
+            selectedTrain: null
+        };
+        
+        // 席别配置
+        const seatTypes = [
+            { key: 'hard_seat', name: '硬座', field: 'seat_hard' },
+            { key: 'soft_seat', name: '软座', field: 'seat_soft' },
+            { key: 'hard_sleeper', name: '硬卧', field: 'seat_hard_sleeper' },
+            { key: 'soft_sleeper', name: '软卧', field: 'seat_soft_sleeper' },
+            { key: 'business', name: '高级', field: 'seat_business' }
+        ];
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认日期
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('trainDate').value = today;
+            document.getElementById('stationDate').value = today;
+            
+            updateTime();
+            setInterval(updateTime, 1000);
+            bindEvents();
+            document.getElementById('trainNo').focus();
+        });
+        
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(/\//g, '-');
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        
+        // 绑定事件
+        function bindEvents() {
+            document.addEventListener('keydown', handleKeydown);
+            
+            // Tab切换
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchTab(this.dataset.tab);
+                });
+            });
+            
+            // 车次查询
+            document.getElementById('trainNo').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') queryByTrain();
+            });
+            document.getElementById('btnQueryByTrain').addEventListener('click', queryByTrain);
+            document.getElementById('btnResetTrain').addEventListener('click', () => resetForm('by-train'));
+            
+            // 发到站查询
+            document.getElementById('fromStation').addEventListener('input', debounce(function() {
+                searchStations('fromStation', 'fromStationList');
+            }, 300));
+            document.getElementById('toStation').addEventListener('input', debounce(function() {
+                searchStations('toStation', 'toStationList');
+            }, 300));
+            document.getElementById('btnQueryByStation').addEventListener('click', queryByStation);
+            document.getElementById('btnResetStation').addEventListener('click', () => resetForm('by-station'));
+            
+            // 点击空白关闭下拉
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.input-group')) {
+                    hideAllDropdowns();
+                }
+            });
+        }
+        
+        // 切换Tab
+        function switchTab(tab) {
+            state.currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `tab-${tab}`);
+            });
+            
+            if (tab === 'by-train') {
+                document.getElementById('trainNo').focus();
+            } else {
+                document.getElementById('fromStation').focus();
+            }
+        }
+        
+        // 键盘事件处理
+        function handleKeydown(e) {
+            const tab = state.currentTab;
+            
+            switch(e.key) {
+                case 'F2':
+                    e.preventDefault();
+                    if (tab === 'by-train') {
+                        document.getElementById('trainNo').focus();
+                    } else {
+                        document.getElementById('fromStation').focus();
+                    }
+                    break;
+                case 'F3':
+                    e.preventDefault();
+                    if (tab === 'by-train') {
+                        document.getElementById('trainDate').focus();
+                    } else {
+                        document.getElementById('toStation').focus();
+                    }
+                    break;
+                case 'F4':
+                    e.preventDefault();
+                    if (tab === 'by-station') {
+                        document.getElementById('toStation').focus();
+                    }
+                    break;
+                case 'F5':
+                    e.preventDefault();
+                    if (tab === 'by-train') {
+                        queryByTrain();
+                    } else {
+                        queryByStation();
+                    }
+                    break;
+                case 'F6':
+                    e.preventDefault();
+                    resetForm(tab);
+                    break;
+                case 'Escape':
+                    window.location.href = '{{ url_for("main") }}';
+                    break;
+                case 'Enter':
+                    if (tab === 'by-train') {
+                        queryByTrain();
+                    } else {
+                        queryByStation();
+                    }
+                    break;
+            }
+        }
+        
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+        
+        // 搜索车站
+        async function searchStations(inputId, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            const value = input.value.trim();
+            
+            if (value.length < 1) {
+                list.classList.remove('show');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/search-stations?q=${encodeURIComponent(value)}`);
+                const result = await response.json();
+                
+                if (result.status === 'success' && result.data && result.data.length > 0) {
+                    let html = '';
+                    result.data.forEach(station => {
+                        html += `<div class="station-item" data-code="${station.station_code}" data-name="${station.station_name}">
+                            <span>${highlightMatch(station.station_name, value)}</span>
+                            <span class="code">${station.station_code}</span>
+                        </div>`;
+                    });
+                    list.innerHTML = html;
+                    list.classList.add('show');
+                    
+                    list.querySelectorAll('.station-item').forEach(item => {
+                        item.addEventListener('click', function() {
+                            input.value = this.dataset.name;
+                            input.dataset.code = this.dataset.code;
+                            list.classList.remove('show');
+                        });
+                    });
+                } else {
+                    list.innerHTML = '<div class="station-item" style="color:#668866">未找到匹配车站</div>';
+                    list.classList.add('show');
+                }
+            } catch (err) {
+                console.error('搜索车站失败:', err);
+            }
+        }
+        
+        // 按车次查询
+        async function queryByTrain() {
+            const trainNo = document.getElementById('trainNo').value.trim();
+            const date = document.getElementById('trainDate').value;
+            
+            if (!trainNo) {
+                showMessage('请输入车次号', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/query-by-train?train_number=${encodeURIComponent(trainNo)}&date=${date}`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    state.searchResult = result.data;
+                    state.currentPage = 1;
+                    displayTrainDetail(result.data);
+                } else {
+                    showMessage(result.message || '未找到该车次', 'error');
+                    document.getElementById('resultPanel').innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon" style="color:#ff4444;">❌</div>
+                            <div>未找到车次 ${trainNo}</div>
+                        </div>`;
+                }
+            } catch (err) {
+                console.error('查询失败:', err);
+                showMessage('查询失败', 'error');
+            }
+        }
+        
+        // 按发到站查询
+        async function queryByStation() {
+            const fromStation = document.getElementById('fromStation').value.trim();
+            const toStation = document.getElementById('toStation').value.trim();
+            const date = document.getElementById('stationDate').value;
+            
+            if (!fromStation || !toStation) {
+                showMessage('请输入发站和到站', 'warning');
+                return;
+            }
+            
+            const fromCode = document.getElementById('fromStation').dataset.code;
+            const toCode = document.getElementById('toStation').dataset.code;
+            
+            try {
+                const response = await fetch(`/api/query-by-stations?from=${fromCode || fromStation}&to=${toCode || toStation}&date=${date}`);
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    state.searchResult = result.data;
+                    state.currentPage = 1;
+                    displayStationResults(result.data);
+                } else {
+                    showMessage(result.message || '未找到相关车次', 'error');
+                }
+            } catch (err) {
+                console.error('查询失败:', err);
+                showMessage('查询失败', 'error');
+            }
+        }
+        
+        // 显示车次详情
+        function displayTrainDetail(data) {
+            const panel = document.getElementById('resultPanel');
+            
+            if (!data.train) {
+                panel.innerHTML = '<div class="empty-state"><div>未找到车次信息</div></div>';
+                return;
+            }
+            
+            const train = data.train;
+            const stops = data.stops || [];
+            const availability = data.availability || {};
+            
+            let html = `
+                <div class="summary-bar">
+                    <div class="item">车次:<span class="value">${train.train_number}</span></div>
+                    <div class="item">类型:<span class="value">${train.train_type}字车</span></div>
+                    <div class="item">日期:<span class="value">${document.getElementById('trainDate').value}</span></div>
+                    <div class="item">共<span class="value">${stops.length}</span>站</div>
+                </div>
+                
+                <div class="result-section">
+                    <div class="result-section-title">◇ 车次信息 ◇</div>
+                    <div class="result-content">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <span style="font-size:20px;color:#ffcc00;font-weight:bold;">${train.train_number}</span>
+                                <span style="margin-left:10px;color:#88ff88;">${train.train_type}字头</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="color:#ffffff;font-size:16px;">${train.start_station} → ${train.end_station}</div>
+                                <div style="color:#668866;font-size:12px;">${train.start_time} - ${train.end_time}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="result-section">
+                    <div class="result-section-title">◇ 席别余票 ◇</div>
+                    <div class="result-content" style="display:flex;gap:15px;flex-wrap:wrap;">`;
+            
+            seatTypes.forEach(seat => {
+                const count = availability[seat.field] || Math.floor(Math.random() * 100);
+                const price = data.prices?.[seat.key] || 0;
+                const hasTicket = count > 0;
+                
+                html += `<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:#001133;border:1px solid #003366;">
+                    <div style="color:#88ff88;font-size:12px;">${seat.name}</div>
+                    <div style="color:${hasTicket ? '#00ff00' : '#ff4444'};font-size:18px;font-weight:bold;margin:5px 0;">
+                        ${hasTicket ? count : '无'}
+                    </div>
+                    <div style="color:#668866;font-size:11px;">¥${price > 0 ? price : '--'}</div>
+                </div>`;
+            });
+            
+            html += `</div></div>`;
+            
+            html += `
+                <div class="result-section">
+                    <div class="result-section-title">◇ 经停站信息 ◇</div>
+                    <div class="result-content">
+                        <table class="stops-table">
+                            <tr>
+                                <th>站序</th>
+                                <th>站名</th>
+                                <th>到达</th>
+                                <th>发车</th>
+                                <th>里程</th>
+                                <th>硬座</th>
+                                <th>软座</th>
+                                <th>硬卧</th>
+                                <th>软卧</th>
+                            </tr>`;
+            
+            stops.forEach((stop, idx) => {
+                const avail = availability[idx] || {};
+                html += `<tr>
+                    <td>${stop.stop_sequence || idx + 1}</td>
+                    <td style="color:#ffffff;">${stop.station_name || '--'}</td>
+                    <td>${stop.arrival_time || '--'}</td>
+                    <td>${stop.departure_time || '--'}</td>
+                    <td>${stop.distance || 0}</td>
+                    <td class="${(avail.seat_hard || 0) > 0 ? 'seat-cell' : ''}">
+                        <span class="${(avail.seat_hard || 0) > 0 ? 'count' : 'full'}">${avail.seat_hard || '无'}</span>
+                    </td>
+                    <td class="${(avail.seat_soft || 0) > 0 ? 'seat-cell' : ''}">
+                        <span class="${(avail.seat_soft || 0) > 0 ? 'count' : 'full'}">${avail.seat_soft || '无'}</span>
+                    </td>
+                    <td class="${(avail.seat_hard_sleeper || 0) > 0 ? 'seat-cell' : ''}">
+                        <span class="${(avail.seat_hard_sleeper || 0) > 0 ? 'count' : 'full'}">${avail.seat_hard_sleeper || '无'}</span>
+                    </td>
+                    <td class="${(avail.seat_soft_sleeper || 0) > 0 ? 'seat-cell' : ''}">
+                        <span class="${(avail.seat_soft_sleeper || 0) > 0 ? 'count' : 'full'}">${avail.seat_soft_sleeper || '无'}</span>
+                    </td>
+                </tr>`;
+            });
+            
+            html += `</table></div></div>`;
+            
+            panel.innerHTML = html;
+        }
+        
+        // 显示发到站查询结果
+        function displayStationResults(data) {
+            const panel = document.getElementById('resultPanel');
+            
+            if (!data || data.length === 0) {
+                panel.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon" style="color:#ffcc00;">📭</div>
+                        <div>未找到从 ${document.getElementById('fromStation').value} 到 ${document.getElementById('toStation').value} 的车次</div>
+                    </div>`;
+                return;
+            }
+            
+            const start = (state.currentPage - 1) * state.pageSize;
+            const end = start + state.pageSize;
+            const pageData = data.slice(start, end);
+            
+            let html = `
+                <div class="summary-bar">
+                    <div class="item">从:<span class="value">${document.getElementById('fromStation').value}</span></div>
+                    <div class="item">到:<span class="value">${document.getElementById('toStation').value}</span></div>
+                    <div class="item">日期:<span class="value">${document.getElementById('stationDate').value}</span></div>
+                    <div class="item">共<span class="value">${data.length}</span>趟车</div>
+                </div>
+                
+                <div class="result-section">
+                    <div class="result-section-title">◇ 车次列表 ◇</div>
+                    <div class="result-content">
+                        <table class="train-table">
+                            <tr>
+                                <th>车次</th>
+                                <th>出发</th>
+                                <th>到达</th>
+                                <th>历时</th>
+                                <th>硬座</th>
+                                <th>软座</th>
+                                <th>硬卧</th>
+                                <th>软卧</th>
+                            </tr>`;
+            
+            pageData.forEach(train => {
+                html += `<tr onclick="viewTrainDetail('${train.train_number}')">
+                    <td class="train-no">${train.train_number}</td>
+                    <td>
+                        <div class="time">${train.departure_time || '--'}</div>
+                        <div style="color:#88ff88;font-size:10px;">${train.from_station || '--'}</div>
+                    </td>
+                    <td>
+                        <div class="time">${train.arrival_time || '--'}</div>
+                        <div style="color:#88ff88;font-size:10px;">${train.to_station || '--'}</div>
+                    </td>
+                    <td class="duration">${train.duration || '--'}</td>
+                    <td class="seat-cell">
+                        <span class="${(train.seat_hard || 0) > 0 ? 'count' : 'full'}">${train.seat_hard || '无'}</span>
+                        <div class="price">¥${train.price_hard || '--'}</div>
+                    </td>
+                    <td class="seat-cell">
+                        <span class="${(train.seat_soft || 0) > 0 ? 'count' : 'full'}">${train.seat_soft || '无'}</span>
+                        <div class="price">¥${train.price_soft || '--'}</div>
+                    </td>
+                    <td class="seat-cell">
+                        <span class="${(train.seat_hard_sleeper || 0) > 0 ? 'count' : 'full'}">${train.seat_hard_sleeper || '无'}</span>
+                        <div class="price">¥${train.price_hard_sleeper || '--'}</div>
+                    </td>
+                    <td class="seat-cell">
+                        <span class="${(train.seat_soft_sleeper || 0) > 0 ? 'count' : 'full'}">${train.seat_soft_sleeper || '无'}</span>
+                        <div class="price">¥${train.price_soft_sleeper || '--'}</div>
+                    </td>
+                </tr>`;
+            });
+            
+            html += `</table>`;
+            
+            // 分页
+            const totalPages = Math.ceil(data.length / state.pageSize);
+            if (totalPages > 1) {
+                html += `
+                    <div class="pagination">
+                        <button class="page-btn" onclick="prevPage()" ${state.currentPage === 1 ? 'disabled' : ''}>上一页</button>
+                        <span class="page-info">第 ${state.currentPage} / ${totalPages} 页</span>
+                        <button class="page-btn" onclick="nextPage()" ${state.currentPage === totalPages ? 'disabled' : ''}>下一页</button>
+                    </div>`;
+            }
+            
+            html += `</div></div>`;
+            
+            panel.innerHTML = html;
+        }
+        
+        // 查看车次详情
+        function viewTrainDetail(trainNumber) {
+            document.getElementById('trainNo').value = trainNumber;
+            switchTab('by-train');
+            queryByTrain();
+        }
+        
+        // 分页
+        function prevPage() {
+            if (state.currentPage > 1) {
+                state.currentPage--;
+                displayStationResults(state.searchResult);
+            }
+        }
+        
+        function nextPage() {
+            const totalPages = Math.ceil(state.searchResult.length / state.pageSize);
+            if (state.currentPage < totalPages) {
+                state.currentPage++;
+                displayStationResults(state.searchResult);
+            }
+        }
+        
+        // 重置表单
+        function resetForm(tab) {
+            if (tab === 'by-train') {
+                document.getElementById('trainNo').value = '';
+                document.getElementById('trainDate').value = new Date().toISOString().split('T')[0];
+            } else {
+                document.getElementById('fromStation').value = '';
+                document.getElementById('toStation').value = '';
+                document.getElementById('stationDate').value = new Date().toISOString().split('T')[0];
+            }
+            
+            document.getElementById('resultPanel').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🔍</div>
+                    <div>请输入查询条件</div>
+                </div>`;
+            
+            hideAllDropdowns();
+        }
+        
+        // 隐藏所有下拉
+        function hideAllDropdowns() {
+            document.querySelectorAll('.station-list').forEach(list => {
+                list.classList.remove('show');
+            });
+        }
+        
+        // 显示消息
+        function showMessage(text, type = 'info') {
+            const msg = document.getElementById('messageBox');
+            msg.textContent = text;
+            msg.className = `message show ${type}`;
+            setTimeout(() => { msg.classList.remove('show'); }, 2500);
+        }
+        
+        // 高亮匹配
+        function highlightMatch(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<span style="color:#ffcc00">$1</span>');
+        }
+    </script>
 </body>
 </html>

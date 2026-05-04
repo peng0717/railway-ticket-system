@@ -4,22 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ system_name }} - 工作台</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif;
-            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #0d2137 100%);
+            font-family: "Consolas", "Microsoft YaHei", monospace;
+            background: #0a1628;
+            color: #00ff00;
             min-height: 100vh;
         }
+        /* 顶部状态栏 */
         .top-bar {
-            background: rgba(0,0,0,0.3);
+            background: #0d2137;
+            border-bottom: 2px solid #c9a84c;
             padding: 12px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #c9a84c;
         }
         .top-bar .system-name {
             color: #fff;
@@ -35,6 +35,7 @@
         .user-info span { color: #c9a84c; font-weight: bold; }
         .user-info a { color: #e74c3c; text-decoration: none; margin-left: 15px; }
         .user-info a:hover { text-decoration: underline; }
+        /* 班次信息栏 */
         .shift-info {
             background: rgba(201,168,76,0.15);
             border: 1px solid rgba(201,168,76,0.3);
@@ -46,11 +47,18 @@
             justify-content: space-between;
             align-items: center;
         }
+        .shift-info .item { display: flex; align-items: center; gap: 8px; }
         .shift-info .label { font-size: 13px; }
         .shift-info .value { font-weight: bold; font-size: 15px; }
+        .shift-info .stats { display: flex; gap: 30px; }
+        .shift-info .stat { text-align: center; }
+        .shift-info .stat-value { font-size: 20px; color: #fff; font-weight: bold; }
+        .shift-info .stat-label { font-size: 11px; color: #aab; }
+        /* 主内容区 */
         .main-content {
             padding: 30px 24px;
         }
+        /* 功能卡片网格 */
         .func-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -87,8 +95,56 @@
         .func-card .icon.query { background: rgba(52,152,219,0.2); color: #3498db; }
         .func-card .icon.refund { background: rgba(231,76,60,0.2); color: #e74c3c; }
         .func-card .icon.end-shift { background: rgba(201,168,76,0.2); color: #c9a84c; }
+        .func-card .icon.report { background: rgba(155,89,182,0.2); color: #9b59b6; }
         .func-card h3 { color: #fff; font-size: 16px; margin-bottom: 6px; }
         .func-card p { color: #8899aa; font-size: 12px; }
+        .func-card .shortcut {
+            display: inline-block;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #aab;
+            margin-top: 10px;
+        }
+        /* 快捷键提示 */
+        .shortcut-bar {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-top: 30px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .shortcut-bar .title {
+            color: #c9a84c;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .shortcut-bar .items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .shortcut-bar .item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #aab;
+        }
+        .shortcut-bar .item kbd {
+            background: #001133;
+            border: 1px solid #00aa00;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #00ff00;
+            font-family: inherit;
+        }
+        /* 消息提示 */
         .alert-info {
             background: rgba(52,152,219,0.15);
             border: 1px solid rgba(52,152,219,0.3);
@@ -98,64 +154,363 @@
             margin-bottom: 20px;
             font-size: 13px;
         }
+        .alert-warning {
+            background: rgba(241,196,15,0.15);
+            border: 1px solid rgba(241,196,15,0.3);
+            color: #f1c40f;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        /* 当前时间显示 */
+        .time-display {
+            position: fixed;
+            bottom: 20px;
+            right: 24px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(201,168,76,0.3);
+            border-radius: 8px;
+            padding: 10px 15px;
+            text-align: center;
+        }
+        .time-display .time {
+            font-size: 24px;
+            color: #ffcc00;
+            font-weight: bold;
+        }
+        .time-display .date {
+            font-size: 12px;
+            color: #aab;
+            margin-top: 5px;
+        }
+        /* 票额预警 */
+        .quota-warning {
+            background: rgba(231,76,60,0.15);
+            border: 1px solid rgba(231,76,60,0.3);
+            color: #e74c3c;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        /* 结班确认弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal {
+            background: #0d2137;
+            border: 2px solid #c9a84c;
+            padding: 20px;
+            min-width: 400px;
+            max-width: 500px;
+        }
+        .modal-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #c9a84c;
+            color: #c9a84c;
+        }
+        .modal-body { margin-bottom: 20px; line-height: 1.8; }
+        .modal-footer { display: flex; gap: 10px; justify-content: center; }
+        .btn {
+            padding: 10px 25px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #c9a84c;
+            border-color: #c9a84c;
+            color: #000;
+        }
+        .btn-primary:hover { background: #dbb85d; }
+        .btn-secondary {
+            background: transparent;
+            border-color: rgba(255,255,255,0.3);
+            color: #aab;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+        /* 班次统计 */
+        .shift-summary {
+            background: #001133;
+            border: 1px solid #c9a84c;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .shift-summary .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .shift-summary .row:last-child { border-bottom: none; }
+        .shift-summary .label { color: #88ff88; }
+        .shift-summary .value { color: #ffcc00; font-weight: bold; }
     </style>
 </head>
 <body>
+    <!-- 顶部状态栏 -->
     <div class="top-bar">
         <div class="system-name"><i class="fas fa-train"></i>{{ system_name }}</div>
         <div class="user-info">
             售票员: <span>{{ session.get('employee_no', '') }}</span>
-            窗口: <span>{{ session.get('window_no', '') }}号</span>
+            {{ session.get('user_name', '') }}
+            | 窗口: <span>{{ session.get('window_no', '') }}</span>
             <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出</a>
         </div>
     </div>
 
+    <!-- 班次信息栏 -->
     {% if session.get('shift_id') %}
     <div class="shift-info">
-        <div>
-            <span class="label">当前班次: </span>
+        <div class="item">
+            <span class="label">当前班次:</span>
             <span class="value">{{ session.get('shift_name', '') }}</span>
         </div>
-        <div>
-            <span class="label">班次ID: </span>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="ticketCount">0</div>
+                <div class="stat-label">售票(张)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="ticketAmount">¥0</div>
+                <div class="stat-label">票房(元)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="refundCount">0</div>
+                <div class="stat-label">退票(张)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="quotaUsed">0%</div>
+                <div class="stat-label">票额使用</div>
+            </div>
+        </div>
+        <div class="item">
+            <span class="label">班次ID:</span>
             <span class="value">#{{ session.get('shift_id', '') }}</span>
         </div>
     </div>
     {% endif %}
 
     <div class="main-content">
+        <!-- 消息提示 -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="alert-info"><i class="fas fa-info-circle"></i> {{ message }}</div>
+        <div class="alert-{{ category }}"><i class="fas fa-info-circle"></i> {{ message }}</div>
         {% endfor %}
         {% endif %}
         {% endwith %}
 
+        <!-- 功能卡片 -->
         <div class="func-grid">
-            <a href="{{ url_for('sell') }}" class="func-card">
+            <a href="{{ url_for('sell') }}" class="func-card" id="card-sell">
                 <div class="icon sell"><i class="fas fa-ticket-alt"></i></div>
-                <h3>售票</h3>
-                <p>查询车次、选择座位、出票</p>
+                <h3>售 票</h3>
+                <p>车次查询、选择座位、出票</p>
+                <span class="shortcut">[F2]</span>
             </a>
-            <a href="{{ url_for('query') }}" class="func-card">
+            <a href="{{ url_for('query') }}" class="func-card" id="card-query">
                 <div class="icon query"><i class="fas fa-search"></i></div>
-                <h3>查询</h3>
-                <p>车次查询、余票查询</p>
+                <h3>余票查询</h3>
+                <p>按车次或发到站查询</p>
+                <span class="shortcut">[F4]</span>
             </a>
-            <a href="{{ url_for('refund') }}" class="func-card">
+            <a href="{{ url_for('refund') }}" class="func-card" id="card-refund">
                 <div class="icon refund"><i class="fas fa-undo-alt"></i></div>
-                <h3>退票</h3>
-                <p>办理退票、退票手续费</p>
+                <h3>退 票</h3>
+                <p>办理退票、计算手续费</p>
+                <span class="shortcut">[F3]</span>
             </a>
-            <form action="{{ url_for('close_shift') }}" method="POST" style="contents">
-                <button type="submit" class="func-card" style="border:none;" onclick="return confirm('确认结班？')">
+            <a href="{{ url_for('daily_report') }}" class="func-card" id="card-report">
+                <div class="icon report"><i class="fas fa-file-alt"></i></div>
+                <h3>班次报表</h3>
+                <p>查看当前班次售票明细</p>
+                <span class="shortcut">[F7]</span>
+            </a>
+            <form action="{{ url_for('close_shift') }}" method="POST" style="contents" id="closeShiftForm">
+                <button type="button" class="func-card" id="card-end-shift" onclick="showCloseShiftModal()">
                     <div class="icon end-shift"><i class="fas fa-clock"></i></div>
-                    <h3>结班</h3>
+                    <h3>结 班</h3>
                     <p>结束当前班次、生成报表</p>
+                    <span class="shortcut">[F10]</span>
                 </button>
             </form>
         </div>
+
+        <!-- 快捷键说明 -->
+        <div class="shortcut-bar">
+            <div class="title">◇ 键盘快捷键 ◇</div>
+            <div class="items">
+                <div class="item"><kbd>F2</kbd> 售票</div>
+                <div class="item"><kbd>F3</kbd> 退票</div>
+                <div class="item"><kbd>F4</kbd> 查询</div>
+                <div class="item"><kbd>F5</kbd> 刷新</div>
+                <div class="item"><kbd>F7</kbd> 报表</div>
+                <div class="item"><kbd>F10</kbd> 结班</div>
+                <div class="item"><kbd>ESC</kbd> 返回</div>
+            </div>
+        </div>
     </div>
+
+    <!-- 时间显示 -->
+    <div class="time-display">
+        <div class="time" id="currentTime"></div>
+        <div class="date" id="currentDate"></div>
+    </div>
+
+    <!-- 结班确认弹窗 -->
+    <div class="modal-overlay hidden" id="closeShiftModal">
+        <div class="modal">
+            <div class="modal-title">◇ 确认结班 ◇</div>
+            <div class="modal-body">
+                <p style="text-align:center;margin-bottom:15px;color:#ffcc00;">确定要结束当前班次吗？</p>
+                <div class="shift-summary" id="shiftSummary">
+                    <div class="row"><span class="label">售票张数</span><span class="value" id="summaryTickets">0</span></div>
+                    <div class="row"><span class="label">票房金额</span><span class="value" id="summaryAmount">¥0</span></div>
+                    <div class="row"><span class="label">退票张数</span><span class="value" id="summaryRefunds">0</span></div>
+                    <div class="row"><span class="label">退款金额</span><span class="value" id="summaryRefundAmount">¥0</span></div>
+                    <div class="row" style="border-top:2px solid #c9a84c;padding-top:10px;margin-top:5px;">
+                        <span class="label">净票房</span><span class="value" style="color:#00ff00;" id="summaryNet">¥0</span>
+                    </div>
+                </div>
+                <p style="font-size:12px;color:#668866;text-align:center;">
+                    结班后本班次数据将无法修改
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="confirmCloseShift()">确认结班</button>
+                <button class="btn btn-secondary" onclick="hideModal('closeShiftModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 每10秒刷新班次统计
+            refreshShiftStats();
+            setInterval(refreshShiftStats, 10000);
+            
+            // 绑定键盘快捷键
+            document.addEventListener('keydown', handleKeydown);
+        });
+        
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('zh-CN', { hour12: false });
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN', { 
+                year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'long' 
+            });
+        }
+        
+        // 刷新班次统计
+        async function refreshShiftStats() {
+            try {
+                const response = await fetch('/api/shift-summary');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    const data = result.data;
+                    document.getElementById('ticketCount').textContent = data.total_tickets || 0;
+                    document.getElementById('ticketAmount').textContent = `¥${(data.total_amount || 0).toFixed(0)}`;
+                    document.getElementById('refundCount').textContent = data.total_refunds || 0;
+                    document.getElementById('quotaUsed').textContent = `${data.quota_used || 0}%`;
+                    
+                    // 更新结班弹窗数据
+                    document.getElementById('summaryTickets').textContent = data.total_tickets || 0;
+                    document.getElementById('summaryAmount').textContent = `¥${(data.total_amount || 0).toFixed(2)}`;
+                    document.getElementById('summaryRefunds').textContent = data.total_refunds || 0;
+                    document.getElementById('summaryRefundAmount').textContent = `¥${(data.refund_amount || 0).toFixed(2)}`;
+                    document.getElementById('summaryNet').textContent = `¥${((data.total_amount || 0) - (data.refund_amount || 0)).toFixed(2)}`;
+                    
+                    // 票额预警
+                    if (data.quota_used >= 80) {
+                        const warning = document.querySelector('.quota-warning');
+                        if (!warning) {
+                            const alert = document.createElement('div');
+                            alert.className = 'quota-warning';
+                            alert.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 票额使用已超过80%，请注意控制售票数量';
+                            document.querySelector('.main-content').prepend(alert);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('获取班次统计失败:', err);
+            }
+        }
+        
+        // 键盘快捷键
+        function handleKeydown(e) {
+            // 忽略输入框内的按键
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key) {
+                case 'F2':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("sell") }}';
+                    break;
+                case 'F3':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("refund") }}';
+                    break;
+                case 'F4':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("query") }}';
+                    break;
+                case 'F5':
+                    e.preventDefault();
+                    refreshShiftStats();
+                    break;
+                case 'F7':
+                    e.preventDefault();
+                    window.location.href = '{{ url_for("daily_report") }}';
+                    break;
+                case 'F10':
+                    e.preventDefault();
+                    showCloseShiftModal();
+                    break;
+                case 'Escape':
+                    if (!document.getElementById('closeShiftModal').classList.contains('hidden')) {
+                        hideModal('closeShiftModal');
+                    }
+                    break;
+            }
+        }
+        
+        // 显示结班弹窗
+        function showCloseShiftModal() {
+            refreshShiftStats();
+            document.getElementById('closeShiftModal').classList.remove('hidden');
+        }
+        
+        // 确认结班
+        function confirmCloseShift() {
+            document.getElementById('closeShiftForm').submit();
+        }
+        
+        // 隐藏弹窗
+        function hideModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+    </script>
 </body>
 </html>
