@@ -45,7 +45,7 @@
                     <td><small class="text-muted">{{ (r.new_machine_code or '')[:16] }}{% if r.new_machine_code %}...{% endif %}</small></td>
                     <td><small>{{ r.created_at[:16] if r.created_at else '-' }}</small></td>
                 </tr>
-                {% empty %}
+                {% else %}
                 <tr>
                     <td colspan="7" class="text-center text-muted py-4">暂无风控记录</td>
                 </tr>
