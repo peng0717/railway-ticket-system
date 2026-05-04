@@ -531,6 +531,9 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            # API请求返回JSON，页面请求重定向
+            if request.path.startswith('/api/'):
+                return jsonify({'status': 'error', 'message': '请先登录'}), 401
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -2309,11 +2312,18 @@ def api_train_detail():
     try:
         cursor = conn.cursor()
         
-        # 获取车次基本信息
-        cursor.execute("""
-            SELECT train_id, train_number, train_type, start_station, end_station, start_time, end_time
-            FROM trains WHERE train_number = ?
-        """, (train_number,))
+        # 获取车次基本信息（支持train_id数字或train_number字符串）
+        train_param = request.args.get('train_id', '').strip()
+        if train_param.isdigit():
+            cursor.execute("""
+                SELECT train_id, train_number, train_type, start_station, end_station, start_time, end_time
+                FROM trains WHERE train_id = ?
+            """, (int(train_param),))
+        else:
+            cursor.execute("""
+                SELECT train_id, train_number, train_type, start_station, end_station, start_time, end_time
+                FROM trains WHERE train_number = ?
+            """, (train_param,))
         train = cursor.fetchone()
         if not train:
             cursor.close()
