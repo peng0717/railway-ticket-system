@@ -81,6 +81,96 @@ def ensure_database_initialized():
                     else:
                         print("⚠️  未找到 all_stations.json，跳过车站导入")
                 
+                # 自动补表：检查并创建缺失的表
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                existing_tables = {row[0] for row in cursor.fetchall()}
+                
+                if 'system_settings' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS system_settings (
+                            key TEXT PRIMARY KEY,
+                            value TEXT NOT NULL,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    default_settings = [
+                        ('refund_approval_threshold', '500'),
+                        ('ticket_limit_per_shift', '200'),
+                        ('ticket_warning_ratio', '0.8'),
+                        ('ticket_anomaly_threshold', '50'),
+                        ('monitor_refresh_interval', '30'),
+                        ('log_retention_days', '90'),
+                    ]
+                    for key, value in default_settings:
+                        cursor.execute('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', (key, value))
+                    conn.commit()
+                    print("✅ 自动补表: system_settings")
+                
+                if 'risk_controls' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS risk_controls (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER,
+                            username TEXT,
+                            original_machine_code TEXT,
+                            new_machine_code TEXT,
+                            action TEXT NOT NULL,
+                            reason TEXT,
+                            operated_by INTEGER DEFAULT 0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: risk_controls")
+                
+                if 'machine_bindings' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS machine_bindings (
+                            user_id INTEGER PRIMARY KEY,
+                            machine_code TEXT NOT NULL,
+                            bound_at TIMESTAMP,
+                            updated_at TIMESTAMP
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: machine_bindings")
+                
+                if 'registration_applications' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS registration_applications (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            real_name TEXT NOT NULL,
+                            id_card TEXT NOT NULL UNIQUE,
+                            email TEXT NOT NULL,
+                            station_code TEXT,
+                            username TEXT NOT NULL UNIQUE,
+                            window_no TEXT,
+                            password_hash TEXT NOT NULL,
+                            machine_code TEXT,
+                            status TEXT DEFAULT 'pending',
+                            reject_reason TEXT,
+                            reviewed_by INTEGER,
+                            reviewed_at TIMESTAMP,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: registration_applications")
+                
+                if 'email_verifications' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS email_verifications (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            email TEXT NOT NULL,
+                            code TEXT NOT NULL,
+                            expires_at TIMESTAMP NOT NULL,
+                            verified INTEGER DEFAULT 0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: email_verifications")
+                
                 cursor.close()
                 conn.close()
                 return
@@ -1080,7 +1170,7 @@ def admin_daily_reports():
                 COALESCE(SUM(total_tickets), 0) as total_tickets,
                 COALESCE(SUM(total_refunds), 0) as total_refunds,
                 COALESCE(SUM(total_amount), 0) as total_amount,
-                COALESCE(SUM(actual_refund), 0) as refund_amount
+                COALESCE(SUM(refund_amount), 0) as refund_amount
             FROM shifts WHERE status = 'closed'
         """)
         sum_row = cursor.fetchone()

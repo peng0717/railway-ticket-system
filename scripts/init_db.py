@@ -414,6 +414,31 @@ def init_database():
     
     conn.commit()
     
+    # ========== 系统配置表 ==========
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 插入默认配置
+    default_settings = [
+        ('refund_approval_threshold', '500'),
+        ('ticket_limit_per_shift', '200'),
+        ('ticket_warning_ratio', '0.8'),
+        ('ticket_anomaly_threshold', '50'),
+        ('monitor_refresh_interval', '30'),
+        ('log_retention_days', '90'),
+    ]
+    for key, value in default_settings:
+        cursor.execute('INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)', (key, value))
+    
+    print("✓ 创建系统配置表")
+    
+    conn.commit()
+    
     # ========== 验证 ==========
     print("\n=== 数据库初始化完成 ===")
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
