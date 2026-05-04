@@ -162,7 +162,7 @@ def admin_required(f):
 @register_bp.route('/')
 def index():
     """注册页面入口"""
-    return render_template('register.html')
+    return render_template('register/register.html')
 
 
 @register_bp.route('/check-db')
@@ -595,7 +595,7 @@ def admin_login():
         else:
             flash('用户名或密码错误', 'error')
     
-    return render_template('admin/login.html')
+    return render_template('register/admin/login.html')
 
 
 @register_bp.route('/admin/logout')
@@ -650,7 +650,7 @@ def admin_dashboard():
         cursor.close()
         conn.close()
     
-    return render_template('admin/dashboard.html', stats=stats, recent=recent)
+    return render_template('register/admin/dashboard.html', stats=stats, recent=recent)
 
 
 @register_bp.route('/admin/applications')
@@ -691,7 +691,7 @@ def admin_applications():
         cursor.close()
         conn.close()
     
-    return render_template('admin/applications.html', 
+    return render_template('register/admin/applications.html', 
                            applications=applications, 
                            status_filter=status_filter,
                            search=search)
@@ -821,7 +821,7 @@ def admin_risk():
         cursor.close()
         conn.close()
     
-    return render_template('admin/risk.html', records=records)
+    return render_template('register/admin/risk.html', records=records)
 
 
 @register_bp.route('/admin/api/unfreeze-user', methods=['POST'])
@@ -883,7 +883,7 @@ def admin_users():
         cursor.close()
         conn.close()
     
-    return render_template('admin/users.html', users=users, search=search)
+    return render_template('register/admin/users.html', users=users, search=search)
 
 
 @register_bp.route('/admin/api/freeze-user', methods=['POST'])

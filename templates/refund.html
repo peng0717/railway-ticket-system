@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退票 - {{ system_name }}</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; background: linear-gradient(135deg, #0a1628, #1a3a5c, #0d2137); min-height: 100vh; color: #dde; }
+        .top-bar { background: rgba(0,0,0,0.3); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c9a84c; }
+        .top-bar .title { color: #fff; font-size: 18px; font-weight: bold; }
+        .top-bar .title i { color: #e74c3c; margin-right: 8px; }
+        .top-bar a { color: #aab; text-decoration: none; }
+        .top-bar a:hover { color: #fff; }
+        .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
+        .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; text-align: center; }
+        .placeholder-icon { font-size: 48px; color: #e74c3c; margin-bottom: 16px; }
+        h2 { color: #fff; margin-bottom: 8px; }
+        p { color: #8899aa; }
+        .btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #aab; padding: 10px 20px; border-radius: 8px; margin-top: 20px; display: inline-block; text-decoration: none; }
+        .btn-back:hover { color: #fff; border-color: #c9a84c; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="title"><i class="fas fa-undo-alt"></i>退票</div>
+        <a href="{{ url_for('main') }}"><i class="fas fa-arrow-left"></i> 返回工作台</a>
+    </div>
+    <div class="container">
+        <div class="card">
+            <div class="placeholder-icon"><i class="fas fa-undo-alt"></i></div>
+            <h2>退票办理</h2>
+            <p>功能开发中，敬请期待...</p>
+            <a href="{{ url_for('main') }}" class="btn-back">返回工作台</a>
+        </div>
+    </div>
+</body>
+</html>

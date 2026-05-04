@@ -1861,7 +1861,7 @@ def query():
     """查询页面"""
     return render_template('query.html', system_name=config.SYSTEM_NAME)
 
-@app.route('/ refund')
+@app.route('/refund')
 @login_required
 def refund():
     """退票页面"""

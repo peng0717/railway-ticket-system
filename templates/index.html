@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ system_name }} - 工作台</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #0d2137 100%);
+            min-height: 100vh;
+        }
+        .top-bar {
+            background: rgba(0,0,0,0.3);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #c9a84c;
+        }
+        .top-bar .system-name {
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .top-bar .system-name i { color: #c9a84c; margin-right: 8px; }
+        .user-info {
+            color: #aab;
+            font-size: 14px;
+        }
+        .user-info span { color: #c9a84c; font-weight: bold; }
+        .user-info a { color: #e74c3c; text-decoration: none; margin-left: 15px; }
+        .user-info a:hover { text-decoration: underline; }
+        .shift-info {
+            background: rgba(201,168,76,0.15);
+            border: 1px solid rgba(201,168,76,0.3);
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin: 20px 24px 0;
+            color: #c9a84c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .shift-info .label { font-size: 13px; }
+        .shift-info .value { font-weight: bold; font-size: 15px; }
+        .main-content {
+            padding: 30px 24px;
+        }
+        .func-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .func-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        .func-card:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: #c9a84c;
+            transform: translateY(-4px);
+        }
+        .func-card .icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 28px;
+        }
+        .func-card .icon.sell { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .func-card .icon.query { background: rgba(52,152,219,0.2); color: #3498db; }
+        .func-card .icon.refund { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .func-card .icon.end-shift { background: rgba(201,168,76,0.2); color: #c9a84c; }
+        .func-card h3 { color: #fff; font-size: 16px; margin-bottom: 6px; }
+        .func-card p { color: #8899aa; font-size: 12px; }
+        .alert-info {
+            background: rgba(52,152,219,0.15);
+            border: 1px solid rgba(52,152,219,0.3);
+            color: #5dade2;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="system-name"><i class="fas fa-train"></i>{{ system_name }}</div>
+        <div class="user-info">
+            售票员: <span>{{ session.get('employee_no', '') }}</span>
+            窗口: <span>{{ session.get('window_no', '') }}号</span>
+            <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> 退出</a>
+        </div>
+    </div>
+
+    {% if session.get('shift_id') %}
+    <div class="shift-info">
+        <div>
+            <span class="label">当前班次: </span>
+            <span class="value">{{ session.get('shift_name', '') }}</span>
+        </div>
+        <div>
+            <span class="label">班次ID: </span>
+            <span class="value">#{{ session.get('shift_id', '') }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert-info"><i class="fas fa-info-circle"></i> {{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="func-grid">
+            <a href="{{ url_for('sell') }}" class="func-card">
+                <div class="icon sell"><i class="fas fa-ticket-alt"></i></div>
+                <h3>售票</h3>
+                <p>查询车次、选择座位、出票</p>
+            </a>
+            <a href="{{ url_for('query') }}" class="func-card">
+                <div class="icon query"><i class="fas fa-search"></i></div>
+                <h3>查询</h3>
+                <p>车次查询、余票查询</p>
+            </a>
+            <a href="{{ url_for('refund') }}" class="func-card">
+                <div class="icon refund"><i class="fas fa-undo-alt"></i></div>
+                <h3>退票</h3>
+                <p>办理退票、退票手续费</p>
+            </a>
+            <form action="{{ url_for('close_shift') }}" method="POST" style="contents">
+                <button type="submit" class="func-card" style="border:none;" onclick="return confirm('确认结班？')">
+                    <div class="icon end-shift"><i class="fas fa-clock"></i></div>
+                    <h3>结班</h3>
+                    <p>结束当前班次、生成报表</p>
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
