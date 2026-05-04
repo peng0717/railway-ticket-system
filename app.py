@@ -2311,7 +2311,7 @@ def api_train_detail():
         
         # 获取车次基本信息
         cursor.execute("""
-            SELECT train_number, train_type, start_station, end_station
+            SELECT train_id, train_number, train_type, start_station, end_station, start_time, end_time
             FROM trains WHERE train_number = ?
         """, (train_number,))
         train = cursor.fetchone()
@@ -2320,24 +2320,32 @@ def api_train_detail():
             conn.close()
             return jsonify({'status': 'error', 'message': '未找到该车次'})
         
-        # 获取经停站
+        # 获取经停站（train_stops用train_id关联，需要JOIN stations获取站名）
         cursor.execute("""
-            SELECT stop_order, station_code, station_name, arrival_time, departure_time, distance
-            FROM train_stops WHERE train_number = ?
-            ORDER BY stop_order
-        """, (train_number,))
-        stops = [dict(s) for s in cursor.fetchall()]
+            SELECT ts.stop_sequence, ts.station_code, s.station_name, 
+                   ts.arrival_time, ts.departure_time, ts.distance_from_start,
+                   ts.seat_business, ts.seat_first, ts.seat_second, 
+                   ts.seat_soft, ts.seat_hard, ts.seat_soft_sleeper, ts.seat_hard_sleeper
+            FROM train_stops ts 
+            LEFT JOIN stations s ON ts.station_code = s.station_code
+            WHERE ts.train_id = ?
+            ORDER BY ts.stop_sequence
+        """, (train['train_id'],))
+        stops = []
+        for s in cursor.fetchall():
+            stop = dict(s)
+            stops.append(stop)
         
-        # 获取票价
+        # 获取票价（ticket_prices是全局的，按from_station/to_station）
         prices = {}
         if from_code and to_code:
             cursor.execute("""
-                SELECT seat_type, price FROM ticket_prices
-                WHERE train_number = ? AND from_station_code = ? AND to_station_code = ?
-            """, (train_number, from_code, to_code))
+                SELECT seat_type, base_price FROM ticket_prices
+                WHERE from_station = ? AND to_station = ?
+            """, (from_code, to_code))
             price_rows = cursor.fetchall()
             for p in price_rows:
-                prices[p['seat_type']] = p['price']
+                prices[p['seat_type']] = round(p['base_price'], 2) if p['base_price'] else 0
         
         cursor.close()
         conn.close()
@@ -2345,16 +2353,21 @@ def api_train_detail():
         return jsonify({
             'status': 'success',
             'data': {
+                'train_id': train['train_id'],
                 'train_number': train['train_number'],
                 'train_type': train['train_type'],
                 'start_station': train['start_station'],
                 'end_station': train['end_station'],
+                'start_time': train['start_time'],
+                'end_time': train['end_time'],
                 'stops': stops,
                 'prices': prices
             }
         })
     except Exception as e:
         print(f"获取车次详情失败: {e}")
+        import traceback
+        traceback.print_exc()
         if conn:
             conn.close()
         return jsonify({'status': 'error', 'message': '获取车次详情失败'})
@@ -2362,13 +2375,10 @@ def api_train_detail():
 @app.route('/api/search-trains')
 @login_required
 def api_search_trains():
-    """搜索车次"""
+    """搜索车次（支持车次号和拼音首字母）"""
+    query = request.args.get('q', '').strip().upper()
     from_station = request.args.get('from', '').strip()
     to_station = request.args.get('to', '').strip()
-    date = request.args.get('date', '').strip()
-    
-    if not from_station or not to_station:
-        return jsonify({'status': 'error', 'message': '请选择出发地和目的地'})
     
     conn = get_db_dict_connection()
     if not conn:
@@ -2376,22 +2386,43 @@ def api_search_trains():
     
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT DISTINCT t.train_id, t.train_number, t.train_type, t.start_station, t.end_station
-            FROM trains t
-            JOIN train_stops ts1 ON t.train_number = ts1.train_number AND ts1.station_code = ?
-            JOIN train_stops ts2 ON t.train_number = ts2.train_number AND ts2.station_code = ?
-            WHERE ts1.stop_order < ts2.stop_order
-            LIMIT 20
-        """, (from_station, to_station))
         
-        trains = cursor.fetchall()
+        if query:
+            # 按车次号搜索
+            cursor.execute("""
+                SELECT train_id, train_number, train_type, start_station, end_station, start_time, end_time
+                FROM trains
+                WHERE train_number LIKE ? OR train_number LIKE ?
+                ORDER BY 
+                    CASE WHEN train_number = ? THEN 0
+                         WHEN train_number LIKE ? THEN 1
+                         ELSE 2 END,
+                    train_number
+                LIMIT 20
+            """, (f'{query}%', f'%{query}%', query, f'{query}%'))
+            trains = [dict(t) for t in cursor.fetchall()]
+        elif from_station and to_station:
+            # 按发到站搜索（train_stops用train_id关联）
+            cursor.execute("""
+                SELECT DISTINCT t.train_id, t.train_number, t.train_type, t.start_station, t.end_station, t.start_time, t.end_time
+                FROM trains t
+                JOIN train_stops ts1 ON t.train_id = ts1.train_id AND ts1.station_code = ?
+                JOIN train_stops ts2 ON t.train_id = ts2.train_id AND ts2.station_code = ?
+                WHERE ts1.stop_sequence < ts2.stop_sequence
+                ORDER BY t.train_number
+                LIMIT 30
+            """, (from_station, to_station))
+            trains = [dict(t) for t in cursor.fetchall()]
+        else:
+            trains = []
+        
         cursor.close()
         conn.close()
-        
-        return jsonify({'status': 'success', 'data': list(trains)})
+        return jsonify({'status': 'success', 'data': trains})
     except Exception as e:
         print(f"搜索车次失败: {e}")
+        import traceback
+        traceback.print_exc()
         if conn:
             conn.close()
         return jsonify({'status': 'error', 'message': '搜索车次失败'})
