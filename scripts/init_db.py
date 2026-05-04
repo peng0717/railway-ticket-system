@@ -352,6 +352,37 @@ def init_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_registration_applications_status ON registration_applications(status)')
     conn.commit()
     
+    # ========== 导入全国车站数据 ==========
+    cursor.execute("SELECT COUNT(*) FROM stations")
+    station_count = cursor.fetchone()[0]
+    if station_count <= 1:  # 只有表头或为空
+        stations_json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'all_stations.json')
+        if os.path.exists(stations_json_path):
+            import json
+            with open(stations_json_path, 'r', encoding='utf-8') as f:
+                stations_data = json.load(f)
+            
+            # 跳过第一行（表头）
+            imported = 0
+            for s in stations_data:
+                if s.get('name') == 'station':  # 跳过表头行
+                    continue
+                try:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO stations (station_name, station_code, pinyin_code)
+                        VALUES (?, ?, ?)
+                    ''', (s.get('name', ''), s.get('telecode', ''), s.get('pinyin_code', '')))
+                    imported += 1
+                except Exception:
+                    pass
+            
+            conn.commit()
+            cursor.execute("SELECT COUNT(*) FROM stations")
+            actual_count = cursor.fetchone()[0]
+            print(f"✓ 导入全国车站数据: {imported} 条，实际入库 {actual_count} 条")
+        else:
+            print("⚠ 未找到 all_stations.json，跳过车站数据导入")
+    
     # ========== 插入默认管理员 ==========
     cursor.execute("SELECT COUNT(*) FROM users WHERE employee_no = 'admin'")
     if cursor.fetchone()[0] == 0:

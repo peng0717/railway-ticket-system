@@ -281,21 +281,16 @@ def send_verification_code():
     email_sent = send_email_code(email, code)
     
     if email_sent:
-        message = '验证码已发送到您的邮箱'
-        dev_code = None
+        message = '验证码已发送到您的邮箱，请查收'
     else:
-        # 发送失败，fallback到开发模式
-        message = f'邮件发送失败，开发模式验证码: {code}'
-        dev_code = code
-        print(f"[邮件发送失败，开发模式] 向 {email} 发送验证码: {code}")
+        message = '邮件发送失败，请检查邮箱地址或稍后重试'
     
     cursor.close()
     conn.close()
     
     return jsonify({
-        'status': 'success',
-        'message': message,
-        'dev_code': dev_code
+        'status': 'success' if email_sent else 'error',
+        'message': message
     })
 
 

@@ -44,16 +44,46 @@ def get_db_path():
 def ensure_database_initialized():
     """启动时自动检测并初始化数据库，从根源避免 'no such table' 错误"""
     db_path = get_db_path()
+    need_full_init = True
+    
     if os.path.exists(db_path):
-        # 数据库文件存在，快速验证关键表是否存在
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
             if cursor.fetchone():
+                need_full_init = False
+                
+                # 即使数据库存在，也检查stations表是否有数据（修复车站搜索不到的问题）
+                cursor.execute("SELECT COUNT(*) FROM stations")
+                station_count = cursor.fetchone()[0]
+                if station_count <= 1:
+                    print("⚠️  车站数据为空，正在导入全国车站...")
+                    import json
+                    stations_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'all_stations.json')
+                    if os.path.exists(stations_json):
+                        with open(stations_json, 'r', encoding='utf-8') as f:
+                            stations_data = json.load(f)
+                        imported = 0
+                        for s in stations_data:
+                            if s.get('name') == 'station':
+                                continue
+                            try:
+                                cursor.execute('INSERT OR IGNORE INTO stations (station_name, station_code, pinyin_code) VALUES (?, ?, ?)',
+                                             (s.get('name', ''), s.get('telecode', ''), s.get('pinyin_code', '')))
+                                imported += 1
+                            except Exception:
+                                pass
+                        conn.commit()
+                        cursor.execute("SELECT COUNT(*) FROM stations")
+                        actual = cursor.fetchone()[0]
+                        print(f"✅ 全国车站数据导入完成: {imported} 条，实际入库 {actual} 条")
+                    else:
+                        print("⚠️  未找到 all_stations.json，跳过车站导入")
+                
                 cursor.close()
                 conn.close()
-                return  # 数据库完好，无需初始化
+                return
             cursor.close()
             conn.close()
         except Exception:

@@ -175,8 +175,8 @@ function initStep2() {
     const sendBtn = document.getElementById('btn-send-code');
     const verifyBtn = document.getElementById('btn-verify');
     const nextBtn = document.getElementById('btn-step-2');
-    const devCodeDisplay = document.getElementById('dev_code_display');
-    const devCodeValue = document.getElementById('dev_code_value');
+    const devCodeDisplay = null;
+    const devCodeValue = null;
     
     let devCode = null;
     
@@ -226,18 +226,7 @@ function initStep2() {
         
         if (data.status === 'success') {
             verifyCodeGroup.style.display = 'block';
-            
-            if (data.dev_code) {
-                // 开发模式显示验证码
-                devCode = data.dev_code;
-                devCodeDisplay.classList.remove('hidden');
-                devCodeValue.textContent = devCode;
-                // 开发模式：显示8秒，方便看到验证码
-                showNotification(data.message, 'info', 8000);
-            } else {
-                // 邮件发送成功
-                showNotification(data.message, 'success', 3000);
-            }
+            showNotification(data.message, 'success', 3000);
         } else {
             showNotification(data.message, 'error');
         }
