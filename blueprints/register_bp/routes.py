@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 
 from flask import render_template, request, jsonify, redirect, url_for, session, flash, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -55,7 +56,7 @@ def send_email_code(to_email, code):
     
     msg = MIMEMultipart('alternative')
     msg['Subject'] = '铁路客票系统注册验证码'
-    msg['From'] = f'{MAIL_CONFIG["sender_name"]} <{MAIL_CONFIG["sender"]}>'
+    msg['From'] = formataddr((MAIL_CONFIG['sender_name'], MAIL_CONFIG['sender']))
     msg['To'] = to_email
     
     html = f'''
