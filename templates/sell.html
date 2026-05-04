@@ -8,39 +8,91 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: "Consolas", "Microsoft YaHei", monospace;
-            background: #1B3A5C;
-            color: #FFFFFF;
-            min-height: 100vh;
+            background: #0A1628;
+            color: #E0E0E0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
         }
-        /* 顶部状态栏 */
-        .top-bar {
-            background: #0D2137;
+        /* ===== 标题栏(48px) ===== */
+        .title-bar {
+            background: #1B3A5C;
             border-bottom: 2px solid #3A5A7C;
-            padding: 10px 20px;
+            height: 48px;
+            padding: 0 15px;
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
         }
-        .top-bar .status-info {
+        .title-bar .left-info {
             display: flex;
-            gap: 15px;
             align-items: center;
+            gap: 20px;
         }
-        .top-bar .station { color: #FFD700; font-weight: bold; }
-        .top-bar .divider { color: #6B8299; }
-        .top-bar .window { color: #FFFFFF; }
-        .top-bar .employee { color: #B0C4DE; }
-        .top-bar .time { color: #FFD700; font-size: 14px; }
-        /* 主内容区 */
-        .main-container {
+        .title-bar .station-name {
+            color: #FFD700;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .title-bar .info-item {
+            color: #B0C4DE;
+            font-size: 13px;
+        }
+        .title-bar .info-item span {
+            color: #FFFFFF;
+        }
+        .title-bar .right-info {
             display: flex;
-            height: calc(100vh - 85px);
+            align-items: center;
+            gap: 25px;
+        }
+        .title-bar .time-display {
+            color: #FFD700;
+            font-size: 15px;
+        }
+        /* ===== 功能菜单栏(36px) ===== */
+        .menu-bar {
+            background: #0D1B2A;
+            border-bottom: 2px solid #3A5A7C;
+            height: 36px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .menu-item {
+            padding: 0 18px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: #B0C4DE;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            border-right: 1px solid #2A4A6C;
+            transition: all 0.1s;
+        }
+        .menu-item:first-child { border-left: 1px solid #2A4A6C; }
+        .menu-item:hover, .menu-item.active {
+            background: #1B3A5C;
+            color: #FFD700;
+        }
+        .menu-item .key {
+            color: #FFD700;
+            margin-right: 5px;
+        }
+        /* ===== 主内容区 ===== */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
         }
         /* 左侧输入区 */
         .input-panel {
-            width: 400px;
-            background: #0D2137;
+            width: 420px;
+            background: #0D1B2A;
             border-right: 2px solid #3A5A7C;
             padding: 15px;
             display: flex;
@@ -49,8 +101,8 @@
         .panel-title {
             background: #1B3A5C;
             border: 2px solid #3A5A7C;
-            padding: 10px 15px;
-            font-size: 14px;
+            padding: 8px 15px;
+            font-size: 13px;
             text-align: center;
             color: #FFD700;
             margin-bottom: 15px;
@@ -71,9 +123,9 @@
         }
         .input-group input, .input-group select {
             flex: 1;
-            background: #0F2B45;
+            background: #0A1628;
             border: 2px solid #3A5A7C;
-            color: #FFFFFF;
+            color: #FFD700;
             padding: 10px 12px;
             font-family: inherit;
             font-size: 14px;
@@ -82,39 +134,82 @@
             outline: none;
             border-color: #FFD700;
         }
-        .input-group input::placeholder { color: #6B8299; }
+        .input-group input::placeholder { color: #4A6A8C; }
+        .input-group select option { background: #0A1628; color: #FFD700; }
         /* 票种选择 */
-        .ticket-type-selector {
+        .ticket-type-area {
             margin: 15px 0;
-            padding: 10px;
-            background: #0F2B45;
+            padding: 12px;
+            background: #0A1628;
             border: 2px solid #3A5A7C;
         }
-        .ticket-type-selector .label {
+        .ticket-type-area .label {
             font-size: 13px;
             color: #FFD700;
             margin-bottom: 10px;
         }
         .ticket-types {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
         .ticket-type-btn {
             flex: 1;
-            padding: 10px 8px;
-            background: #0D2137;
+            padding: 10px 5px;
+            background: #0D1B2A;
             border: 2px solid #3A5A7C;
             color: #B0C4DE;
             cursor: pointer;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 14px;
             text-align: center;
         }
-        .ticket-type-btn:hover { border-color: #FFD700; }
+        .ticket-type-btn:hover { border-color: #B8860B; }
         .ticket-type-btn.active {
             background: #FFD700;
-            color: #0D2137;
+            color: #0A1628;
             border-color: #FFD700;
+        }
+        /* 席别选择 */
+        .seat-type-area {
+            margin: 15px 0;
+        }
+        .seat-type-area .label {
+            font-size: 13px;
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+        .seat-types {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .seat-type-btn {
+            padding: 8px 5px;
+            background: #0D1B2A;
+            border: 2px solid #3A5A7C;
+            color: #B0C4DE;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            text-align: center;
+        }
+        .seat-type-btn:hover { border-color: #B8860B; }
+        .seat-type-btn.active {
+            background: #1B3A5C;
+            color: #FFD700;
+            border-color: #FFD700;
+        }
+        /* 旅客信息 */
+        .passenger-area {
+            margin: 15px 0;
+            padding: 12px;
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+        }
+        .passenger-area .label {
+            font-size: 13px;
+            color: #FFD700;
+            margin-bottom: 10px;
         }
         /* 操作按钮 */
         .action-buttons {
@@ -131,795 +226,944 @@
             cursor: pointer;
             font-family: inherit;
             font-size: 14px;
-            text-align: center;
         }
         .action-btn:hover { border-color: #FFD700; color: #FFD700; }
         .action-btn.primary {
             background: #FFD700;
-            color: #0D2137;
+            color: #0A1628;
             border-color: #FFD700;
         }
         .action-btn.primary:hover { background: #E5C100; }
+        .action-btn.search {
+            background: #0A1628;
+            border-color: #B8860B;
+            color: #FFD700;
+        }
+        .action-btn.search:hover { background: #B8860B; color: #0A1628; }
+        /* 车站搜索下拉 */
+        .station-dropdown {
+            position: absolute;
+            background: #0D1B2A;
+            border: 2px solid #FFD700;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            width: calc(100% - 105px);
+        }
+        .station-dropdown.show { display: block; }
+        .station-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #1B3A5C;
+        }
+        .station-option:hover { background: #1B3A5C; }
+        .station-option .name { color: #FFFFFF; }
+        .station-option .code { color: #6B8299; font-size: 11px; margin-left: 10px; }
+        .input-wrapper { position: relative; flex: 1; }
         /* 右侧信息区 */
         .info-panel {
             flex: 1;
-            padding: 15px;
             display: flex;
             flex-direction: column;
+            padding: 15px;
             gap: 15px;
             overflow-y: auto;
         }
-        .info-box {
-            background: #0D2137;
+        .panel-box {
+            background: #0D1B2A;
             border: 2px solid #3A5A7C;
-            padding: 15px;
         }
-        .info-box-title {
+        .panel-box-title {
             color: #FFD700;
-            font-size: 14px;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #3A5A7C;
-        }
-        /* 车次信息 */
-        .train-info {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 8px;
-            font-size: 14px;
-        }
-        .train-info .label { color: #B0C4DE; }
-        .train-info .value { color: #FFFFFF; }
-        .train-info .train-number { color: #FFD700; font-size: 20px; font-weight: bold; }
-        .train-info .route { color: #FFFFFF; }
-        /* 经停站 */
-        .stops-list {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .stop-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #1B3A5C;
             font-size: 13px;
-        }
-        .stop-item:last-child { border-bottom: none; }
-        .stop-seq { color: #FFD700; width: 30px; }
-        .stop-name { color: #FFFFFF; flex: 1; }
-        .stop-time { color: #B0C4DE; }
-        /* 席别余票 */
-        .seat-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .seat-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background: #0F2B45;
-            border: 2px solid #3A5A7C;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .seat-item:hover { border-color: #FFD700; }
-        .seat-item.selected {
-            border-color: #FFD700;
+            padding: 8px 15px;
+            border-bottom: 1px solid #3A5A7C;
             background: #1B3A5C;
         }
-        .seat-item.disabled {
-            border-color: #2A3A4C;
-            color: #6B8299;
-            cursor: not-allowed;
-        }
-        .seat-num { color: #FFD700; width: 30px; }
-        .seat-name { color: #FFFFFF; flex: 1; }
-        .seat-price { color: #FFD700; width: 100px; text-align: right; }
-        .seat-count { color: #B0C4DE; width: 80px; text-align: right; }
-        /* 票面确认区 */
-        .ticket-confirm {
-            background: #0A1628;
-            border: 3px double #FFD700;
-            padding: 20px;
-            text-align: center;
-        }
-        .ticket-confirm-title {
-            color: #FFD700;
-            font-size: 18px;
-            margin-bottom: 15px;
-        }
-        .ticket-lines {
-            font-size: 14px;
-            line-height: 1.8;
-            color: #FFFFFF;
-            text-align: left;
-            max-width: 300px;
-            margin: 0 auto 15px;
-        }
-        .ticket-price-large {
-            color: #FFD700;
-            font-size: 32px;
-            font-weight: bold;
-            margin: 15px 0;
-        }
-        .confirm-inputs {
+        .panel-box-body { padding: 10px 15px; }
+        /* 车次列表 */
+        .train-list { max-height: 300px; overflow-y: auto; }
+        .train-item {
             display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 15px;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1B3A5C;
+            cursor: pointer;
         }
-        .confirm-input-group {
+        .train-item:hover { background: #152A45; }
+        .train-item.selected { background: #1B3A5C; border-left: 3px solid #FFD700; }
+        .train-item:last-child { border-bottom: none; }
+        .train-num {
+            width: 80px;
+            color: #FFD700;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .train-route {
+            flex: 1;
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        .confirm-input-group label { color: #B0C4DE; font-size: 14px; }
-        .confirm-input-group input {
-            background: #0F2B45;
-            border: 2px solid #3A5A7C;
+        .train-from, .train-to {
             color: #FFFFFF;
-            padding: 8px 12px;
+            font-size: 13px;
+        }
+        .train-arrow { color: #6B8299; }
+        .train-time {
+            width: 100px;
+            color: #B0C4DE;
+            font-size: 13px;
+        }
+        .train-duration {
+            width: 60px;
+            color: #6B8299;
+            font-size: 12px;
+            text-align: right;
+        }
+        /* 席别余票 */
+        .seat-list { display: flex; flex-direction: column; gap: 8px; }
+        .seat-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: #0A1628;
+            border: 1px solid #3A5A7C;
+            cursor: pointer;
+        }
+        .seat-item:hover { border-color: #B8860B; }
+        .seat-item.selected { border-color: #FFD700; background: #1B3A5C; }
+        .seat-name { width: 80px; color: #FFFFFF; font-size: 13px; }
+        .seat-price { width: 80px; color: #FFD700; font-size: 14px; text-align: right; }
+        .seat-count { flex: 1; color: #4CAF50; font-size: 13px; }
+        .seat-count.zero { color: #FF4444; }
+        /* 购票须知 */
+        .notice-box {
+            background: #0A1628;
+            border: 1px solid #3A5A7C;
+            padding: 10px 15px;
+            font-size: 12px;
+            color: #6B8299;
+        }
+        .notice-box .title { color: #FFD700; margin-bottom: 5px; }
+        /* 统计信息 */
+        .summary-area {
+            background: #0A1628;
+            border: 2px solid #B8860B;
+            padding: 15px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .summary-item { text-align: center; }
+        .summary-item .label { color: #B0C4DE; font-size: 12px; }
+        .summary-item .value { color: #FFD700; font-size: 20px; font-weight: bold; }
+        /* ===== 操作区(60px) ===== */
+        .action-bar {
+            background: #1B3A5C;
+            border-top: 2px solid #3A5A7C;
+            height: 60px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .action-bar .stats-info {
+            display: flex;
+            gap: 25px;
+        }
+        .action-bar .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .action-bar .stat-label { color: #B0C4DE; font-size: 12px; }
+        .action-bar .stat-value { color: #FFD700; font-size: 18px; font-weight: bold; }
+        .action-bar .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .action-bar .action-btn {
+            padding: 10px 25px;
+            background: #0D1B2A;
+            border: 2px solid #3A5A7C;
+            color: #B0C4DE;
             font-family: inherit;
             font-size: 14px;
-            width: 120px;
+            cursor: pointer;
         }
-        .confirm-input-group input:focus { border-color: #FFD700; outline: none; }
-        /* 车站下拉选择 */
-        .station-dropdown {
-            position: relative;
+        .action-bar .action-btn:hover { border-color: #FFD700; color: #FFD700; }
+        .action-bar .action-btn.primary {
+            background: #FFD700;
+            color: #0A1628;
+            border-color: #FFD700;
         }
-        .station-dropdown .dropdown-list {
-            position: absolute;
-            top: 100%;
+        .action-bar .action-btn.primary:hover { background: #E5C100; }
+        .action-bar .action-btn.print {
+            background: #0A1628;
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+        .action-bar .action-btn.print:hover { background: #4CAF50; color: #0A1628; }
+        .action-bar .action-btn.print:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
             left: 0;
             right: 0;
-            background: #0D2137;
-            border: 2px solid #FFD700;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 100;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
             display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
-        .station-dropdown .dropdown-list.show { display: block; }
-        .station-dropdown .dropdown-item {
-            padding: 10px 12px;
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #0D1B2A;
+            border: 3px solid #3A5A7C;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { color: #FFD700; font-size: 15px; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #B0C4DE;
+            font-size: 20px;
             cursor: pointer;
-            font-size: 13px;
+        }
+        .modal-close:hover { color: #FF4444; }
+        .modal-body { padding: 20px; }
+        /* 票面信息 */
+        .ticket-preview {
+            background: #FFFFFF;
+            color: #333;
+            border: 2px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .ticket-preview .ticket-header {
+            text-align: center;
+            border-bottom: 2px dashed #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .ticket-preview .ticket-header h4 { color: #1a4a7a; font-size: 18px; }
+        .ticket-preview .ticket-header .type { color: #666; font-size: 12px; }
+        .ticket-preview .ticket-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 14px; }
+        .ticket-preview .ticket-info .item { padding: 5px 0; }
+        .ticket-preview .ticket-info .label { color: #666; font-size: 12px; }
+        .ticket-preview .ticket-info .value { color: #333; font-weight: bold; font-size: 16px; }
+        .ticket-preview .ticket-price {
+            text-align: center;
+            padding-top: 15px;
+            border-top: 2px dashed #ccc;
+            margin-top: 15px;
+        }
+        .ticket-preview .ticket-price .price { color: #CC0000; font-size: 28px; font-weight: bold; }
+        .ticket-preview .ticket-price .unit { color: #CC0000; }
+        /* 收款信息 */
+        .payment-info {
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .payment-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
             border-bottom: 1px solid #1B3A5C;
         }
-        .station-dropdown .dropdown-item:hover { background: #1B3A5C; }
-        .station-dropdown .dropdown-item .name { color: #FFFFFF; }
-        .station-dropdown .dropdown-item .code { color: #6B8299; font-size: 11px; margin-left: 10px; }
-        /* 底部功能栏 */
-        .bottom-bar {
-            background: #0D2137;
-            border-top: 2px solid #3A5A7C;
-            padding: 8px 20px;
+        .payment-row:last-child { border-bottom: none; }
+        .payment-row .label { color: #B0C4DE; }
+        .payment-row .value { color: #FFD700; font-weight: bold; }
+        .payment-row .value.change { color: #4CAF50; }
+        .payment-input {
             display: flex;
-            justify-content: center;
-            gap: 25px;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
         }
-        .bottom-bar .func-hint { color: #6B8299; font-size: 12px; }
-        .bottom-bar .func-hint kbd { 
-            background: #1B3A5C; 
-            border: 1px solid #3A5A7C; 
-            color: #FFD700; 
-            padding: 2px 6px; 
-            margin-right: 5px; 
+        .payment-input label { color: #FFD700; }
+        .payment-input input {
+            flex: 1;
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            color: #FFD700;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 16px;
         }
-        /* 隐藏状态 */
-        .hidden { display: none !important; }
-        /* 消息提示 */
-        .message {
-            padding: 12px 20px;
-            margin: 10px 0;
-            border: 2px solid;
-            font-size: 14px;
+        .payment-input input:focus { border-color: #FFD700; outline: none; }
+        /* 错误提示 */
+        .error-msg {
+            background: #2A1A1A;
+            border: 1px solid #FF4444;
+            color: #FF4444;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
         }
-        .message.error { background: rgba(255,68,68,0.1); border-color: #FF4444; color: #FF4444; }
-        .message.success { background: rgba(76,175,80,0.1); border-color: #4CAF50; color: #4CAF50; }
+        /* 成功提示 */
+        .success-modal .modal-box { border-color: #4CAF50; }
+        .success-modal .modal-header { background: #1B3A5C; border-color: #4CAF50; }
+        .success-modal h3 { color: #4CAF50 !important; }
     </style>
 </head>
 <body>
-    <!-- 顶部状态栏 -->
-    <div class="top-bar">
-        <div class="status-info">
-            <span class="station">{{ session.get('station_name', '北京站') }}</span>
-            <span class="divider">|</span>
-            <span class="window">窗口{{ session.get('window_no', '1') }}</span>
-            <span class="divider">|</span>
-            <span class="employee">工号:{{ session.get('employee_no', '') }} {{ session.get('user_name', '') }}</span>
+    <!-- 标题栏 -->
+    <div class="title-bar">
+        <div class="left-info">
+            <div class="station-name">{{ session.get('station_name', '北京') }}</div>
+            <div class="info-item">窗口:<span>{{ session.get('window_no', '101号口') }}</span></div>
+            <div class="info-item">工号:<span>{{ session.get('employee_no', 'N/A') }}</span></div>
+            <div class="info-item">班次:<span>{{ session.get('shift_name', '白班') }}</span></div>
         </div>
-        <div class="time" id="current-time">--:--:--</div>
+        <div class="right-info">
+            <div class="time-display" id="current-time">00:00:00</div>
+        </div>
     </div>
-
+    
+    <!-- 功能菜单栏 -->
+    <div class="menu-bar">
+        <a href="{{ url_for('main') }}" class="menu-item"><span class="key">H</span>首页</a>
+        <a href="{{ url_for('sell') }}" class="menu-item active"><span class="key">G</span>售票</a>
+        <a href="{{ url_for('refund') }}" class="menu-item"><span class="key">T</span>退票</a>
+        <a href="{{ url_for('query') }}" class="menu-item"><span class="key">I</span>查询</a>
+        <a href="{{ url_for('daily_report') }}" class="menu-item"><span class="key">R</span>报表</a>
+        <a href="{{ url_for('close_shift') }}" class="menu-item"><span class="key">X</span>交班</a>
+    </div>
+    
     <!-- 主内容区 -->
-    <div class="main-container">
-        <!-- 左侧输入面板 -->
+    <div class="main-content">
+        <!-- 左侧输入区 -->
         <div class="input-panel">
-            <div class="panel-title">◇ 售票输入</div>
+            <div class="panel-title">[ 售 票 输 入 ]</div>
             
-            <div class="input-group">
-                <label><span class="key">[F1]</span>日期:</label>
-                <input type="date" id="travel-date" value="">
-            </div>
+            {% if error %}
+            <div class="error-msg">{{ error }}</div>
+            {% endif %}
             
-            <div class="input-group">
-                <label><span class="key">[F2]</span>车次:</label>
-                <input type="text" id="train-number" placeholder="输入车次号 如G1" maxlength="10">
-            </div>
-            
-            <div class="input-group">
-                <label><span class="key">[F3]</span>发站:</label>
-                <div class="station-dropdown">
-                    <input type="text" id="from-station" placeholder="输入拼音码" maxlength="10">
-                    <div class="dropdown-list" id="from-station-list"></div>
+            <form id="search-form" method="GET" action="{{ url_for('sell') }}">
+                <div class="input-group">
+                    <label><span class="key">[F1]</span>日期:</label>
+                    <input type="date" name="date" id="travel-date" value="{{ default_date|default('') }}" required>
                 </div>
-            </div>
-            
-            <div class="input-group">
-                <label><span class="key">[F4]</span>到站:</label>
-                <div class="station-dropdown">
-                    <input type="text" id="to-station" placeholder="输入拼音码" maxlength="10">
-                    <div class="dropdown-list" id="to-station-list"></div>
+                <div class="input-group">
+                    <label><span class="key">[F2]</span>车次:</label>
+                    <input type="text" name="train_number" id="train-number" placeholder="输入车次或选择下方车次" value="{{ train_number|default('') }}">
                 </div>
-            </div>
+                <div class="input-group">
+                    <label><span class="key">[F3]</span>发站:</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="from_station_name" id="from-station" placeholder="输入车站名或拼音首字母" autocomplete="off" value="{{ from_station|default('') }}">
+                        <input type="hidden" name="from_station" id="from-station-code" value="{{ from_station_code|default('') }}">
+                        <div class="station-dropdown" id="from-station-dropdown"></div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label><span class="key">[F4]</span>到站:</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="to_station_name" id="to-station" placeholder="输入车站名或拼音首字母" autocomplete="off" value="{{ to_station|default('') }}">
+                        <input type="hidden" name="to_station" id="to-station-code" value="{{ to_station_code|default('') }}">
+                        <div class="station-dropdown" id="to-station-dropdown"></div>
+                    </div>
+                </div>
+            </form>
             
-            <div class="ticket-type-selector">
-                <div class="label">票种[F5]:</div>
+            <!-- 票种选择 -->
+            <div class="ticket-type-area">
+                <div class="label">票种 [F6]:</div>
                 <div class="ticket-types">
-                    <button class="ticket-type-btn active" data-type="adult">全票</button>
-                    <button class="ticket-type-btn" data-type="child">孩票</button>
-                    <button class="ticket-type-btn" data-type="student">学票</button>
-                    <button class="ticket-type-btn" data-type="military">军残</button>
+                    <button type="button" class="ticket-type-btn active" data-type="adult" onclick="selectTicketType(this)">全价</button>
+                    <button type="button" class="ticket-type-btn" data-type="child" onclick="selectTicketType(this)">孩半</button>
+                    <button type="button" class="ticket-type-btn" data-type="student" onclick="selectTicketType(this)">学生</button>
+                    <button type="button" class="ticket-type-btn" data-type="soldier" onclick="selectTicketType(this)">军残</button>
+                </div>
+                <input type="hidden" name="ticket_type" id="ticket-type" value="adult">
+            </div>
+            
+            <!-- 席别选择 -->
+            <div class="seat-type-area">
+                <div class="label">席别 [F5]:</div>
+                <div class="seat-types" id="seat-types">
+                    <button type="button" class="seat-type-btn" data-seat="二等座" onclick="selectSeatType(this)">二等座</button>
+                    <button type="button" class="seat-type-btn" data-seat="一等座" onclick="selectSeatType(this)">一等座</button>
+                    <button type="button" class="seat-type-btn" data-seat="商务座" onclick="selectSeatType(this)">商务座</button>
+                    <button type="button" class="seat-type-btn" data-seat="硬座" onclick="selectSeatType(this)">硬座</button>
+                    <button type="button" class="seat-type-btn" data-seat="软座" onclick="selectSeatType(this)">软座</button>
+                    <button type="button" class="seat-type-btn" data-seat="硬卧" onclick="selectSeatType(this)">硬卧</button>
+                    <button type="button" class="seat-type-btn" data-seat="软卧" onclick="selectSeatType(this)">软卧</button>
+                    <button type="button" class="seat-type-btn" data-seat="无座" onclick="selectSeatType(this)">无座</button>
+                </div>
+                <input type="hidden" name="seat_type" id="seat-type" value="">
+            </div>
+            
+            <!-- 旅客信息 -->
+            <div class="passenger-area">
+                <div class="label">旅客信息:</div>
+                <div class="input-group">
+                    <label><span class="key">[P]</span>姓名:</label>
+                    <input type="text" id="passenger-name" placeholder="输入旅客姓名" maxlength="20">
+                </div>
+                <div class="input-group">
+                    <label><span class="key">[I]</span>证件:</label>
+                    <input type="text" id="passenger-id" placeholder="输入身份证号" maxlength="18">
                 </div>
             </div>
             
             <div class="action-buttons">
-                <button class="action-btn primary" id="query-btn">[Enter] 查询余票</button>
-                <button class="action-btn" id="reset-btn">[F6] 重置</button>
+                <button type="button" class="action-btn search" onclick="searchTrains()">[查询车次]</button>
+                <button type="button" class="action-btn" onclick="resetForm()">[重置]</button>
             </div>
         </div>
-
-        <!-- 右侧信息面板 -->
-        <div class="info-panel">
-            <!-- 车次信息 -->
-            <div class="info-box" id="train-info-box">
-                <div class="info-box-title">◇ 车次信息</div>
-                <div id="train-info-content">
-                    <div style="color: #6B8299; text-align: center; padding: 30px;">
-                        请输入车次号或发到站查询
-                    </div>
-                </div>
-            </div>
-
-            <!-- 经停站 -->
-            <div class="info-box" id="stops-info-box">
-                <div class="info-box-title">◇ 经停站</div>
-                <div class="stops-list" id="stops-list-content">
-                    <div style="color: #6B8299; text-align: center; padding: 20px;">
-                        无
-                    </div>
-                </div>
-            </div>
-
-            <!-- 席别余票 -->
-            <div class="info-box" id="seats-info-box">
-                <div class="info-box-title">◇ 席别余票</div>
-                <div class="seat-list" id="seat-list-content">
-                    <div style="color: #6B8299; text-align: center; padding: 20px;">
-                        请先选择车次和发到站
-                    </div>
-                </div>
-            </div>
-
-            <!-- 票面确认区 -->
-            <div class="info-box hidden" id="ticket-confirm-box">
-                <div class="ticket-confirm">
-                    <div class="ticket-confirm-title">★ 确认出票 ★</div>
-                    <div class="ticket-lines" id="ticket-lines">
-                        <div>车次: <span id="confirm-train"></span></div>
-                        <div>日期: <span id="confirm-date"></span></div>
-                        <div>发站: <span id="confirm-from"></span></div>
-                        <div>到站: <span id="confirm-to"></span></div>
-                        <div>席别: <span id="confirm-seat"></span></div>
-                        <div>票种: <span id="confirm-type"></span></div>
-                    </div>
-                    <div class="ticket-price-large">¥<span id="confirm-price">0</span></div>
-                    <div class="confirm-inputs">
-                        <div class="confirm-input-group">
-                            <label>确认出票:</label>
-                            <input type="text" id="confirm-yesno" value="" maxlength="1" placeholder="Y/N">
-                        </div>
-                        <div class="confirm-input-group">
-                            <label>收款金额:</label>
-                            <input type="number" id="payment-amount" placeholder="0.00" step="0.01">
-                        </div>
-                    </div>
-                    <div style="margin-top: 15px; color: #B0C4DE; font-size: 13px;">
-                        按Y确认出票，按N取消
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 底部功能键栏 -->
-    <div class="bottom-bar">
-        <span class="func-hint"><kbd>F1</kbd>日期</span>
-        <span class="func-hint"><kbd>F2</kbd>车次</span>
-        <span class="func-hint"><kbd>F3</kbd>发站</span>
-        <span class="func-hint"><kbd>F4</kbd>到站</span>
-        <span class="func-hint"><kbd>F5</kbd>票种</span>
-        <span class="func-hint"><kbd>F6</kbd>重置</span>
-        <span class="func-hint"><kbd>Enter</kbd>查询</span>
-        <span class="func-hint"><kbd>ESC</kbd>返回</span>
-    </div>
-
-    <script>
-        // BroadcastChannel 通信
-        const channel = new BroadcastChannel('trs-display');
         
-        // 当前状态
-        let currentState = {
-            trainNumber: '',
-            fromStation: '',
-            fromStationName: '',
-            toStation: '',
-            toStationName: '',
-            seatType: '',
-            ticketType: 'adult',
-            date: '',
-            price: 0,
-            trainId: null,
-            stops: []
-        };
-
-        // DOM元素
-        const trainNumberInput = document.getElementById('train-number');
-        const fromStationInput = document.getElementById('from-station');
-        const toStationInput = document.getElementById('to-station');
-        const dateInput = document.getElementById('travel-date');
-        const queryBtn = document.getElementById('query-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const confirmBox = document.getElementById('ticket-confirm-box');
-        const confirmYesno = document.getElementById('confirm-yesno');
-        const paymentAmount = document.getElementById('payment-amount');
-
-        // 初始化
-        function init() {
-            // 设置默认日期
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.value = today;
-            currentState.date = today;
-
-            // 更新时间
-            updateTime();
-            setInterval(updateTime, 1000);
-
-            // 绑定事件
-            trainNumberInput.addEventListener('keydown', handleTrainInput);
-            fromStationInput.addEventListener('input', handleStationInput('from'));
-            toStationInput.addEventListener('input', handleStationInput('to'));
-            dateInput.addEventListener('change', () => currentState.date = dateInput.value);
-            queryBtn.addEventListener('click', queryTickets);
-            resetBtn.addEventListener('click', resetForm);
-            confirmYesno.addEventListener('keydown', handleConfirm);
-            paymentAmount.addEventListener('keydown', handlePayment);
-
-            // 票种选择
-            document.querySelectorAll('.ticket-type-btn').forEach(btn => {
-                btn.addEventListener('click', () => selectTicketType(btn));
-            });
-
-            // 车站输入聚焦
-            fromStationInput.addEventListener('focus', () => handleStationInput('from')());
-            toStationInput.addEventListener('focus', () => handleStationInput('to')());
-
-            // 发送到副屏：待机状态
-            sendToPassengerDisplay('idle');
-        }
-
+        <!-- 右侧信息区 -->
+        <div class="info-panel">
+            <!-- 车次列表 -->
+            <div class="panel-box">
+                <div class="panel-box-title">车次信息 [车次列表]</div>
+                <div class="panel-box-body train-list" id="train-list">
+                    {% if trains %}
+                        {% for train in trains %}
+                        <div class="train-item {% if loop.first %}selected{% endif %}" 
+                             data-train-id="{{ train.train_id }}"
+                             data-train-number="{{ train.train_number }}"
+                             data-from="{{ train.start_station }}"
+                             data-to="{{ train.end_station }}"
+                             data-departure="{{ train.start_time }}"
+                             data-duration="{{ train.duration }}"
+                             onclick="selectTrain(this)">
+                            <div class="train-num">{{ train.train_number }}</div>
+                            <div class="train-route">
+                                <span class="train-from">{{ train.start_station }}</span>
+                                <span class="train-arrow">→</span>
+                                <span class="train-to">{{ train.end_station }}</span>
+                            </div>
+                            <div class="train-time">{{ train.start_time }}</div>
+                            <div class="train-duration">{{ train.duration }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="color:#6B8299;text-align:center;padding:30px;">
+                            请输入发到站后点击"查询车次"获取车次信息
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- 席别余票 -->
+            <div class="panel-box">
+                <div class="panel-box-title">席别/票价/余票</div>
+                <div class="panel-box-body seat-list" id="seat-list">
+                    <div style="color:#6B8299;text-align:center;padding:20px;">
+                        请选择车次后查看席别余票
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 购票须知 -->
+            <div class="notice-box">
+                <div class="title">购票须知:</div>
+                <div>1. 每张车票限一人使用,票面记载信息不得更改</div>
+                <div>2. 开车前15天以上退票免收退票费,48小时以上收5%,24-48小时收10%,24小时内收20%</div>
+                <div>3. 儿童票半价,需提供有效证件;学生票需凭学生证购买</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 操作区 -->
+    <div class="action-bar">
+        <div class="stats-info">
+            <div class="stat-item">
+                <span class="stat-label">已选:</span>
+                <span class="stat-value" id="selected-train">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">席别:</span>
+                <span class="stat-value" id="selected-seat">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">票价:</span>
+                <span class="stat-value" id="selected-price">0.00元</span>
+            </div>
+        </div>
+        <div class="action-buttons">
+            <button class="action-btn" onclick="location.href='{{ url_for('main') }}'">[H]首页</button>
+            <button class="action-btn" onclick="resetForm()">[E]取消</button>
+            <button class="action-btn primary" id="confirm-btn" onclick="showConfirmModal()" disabled>[N]确认出票</button>
+        </div>
+    </div>
+    
+    <!-- 确认出票模态框 -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>[ 确 认 出 票 ]</h3>
+                <button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="ticket-preview">
+                    <div class="ticket-header">
+                        <h4>铁 路 客 票</h4>
+                        <div class="type">计算机客票</div>
+                    </div>
+                    <div class="ticket-info">
+                        <div class="item">
+                            <div class="label">日  期</div>
+                            <div class="value" id="preview-date">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">车  次</div>
+                            <div class="value" id="preview-train">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">发  站</div>
+                            <div class="value" id="preview-from">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">到  站</div>
+                            <div class="value" id="preview-to">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">席  别</div>
+                            <div class="value" id="preview-seat">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">票  种</div>
+                            <div class="value" id="preview-type">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">姓  名</div>
+                            <div class="value" id="preview-name">--</div>
+                        </div>
+                        <div class="item">
+                            <div class="label">证件号</div>
+                            <div class="value" id="preview-id">--</div>
+                        </div>
+                    </div>
+                    <div class="ticket-price">
+                        <div>票  价</div>
+                        <div><span class="price" id="preview-price">0.00</span><span class="unit"> 元</span></div>
+                    </div>
+                </div>
+                
+                <div class="payment-info">
+                    <div class="payment-row">
+                        <span class="label">票  价:</span>
+                        <span class="value" id="pay-price">0.00元</span>
+                    </div>
+                    <div class="payment-row">
+                        <span class="label">收  款:</span>
+                        <span class="value" id="pay-received">0.00元</span>
+                    </div>
+                    <div class="payment-row">
+                        <span class="label">找  零:</span>
+                        <span class="value change" id="pay-change">0.00元</span>
+                    </div>
+                    <div class="payment-input">
+                        <label>收款金额:</label>
+                        <input type="number" id="payment-amount" value="0" min="0" step="0.01" oninput="calculateChange()">
+                    </div>
+                </div>
+                
+                <div style="display:flex;gap:10px;">
+                    <button class="action-btn" style="flex:1;" onclick="closeModal('confirm-modal')">[E]取消</button>
+                    <button class="action-btn primary" style="flex:1;" onclick="confirmSell()">[Enter]确认出票</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 出票成功模态框 -->
+    <div class="modal-overlay success-modal" id="success-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>[ 出 票 成 功 ]</h3>
+                <button class="modal-close" onclick="closeModal('success-modal');location.reload();">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div style="color:#4CAF50;font-size:48px;margin-bottom:20px;">√</div>
+                <div style="color:#FFD700;font-size:24px;margin-bottom:15px;">出票成功!</div>
+                <div style="color:#B0C4DE;margin-bottom:10px;">票号: <span id="success-ticket-no" style="color:#FFD700;"></span></div>
+                <div style="color:#B0C4DE;">请提醒旅客保管好车票</div>
+                <div style="margin-top:25px;display:flex;gap:10px;">
+                    <button class="action-btn" style="flex:1;" onclick="closeModal('success-modal');location.reload();">[继续售票]</button>
+                    <button class="action-btn" style="flex:1;" onclick="closeModal('success-modal');location.href='{{ url_for('main') }}';">[返回首页]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 全局变量
+        let selectedTrain = null;
+        let selectedSeat = null;
+        let currentPrice = 0;
+        let currentTicketType = 'adult';
+        
         // 更新时间
         function updateTime() {
             const now = new Date();
-            const timeStr = now.toLocaleString('zh-CN', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            }).replace(/\//g, '-');
-            document.getElementById('current-time').textContent = timeStr;
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('zh-CN', {hour12: false});
         }
-
-        // 车次输入处理
-        function handleTrainInput(e) {
-            if (e.key === 'Enter') {
-                const trainNum = trainNumberInput.value.trim().toUpperCase();
-                if (trainNum) {
-                    currentState.trainNumber = trainNum;
-                    searchTrainByNumber(trainNum);
-                }
-            }
-        }
-
-        // 按车次号搜索
-        function searchTrainByNumber(trainNum) {
-            fetch(`/api/search-trains?q=${encodeURIComponent(trainNum)}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success' && data.data.length > 0) {
-                        const train = data.data[0];
-                        currentState.trainId = train.train_id;
-                        currentState.trainNumber = train.train_number;
-                        trainNumberInput.value = train.train_number;
-                        displayTrainInfo(train);
-                        // 自动获取经停站
-                        fetchTrainDetail(train.train_id);
-                    } else {
-                        document.getElementById('train-info-content').innerHTML = 
-                            '<div style="color: #FF4444; text-align: center; padding: 30px;">未找到该车次</div>';
-                    }
-                });
-        }
-
-        // 获取车次详情
-        function fetchTrainDetail(trainId) {
-            const fromCode = currentState.fromStation;
-            const toCode = currentState.toStation;
-            fetch(`/api/train-detail?train_id=${encodeURIComponent(trainId)}&from=${fromCode}&to=${toCode}`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        currentState.stops = data.data.stops || [];
-                        currentState.trainType = data.data.train_type;
-                        displayStops(data.data.stops);
-                        // 根据车型和站点显示席别
-                        if (fromCode && toCode) {
-                            displaySeats(data.data.train_type, data.data.stops, data.data.prices || {});
-                        }
-                    }
-                });
-        }
-
-        // 显示车次信息
-        function displayTrainInfo(train) {
-            document.getElementById('train-info-content').innerHTML = `
-                <div class="train-info">
-                    <div class="train-number" style="grid-column: 1 / -1;">${train.train_number}</div>
-                    <div class="label">类型:</div><div class="value">${train.train_type || '高速动车'}</div>
-                    <div class="label">发站:</div><div class="value" style="color: #FFD700;">${train.start_station}</div>
-                    <div class="label">到站:</div><div class="value" style="color: #FFD700;">${train.end_station}</div>
-                    <div class="label">发时:</div><div class="value">${train.start_time || '--:--'}</div>
-                    <div class="label">到时:</div><div class="value">${train.end_time || '--:--'}</div>
-                </div>
-            `;
-        }
-
-        // 车站输入处理
-        function handleStationInput(type) {
-            return function() {
-                const input = type === 'from' ? fromStationInput : toStationInput;
-                const value = input.value.trim().toUpperCase();
-                const list = document.getElementById(type + '-station-list');
-                
-                if (value.length < 1) {
-                    list.classList.remove('show');
-                    return;
-                }
-
-                fetch(`/api/search-stations?q=${encodeURIComponent(value)}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === 'success' && data.data.length > 0) {
-                            list.innerHTML = data.data.slice(0, 8).map(s => `
-                                <div class="dropdown-item" data-code="${s.code}" data-name="${s.name}" onclick="selectStation('${type}', '${s.code}', '${s.name}')">
-                                    <span class="name">${s.name}</span>
-                                    <span class="code">${s.code}</span>
-                                </div>
-                            `).join('');
-                            list.classList.add('show');
-                        } else {
-                            list.classList.remove('show');
-                        }
-                    });
-            };
-        }
-
-        // 选择车站
-        window.selectStation = function(type, code, name) {
-            const input = type === 'from' ? fromStationInput : toStationInput;
-            input.value = name;
-            currentState[type + 'Station'] = code;
-            currentState[type + 'StationName'] = name;
-            
-            const list = document.getElementById(type + '-station-list');
-            list.classList.remove('show');
-
-            // 如果车次已选择，更新票价
-            if (currentState.trainId && currentState.fromStation && currentState.toStation) {
-                fetchTrainDetail(currentState.trainId);
-            }
-
-            // 发送到副屏
-            if (type === 'from' || type === 'to') {
-                sendToPassengerDisplay('ticket_info', {
-                    from: currentState.fromStationName,
-                    to: currentState.toStationName,
-                    train: currentState.trainNumber
-                });
-            }
-        };
-
-        // 票种选择
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // 设置默认日期为今天
+        document.getElementById('travel-date').valueAsDate = new Date();
+        
+        // 选择票种
         function selectTicketType(btn) {
             document.querySelectorAll('.ticket-type-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            currentState.ticketType = btn.dataset.type;
+            currentTicketType = btn.dataset.type;
+            document.getElementById('ticket-type').value = currentTicketType;
+            updatePrice();
         }
-
-        // 查询余票
-        function queryTickets() {
-            if (!currentState.trainId || !currentState.fromStation || !currentState.toStation) {
-                alert('请输入车次、发站和到站');
+        
+        // 选择席别
+        function selectSeatType(btn) {
+            document.querySelectorAll('.seat-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedSeat = btn.dataset.seat;
+            document.getElementById('seat-type').value = selectedSeat;
+            document.getElementById('selected-seat').textContent = selectedSeat;
+            updatePrice();
+            checkConfirmBtn();
+        }
+        
+        // 选择车次
+        function selectTrain(el) {
+            document.querySelectorAll('.train-item').forEach(item => item.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedTrain = {
+                id: el.dataset.trainId,
+                number: el.dataset.trainNumber,
+                from: el.dataset.from,
+                to: el.dataset.to,
+                departure: el.dataset.departure,
+                duration: el.dataset.duration
+            };
+            document.getElementById('selected-train').textContent = selectedTrain.number;
+            
+            // 更新席别余票
+            loadSeatAvailability(selectedTrain.id);
+            checkConfirmBtn();
+        }
+        
+        // 加载席别余票
+        function loadSeatAvailability(trainId) {
+            const date = document.getElementById('travel-date').value;
+            const fromStation = document.getElementById('from-station-code').value;
+            const toStation = document.getElementById('to-station-code').value;
+            
+            if (!fromStation || !toStation) return;
+            
+            fetch(`/api/seat-availability?train_id=${trainId}&date=${date}&from=${fromStation}&to=${toStation}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        renderSeatList(data.data);
+                    }
+                })
+                .catch(() => {});
+        }
+        
+        // 渲染席别列表
+        function renderSeatList(seats) {
+            const container = document.getElementById('seat-list');
+            if (!seats || seats.length === 0) {
+                container.innerHTML = '<div style="color:#6B8299;text-align:center;padding:20px;">暂无余票信息</div>';
                 return;
             }
-
-            // 发送确认信息到副屏
-            sendToPassengerDisplay('confirm');
-
-            // 聚焦确认框
-            confirmBox.classList.remove('hidden');
-            confirmYesno.focus();
-        }
-
-        // 显示经停站
-        function displayStops(stops) {
-            if (!stops || stops.length === 0) {
-                document.getElementById('stops-list-content').innerHTML = 
-                    '<div style="color: #6B8299; text-align: center; padding: 20px;">无经停站信息</div>';
-                return;
-            }
-
-            document.getElementById('stops-list-content').innerHTML = stops.map((s, i) => `
-                <div class="stop-item">
-                    <span class="stop-seq">${s.stop_sequence || (i+1)}</span>
-                    <span class="stop-name">${s.station_name || s.station_code}</span>
-                    <span class="stop-time">${s.arrival_time || '--:--'}→${s.departure_time || '--:--'}</span>
+            
+            container.innerHTML = seats.map(seat => `
+                <div class="seat-item" data-seat="${seat.seat_type}" data-price="${seat.price}" onclick="selectSeatType(this)">
+                    <div class="seat-name">${seat.seat_type}</div>
+                    <div class="seat-price">${seat.price.toFixed(2)}元</div>
+                    <div class="seat-count ${seat.count <= 0 ? 'zero' : ''}">${seat.count > 0 ? '余' + seat.count + '张' : '售完'}</div>
                 </div>
             `).join('');
         }
-
-        // 显示席别（根据车型显示不同选项）
-        function displaySeats(trainType, stops, prices) {
-            // 根据车型定义席别
-            let seatTypes = [];
+        
+        // 更新票价
+        function updatePrice() {
+            if (!selectedTrain) return;
             
-            if (trainType === 'G' || trainType === 'D' || trainType === 'C') {
-                // 高铁/动车/城际：商务座、一等座、二等座
-                seatTypes = [
-                    { key: 'business', name: '商务座', num: '1' },
-                    { key: 'first', name: '一等座', num: '2' },
-                    { key: 'second', name: '二等座', num: '3' }
-                ];
-            } else {
-                // 普速列车：软卧、硬卧、硬座
-                seatTypes = [
-                    { key: 'soft_sleeper', name: '软卧', num: '1' },
-                    { key: 'hard_sleeper', name: '硬卧', num: '2' },
-                    { key: 'hard', name: '硬座', num: '3' }
-                ];
+            const seatEl = document.querySelector('.seat-item.active');
+            if (seatEl) {
+                currentPrice = parseFloat(seatEl.dataset.price) || 0;
+                
+                // 根据票种调整价格
+                if (currentTicketType === 'child' || currentTicketType === 'student') {
+                    currentPrice = currentPrice * 0.5;
+                }
             }
-
-            // 从经停站获取余票数量
-            let seatCounts = {};
-            if (stops && stops.length > 0) {
-                stops.forEach(s => {
-                    if (s.seat_business > 0) seatCounts['business'] = (seatCounts['business'] || 0) + s.seat_business;
-                    if (s.seat_first > 0) seatCounts['first'] = (seatCounts['first'] || 0) + s.seat_first;
-                    if (s.seat_second > 0) seatCounts['second'] = (seatCounts['second'] || 0) + s.seat_second;
-                    if (s.seat_soft_sleeper > 0) seatCounts['soft_sleeper'] = (seatCounts['soft_sleeper'] || 0) + s.seat_soft_sleeper;
-                    if (s.seat_hard_sleeper > 0) seatCounts['hard_sleeper'] = (seatCounts['hard_sleeper'] || 0) + s.seat_hard_sleeper;
-                    if (s.seat_soft > 0) seatCounts['soft_seat'] = (seatCounts['soft_seat'] || 0) + s.seat_soft;
-                    if (s.seat_hard > 0) seatCounts['hard'] = (seatCounts['hard'] || 0) + s.seat_hard;
-                });
-            }
-
-            document.getElementById('seat-list-content').innerHTML = seatTypes.map((s, idx) => {
-                const price = prices[s.key] || Math.floor(Math.random() * 500 + 200);
-                const count = seatCounts[s.key] || Math.floor(Math.random() * 100 + 10);
-                return `
-                    <div class="seat-item ${count <= 0 ? 'disabled' : ''}" data-seat="${s.key}" data-price="${price}" data-count="${count}" onclick="selectSeat(this)">
-                        <span class="seat-num">${s.num}.</span>
-                        <span class="seat-name">${s.name}</span>
-                        <span class="seat-price">¥${price}</span>
-                        <span class="seat-count">余${count}</span>
-                    </div>
-                `;
-            }).join('');
+            
+            document.getElementById('selected-price').textContent = currentPrice.toFixed(2) + '元';
+            checkConfirmBtn();
         }
-
-        // 选择席别
-        window.selectSeat = function(el) {
-            if (el.classList.contains('disabled')) return;
+        
+        // 检查确认按钮状态
+        function checkConfirmBtn() {
+            const btn = document.getElementById('confirm-btn');
+            const hasTrain = selectedTrain !== null;
+            const hasSeat = selectedSeat !== null && selectedSeat !== '';
+            const fromStation = document.getElementById('from-station-code').value;
+            const toStation = document.getElementById('to-station-code').value;
             
-            document.querySelectorAll('.seat-item').forEach(s => s.classList.remove('selected'));
-            el.classList.add('selected');
+            btn.disabled = !(hasTrain && hasSeat && fromStation && toStation);
+        }
+        
+        // 搜索车次
+        function searchTrains() {
+            const date = document.getElementById('travel-date').value;
+            const fromStation = document.getElementById('from-station').value;
+            const fromCode = document.getElementById('from-station-code').value;
+            const toStation = document.getElementById('to-station').value;
+            const toCode = document.getElementById('to-station-code').value;
             
-            currentState.seatType = el.dataset.seat;
-            currentState.price = parseInt(el.dataset.price);
-
-            // 更新确认区
-            document.getElementById('confirm-train').textContent = currentState.trainNumber;
-            document.getElementById('confirm-date').textContent = currentState.date;
-            document.getElementById('confirm-from').textContent = currentState.fromStationName;
-            document.getElementById('confirm-to').textContent = currentState.toStationName;
-            document.getElementById('confirm-seat').textContent = 
-                document.querySelector(`.seat-item[data-seat="${currentState.seatType}"] .seat-name`).textContent;
-            document.getElementById('confirm-type').textContent = 
-                document.querySelector('.ticket-type-btn.active').textContent;
-            document.getElementById('confirm-price').textContent = currentState.price;
-
-            // 发送到副屏：收款
-            sendToPassengerDisplay('payment', {
-                amount: currentState.price,
-                train: currentState.trainNumber,
-                from: currentState.fromStationName,
-                to: currentState.toStationName
+            if (!date || !fromCode || !toCode) {
+                alert('请输入完整的日期、发站和到站');
+                return;
+            }
+            
+            // 通过URL参数传递数据并刷新页面
+            const params = new URLSearchParams({
+                date: date,
+                from_station: fromCode,
+                from_station_name: fromStation,
+                to_station: toCode,
+                to_station_name: toStation
             });
-
-            // 显示确认区
-            confirmBox.classList.remove('hidden');
-            confirmYesno.value = '';
-            paymentAmount.value = '';
-            confirmYesno.focus();
-        };
-
-        // 处理确认
-        function handleConfirm(e) {
-            if (e.key === 'Enter' || e.key === 'y' || e.key === 'Y' || e.key === 'n' || e.key === 'N') {
-                const val = confirmYesno.value.toUpperCase();
-                if (val === 'Y') {
-                    if (!paymentAmount.value || parseFloat(paymentAmount.value) < currentState.price) {
-                        alert('收款金额不足');
-                        paymentAmount.focus();
-                        return;
-                    }
-                    // 确认出票
-                    processSale();
-                } else if (val === 'N') {
-                    confirmBox.classList.add('hidden');
-                    sendToPassengerDisplay('idle');
-                }
-            }
+            location.href = '{{ url_for("sell") }}?' + params.toString();
         }
-
-        // 处理收款
-        function handlePayment(e) {
-            if (e.key === 'Enter') {
-                const amount = parseFloat(paymentAmount.value);
-                if (amount >= currentState.price) {
-                    confirmYesno.focus();
-                }
-            }
+        
+        // 重置表单
+        function resetForm() {
+            document.getElementById('train-number').value = '';
+            document.getElementById('from-station').value = '';
+            document.getElementById('from-station-code').value = '';
+            document.getElementById('to-station').value = '';
+            document.getElementById('to-station-code').value = '';
+            document.getElementById('passenger-name').value = '';
+            document.getElementById('passenger-id').value = '';
+            document.getElementById('selected-train').textContent = '--';
+            document.getElementById('selected-seat').textContent = '--';
+            document.getElementById('selected-price').textContent = '0.00元';
+            document.getElementById('seat-list').innerHTML = '<div style="color:#6B8299;text-align:center;padding:20px;">请选择车次后查看席别余票</div>';
+            document.querySelectorAll('.train-item').forEach(item => item.classList.remove('selected'));
+            document.querySelectorAll('.seat-type-btn').forEach(btn => btn.classList.remove('active'));
+            selectedTrain = null;
+            selectedSeat = null;
+            currentPrice = 0;
+            document.getElementById('confirm-btn').disabled = true;
         }
-
-        // 处理售票
-        function processSale() {
+        
+        // 显示确认模态框
+        function showConfirmModal() {
+            if (!selectedTrain) {
+                alert('请选择车次');
+                return;
+            }
+            
+            const date = document.getElementById('travel-date').value;
+            const name = document.getElementById('passenger-name').value || '未填写';
+            const id = document.getElementById('passenger-id').value || '未填写';
+            
+            document.getElementById('preview-date').textContent = date;
+            document.getElementById('preview-train').textContent = selectedTrain.number;
+            document.getElementById('preview-from').textContent = document.getElementById('from-station').value || selectedTrain.from;
+            document.getElementById('preview-to').textContent = document.getElementById('to-station').value || selectedTrain.to;
+            document.getElementById('preview-seat').textContent = selectedSeat;
+            document.getElementById('preview-name').textContent = name;
+            document.getElementById('preview-id').textContent = id;
+            
+            const typeMap = {'adult': '全价', 'child': '孩半', 'student': '学生', 'soldier': '军残'};
+            document.getElementById('preview-type').textContent = typeMap[currentTicketType] || '全价';
+            
+            document.getElementById('preview-price').textContent = currentPrice.toFixed(2);
+            document.getElementById('pay-price').textContent = currentPrice.toFixed(2) + '元';
+            document.getElementById('payment-amount').value = Math.ceil(currentPrice);
+            calculateChange();
+            
+            document.getElementById('confirm-modal').classList.add('show');
+        }
+        
+        // 计算找零
+        function calculateChange() {
+            const payment = parseFloat(document.getElementById('payment-amount').value) || 0;
+            const change = payment - currentPrice;
+            document.getElementById('pay-received').textContent = payment.toFixed(2) + '元';
+            document.getElementById('pay-change').textContent = change.toFixed(2) + '元';
+            document.getElementById('pay-change').style.color = change >= 0 ? '#4CAF50' : '#FF4444';
+        }
+        
+        // 关闭模态框
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+        
+        // 确认出票
+        function confirmSell() {
+            const payment = parseFloat(document.getElementById('payment-amount').value) || 0;
+            
+            if (payment < currentPrice) {
+                alert('收款金额不足!');
+                return;
+            }
+            
             const formData = new FormData();
-            formData.append('train_number', currentState.trainNumber);
-            formData.append('train_id', currentState.trainId);
-            formData.append('date', currentState.date);
-            formData.append('from_station', currentState.fromStation);
-            formData.append('to_station', currentState.toStation);
-            formData.append('seat_type', currentState.seatType);
-            formData.append('ticket_type', currentState.ticketType);
-            formData.append('price', currentState.price);
-            formData.append('payment', paymentAmount.value);
-
-            fetch('/api/sell-ticket', {
+            formData.append('train_id', selectedTrain.id);
+            formData.append('train_number', selectedTrain.number);
+            formData.append('date', document.getElementById('travel-date').value);
+            formData.append('from_station', document.getElementById('from-station-code').value);
+            formData.append('from_station_name', document.getElementById('from-station').value);
+            formData.append('to_station', document.getElementById('to-station-code').value);
+            formData.append('to_station_name', document.getElementById('to-station').value);
+            formData.append('seat_type', selectedSeat);
+            formData.append('ticket_type', currentTicketType);
+            formData.append('price', currentPrice);
+            formData.append('payment', payment);
+            formData.append('passenger_name', document.getElementById('passenger-name').value);
+            formData.append('id_number', document.getElementById('passenger-id').value);
+            
+            fetch('{{ url_for("api_sell_ticket") }}', {
                 method: 'POST',
                 body: formData
             })
             .then(r => r.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // 发送到副屏：出票成功
-                    sendToPassengerDisplay('success');
-                    
-                    // 显示成功信息
-                    document.getElementById('train-info-content').innerHTML = 
-                        `<div style="color: #4CAF50; text-align: center; padding: 30px; font-size: 18px;">
-                            <div>★ 出票成功 ★</div>
-                            <div style="margin-top: 10px;">票号: ${data.ticket_id}</div>
-                            <div style="margin-top: 10px;">找零: ¥${(parseFloat(paymentAmount.value) - currentState.price).toFixed(2)}</div>
-                        </div>`;
-                    
-                    confirmBox.classList.add('hidden');
-                    
-                    // 3秒后重置
-                    setTimeout(resetForm, 3000);
+                    closeModal('confirm-modal');
+                    document.getElementById('success-ticket-no').textContent = data.ticket_no;
+                    document.getElementById('success-modal').classList.add('show');
                 } else {
-                    alert(data.message || '出票失败');
+                    alert('出票失败: ' + data.message);
                 }
             })
             .catch(err => {
-                console.error(err);
-                alert('出票请求失败');
+                alert('出票失败: ' + err);
             });
         }
-
-        // 重置表单
-        function resetForm() {
-            trainNumberInput.value = '';
-            fromStationInput.value = '';
-            toStationInput.value = '';
-            currentState = {
-                trainNumber: '',
-                fromStation: '',
-                fromStationName: '',
-                toStation: '',
-                toStationName: '',
-                seatType: '',
-                ticketType: 'adult',
-                date: dateInput.value,
-                price: 0,
-                trainId: null,
-                stops: []
-            };
+        
+        // 车站搜索
+        let stationSearchTimer = null;
+        function setupStationSearch(inputId, dropdownId, codeId) {
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
             
-            document.querySelectorAll('.seat-item').forEach(s => s.classList.remove('selected'));
-            document.querySelectorAll('.ticket-type-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.ticket-type-btn[data-type="adult"]').classList.add('active');
+            input.addEventListener('input', function() {
+                clearTimeout(stationSearchTimer);
+                stationSearchTimer = setTimeout(() => {
+                    const query = this.value.trim();
+                    if (query.length < 1) {
+                        dropdown.classList.remove('show');
+                        return;
+                    }
+                    
+                    fetch('/api/search-stations?q=' + encodeURIComponent(query))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success' && data.data.length > 0) {
+                                dropdown.innerHTML = data.data.slice(0, 8).map(s => 
+                                    `<div class="station-option" onclick="selectStation('${inputId}', '${codeId}', '${s.station_name}', '${s.station_code}')">
+                                        <span class="name">${s.station_name}</span>
+                                        <span class="code">${s.station_code}</span>
+                                    </div>`
+                                ).join('');
+                                dropdown.classList.add('show');
+                            } else {
+                                dropdown.classList.remove('show');
+                            }
+                        })
+                        .catch(() => {});
+                }, 200);
+            });
             
-            document.getElementById('train-info-content').innerHTML = 
-                '<div style="color: #6B8299; text-align: center; padding: 30px;">请输入车次号或发到站查询</div>';
-            document.getElementById('stops-list-content').innerHTML = 
-                '<div style="color: #6B8299; text-align: center; padding: 20px;">无</div>';
-            document.getElementById('seat-list-content').innerHTML = 
-                '<div style="color: #6B8299; text-align: center; padding: 20px;">请先选择车次和发到站</div>';
-            
-            confirmBox.classList.add('hidden');
-            
-            sendToPassengerDisplay('idle');
-            trainNumberInput.focus();
+            input.addEventListener('blur', () => {
+                setTimeout(() => dropdown.classList.remove('show'), 200);
+            });
         }
-
-        // 发送到副屏
-        function sendToPassengerDisplay(type, data = {}) {
-            channel.postMessage({ type, data, timestamp: Date.now() });
+        
+        function selectStation(inputId, codeId, name, code) {
+            document.getElementById(inputId).value = name;
+            document.getElementById(codeId).value = code;
+            document.getElementById(inputId.replace('-station', '-station-dropdown')).classList.remove('show');
+            checkConfirmBtn();
         }
-
+        
+        // 初始化车站搜索
+        setupStationSearch('from-station', 'from-station-dropdown', 'from-station-code');
+        setupStationSearch('to-station', 'to-station-dropdown', 'to-station-code');
+        
         // 键盘快捷键
         document.addEventListener('keydown', function(e) {
-            // 阻止F键默认行为
-            if (e.key.startsWith('F') && e.key.length === 2) {
+            // Alt+字母导航
+            if (e.altKey) {
+                switch(e.key.toUpperCase()) {
+                    case 'G': location.href = '{{ url_for("sell") }}'; break;
+                    case 'T': location.href = '{{ url_for("refund") }}'; break;
+                    case 'I': location.href = '{{ url_for("query") }}'; break;
+                    case 'R': location.href = '{{ url_for("daily_report") }}'; break;
+                    case 'X': location.href = '{{ url_for("close_shift") }}'; break;
+                    case 'H': location.href = '{{ url_for("main") }}'; break;
+                }
+            }
+            
+            // F1-F6跳转
+            if (!e.altKey && !e.ctrlKey) {
+                switch(e.key) {
+                    case 'F1': e.preventDefault(); document.getElementById('travel-date').focus(); break;
+                    case 'F2': e.preventDefault(); document.getElementById('train-number').focus(); break;
+                    case 'F3': e.preventDefault(); document.getElementById('from-station').focus(); break;
+                    case 'F4': e.preventDefault(); document.getElementById('to-station').focus(); break;
+                    case 'F5': e.preventDefault(); document.querySelector('.seat-type-btn').focus(); break;
+                    case 'F6': e.preventDefault(); document.querySelector('.ticket-type-btn').focus(); break;
+                }
+            }
+            
+            // Enter键确认出票
+            if (e.key === 'Enter' && document.getElementById('confirm-modal').classList.contains('show')) {
                 e.preventDefault();
+                confirmSell();
             }
-
-            if (e.key === 'F1') { dateInput.focus(); }
-            if (e.key === 'F2') { trainNumberInput.focus(); }
-            if (e.key === 'F3') { fromStationInput.focus(); }
-            if (e.key === 'F4') { toStationInput.focus(); }
-            if (e.key === 'F6') { resetForm(); }
-            if (e.key === 'Escape') { window.location.href = '/main'; }
-            if (e.key === 'Enter' && !confirmBox.classList.contains('hidden')) {
-                // Enter已在确认框内处理
-            }
-        });
-
-        // 点击其他地方关闭下拉
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.station-dropdown')) {
-                document.querySelectorAll('.dropdown-list').forEach(l => l.classList.remove('show'));
+            
+            // E键取消
+            if (e.key === 'e' || e.key === 'E') {
+                if (document.getElementById('confirm-modal').classList.contains('show')) {
+                    closeModal('confirm-modal');
+                } else if (document.getElementById('success-modal').classList.contains('show')) {
+                    closeModal('success-modal');
+                    location.reload();
+                }
             }
         });
-
-        // 初始化
-        init();
+        
+        // 自动填充之前的查询条件
+        {% if from_station_code %}
+        document.getElementById('from-station-code').value = '{{ from_station_code }}';
+        {% endif %}
+        {% if to_station_code %}
+        document.getElementById('to-station-code').value = '{{ to_station_code }}';
+        {% endif %}
     </script>
 </body>
 </html>

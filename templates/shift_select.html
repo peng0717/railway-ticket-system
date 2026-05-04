@@ -3,277 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班次选定</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <title>班次选定 - {{ system_name }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif;
-            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #0d2137 100%);
+            font-family: "Consolas", "Microsoft YaHei", monospace;
+            background: #0A1628;
+            color: #E0E0E0;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 顶部状态栏 */
+        .top-bar {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-bar .system-name {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        /* 主内容区 */
+        .main-area {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 40px 20px;
         }
-        
-        .shift-container {
-            width: 100%;
-            max-width: 450px;
-            padding: 20px;
-        }
-        
         .shift-box {
-            background: #fff;
-            border-radius: 4px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            overflow: hidden;
+            background: #0D1B2A;
+            border: 3px solid #3A5A7C;
+            width: 100%;
+            max-width: 500px;
         }
-        
-        .shift-header {
-            background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%);
-            color: #fff;
-            padding: 20px;
+        .box-header {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 15px 20px;
             text-align: center;
         }
-        
-        .shift-header h2 {
-            font-size: 22px;
-            font-weight: bold;
+        .box-header h1 {
+            color: #FFD700;
+            font-size: 18px;
             letter-spacing: 4px;
+            margin-bottom: 5px;
         }
-        
-        .shift-body {
+        .box-header .subtitle {
+            color: #B0C4DE;
+            font-size: 12px;
+        }
+        .box-body {
             padding: 25px 30px;
         }
-        
+        /* 信息行 */
         .info-row {
             display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px dashed #eee;
+            border-bottom: 1px solid #2A4A6C;
+            padding: 10px 0;
         }
-        
-        .info-row:last-child {
+        .info-row:last-of-type {
             border-bottom: none;
         }
-        
         .info-label {
-            color: #666;
+            width: 100px;
+            color: #FFD700;
             font-size: 14px;
         }
-        
         .info-value {
-            color: #333;
-            font-weight: bold;
+            flex: 1;
+            color: #FFFFFF;
             font-size: 14px;
         }
-        
-        .shift-select {
-            margin-top: 20px;
+        /* 班次选择区 */
+        .shift-select-area {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #3A5A7C;
         }
-        
-        .shift-select label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #333;
+        .select-title {
+            color: #FFD700;
+            font-size: 14px;
+            margin-bottom: 15px;
         }
-        
-        .shift-option {
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .shift-option:hover {
-            border-color: #1a4a7a;
-            background: #f8f9fa;
-        }
-        
-        .shift-option.active {
-            border-color: #1a4a7a;
-            background: #e8f4fc;
-        }
-        
-        .shift-option input {
-            margin-right: 12px;
-            width: 18px;
-            height: 18px;
-            accent-color: #1a4a7a;
-        }
-        
-        .shift-option .shift-name {
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .shift-option .shift-time {
-            color: #666;
-            font-size: 13px;
-            margin-left: 10px;
-        }
-        
-        .btn-group {
+        .shift-options {
             display: flex;
             gap: 15px;
-            margin-top: 25px;
         }
-        
-        .btn-confirm {
+        .shift-option {
             flex: 1;
-            height: 42px;
-            background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%);
-            color: #fff;
-            border: none;
-            border-radius: 3px;
-            font-size: 16px;
-            font-weight: bold;
-            letter-spacing: 2px;
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            padding: 20px 15px;
             cursor: pointer;
-        }
-        
-        .btn-confirm:hover {
-            background: linear-gradient(180deg, #245a8a 0%, #1a4a6a 100%);
-        }
-        
-        .btn-cancel {
-            flex: 1;
-            height: 42px;
-            background: #f5f5f5;
-            color: #333;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        
-        .btn-cancel:hover {
-            background: #e8e8e8;
-        }
-        
-        .keyboard-hint {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #888;
+            transition: all 0.15s;
             text-align: center;
         }
-        
-        .keyboard-hint kbd {
-            background: #eee;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 11px;
+        .shift-option:hover {
+            border-color: #B8860B;
         }
+        .shift-option.selected {
+            background: #1B3A5C;
+            border-color: #FFD700;
+        }
+        .shift-option .shift-key {
+            color: #FFD700;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .shift-option .shift-name {
+            color: #FFFFFF;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .shift-option .shift-time {
+            color: #B0C4DE;
+            font-size: 12px;
+        }
+        .shift-option .shift-desc {
+            color: #6B8299;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+        /* 操作按钮 */
+        .action-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 12px 20px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-confirm {
+            background: #1B3A5C;
+            border: 2px solid #B8860B;
+            color: #FFD700;
+        }
+        .btn-confirm:hover {
+            background: #B8860B;
+            color: #0A1628;
+        }
+        .btn-cancel {
+            background: transparent;
+            border: 2px solid #3A5A7C;
+            color: #B0C4DE;
+        }
+        .btn-cancel:hover {
+            border-color: #FF4444;
+            color: #FF4444;
+        }
+        /* 底部信息 */
+        .footer-bar {
+            background: #1B3A5C;
+            border-top: 2px solid #3A5A7C;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .footer-bar .tip {
+            color: #B0C4DE;
+            font-size: 12px;
+        }
+        .footer-bar .shortcut {
+            color: #6B8299;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        /* 隐藏的表单 */
+        form { display: none; }
     </style>
 </head>
 <body>
-    <div class="shift-container">
+    <div class="top-bar">
+        <span class="system-name">铁路客票发售和预订系统</span>
+        <span style="color:#B0C4DE;font-size:12px;">{{ system_name }}</span>
+    </div>
+    
+    <div class="main-area">
         <div class="shift-box">
-            <div class="shift-header">
-                <h2>班 次 选 定</h2>
+            <div class="box-header">
+                <h1>班 次 选 择</h1>
+                <div class="subtitle">请选择上班班次类型</div>
             </div>
-            
-            <div class="shift-body">
+            <div class="box-body">
                 <div class="info-row">
-                    <span class="info-label">记账日期:</span>
-                    <span class="info-value" id="accountDate"></span>
+                    <div class="info-label">工号:</div>
+                    <div class="info-value">{{ session.get('employee_no', 'N/A') }}</div>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">上班日期:</span>
-                    <span class="info-value" id="workDate"></span>
+                    <div class="info-label">姓名:</div>
+                    <div class="info-value">{{ session.get('user_name', 'N/A') }}</div>
                 </div>
                 <div class="info-row">
-                    <span class="info-label">当前时间:</span>
-                    <span class="info-value" id="currentTime"></span>
+                    <div class="info-label">当前时间:</div>
+                    <div class="info-value" id="current-time">--:--:--</div>
                 </div>
                 
-                <form method="POST" action="{{ url_for('shift_select') }}" id="shiftForm">
-                    <div class="shift-select">
-                        <label>班次选择:</label>
-                        
-                        <div class="shift-option {% if default_shift == 'day' %}active{% endif %}" 
-                             onclick="selectShift('day')">
-                            <input type="radio" name="shift_type" value="day" id="shiftDay"
-                                   {% if default_shift == 'day' %}checked{% endif %}>
-                            <span class="shift-name">{{ shift_types.day.name }}</span>
-                            <span class="shift-time">({{ shift_types.day.start }}-{{ shift_types.day.end }})</span>
-                        </div>
-                        
-                        <div class="shift-option {% if default_shift == 'night' %}active{% endif %}"
-                             onclick="selectShift('night')">
-                            <input type="radio" name="shift_type" value="night" id="shiftNight"
-                                   {% if default_shift == 'night' %}checked{% endif %}>
-                            <span class="shift-name">{{ shift_types.night.name }}</span>
-                            <span class="shift-time">({{ shift_types.night.start }}-{{ shift_types.night.end }})</span>
-                        </div>
-                    </div>
-                    
-                    <div class="btn-group">
-                        <button type="submit" class="btn-confirm">
-                            <i class="fas fa-check"></i> 确 定
-                        </button>
-                        <button type="button" class="btn-cancel" onclick="goLogout()">
-                            <i class="fas fa-times"></i> 取 消
-                        </button>
-                    </div>
-                    
-                    <div class="keyboard-hint">
-                        按 <kbd>Enter</kbd> 确认 | <kbd>Esc</kbd> 取消
-                    </div>
+                <form id="shift-form" method="POST" action="{{ url_for('shift_select') }}">
+                    <input type="hidden" name="shift_type" id="shift_type" value="{{ default_shift }}">
                 </form>
+                
+                <div class="shift-select-area">
+                    <div class="select-title">选择班次类型:</div>
+                    <div class="shift-options">
+                        <div class="shift-option {% if default_shift == 'day' %}selected{% endif %}" data-value="day" onclick="selectShift(this)">
+                            <div class="shift-key">[ 1 ]</div>
+                            <div class="shift-name">白班</div>
+                            <div class="shift-time">08:00 - 20:00</div>
+                            <div class="shift-desc">日间售票窗口</div>
+                        </div>
+                        <div class="shift-option {% if default_shift == 'night' %}selected{% endif %}" data-value="night" onclick="selectShift(this)">
+                            <div class="shift-key">[ 2 ]</div>
+                            <div class="shift-name">夜班</div>
+                            <div class="shift-time">20:00 - 08:00</div>
+                            <div class="shift-desc">夜间售票窗口</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-row">
+                    <button class="action-btn btn-confirm" onclick="confirmShift()">[ 确 认 进 入 ]</button>
+                    <button class="action-btn btn-cancel" onclick="logout()">[ 退 出 ]</button>
+                </div>
             </div>
         </div>
     </div>
     
+    <div class="footer-bar">
+        <div class="tip">请选择当前班次类型后确认进入工作台</div>
+        <div class="shortcut">快捷键: 1=白班 2=夜班 Enter=确认 Esc=退出</div>
+    </div>
+    
     <script>
+        // 更新当前时间
         function updateTime() {
             const now = new Date();
-            const dateStr = (now.getMonth() + 1).toString().padStart(2, '0') + '月' + 
-                           now.getDate().toString().padStart(2, '0') + '日';
-            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
-                           now.getMinutes().toString().padStart(2, '0') + ':' + 
-                           now.getSeconds().toString().padStart(2, '0');
-            
-            document.getElementById('accountDate').textContent = dateStr;
-            document.getElementById('workDate').textContent = dateStr;
-            document.getElementById('currentTime').textContent = timeStr;
+            const timeStr = now.toLocaleTimeString('zh-CN', {hour12: false});
+            document.getElementById('current-time').textContent = timeStr;
         }
-        
-        function selectShift(type) {
-            document.querySelectorAll('.shift-option').forEach(opt => opt.classList.remove('active'));
-            document.querySelector(`input[value="${type}"]`).checked = true;
-            document.querySelector(`input[value="${type}"]`).closest('.shift-option').classList.add('active');
-        }
-        
-        function goLogout() {
-            window.location.href = '{{ url_for("logout") }}';
-        }
-        
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('shiftForm').submit();
-            } else if (e.key === 'Escape') {
-                goLogout();
-            } else if (e.key === '1') {
-                selectShift('day');
-            } else if (e.key === '2') {
-                selectShift('night');
-            }
-        });
-        
         updateTime();
         setInterval(updateTime, 1000);
+        
+        // 选择班次
+        function selectShift(el) {
+            document.querySelectorAll('.shift-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            el.classList.add('selected');
+            document.getElementById('shift_type').value = el.dataset.value;
+        }
+        
+        // 确认班次
+        function confirmShift() {
+            document.getElementById('shift-form').submit();
+        }
+        
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '{{ url_for("login") }}';
+            }
+        }
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '1') {
+                selectShift(document.querySelector('[data-value="day"]'));
+            } else if (e.key === '2') {
+                selectShift(document.querySelector('[data-value="night"]'));
+            } else if (e.key === 'Enter') {
+                confirmShift();
+            } else if (e.key === 'Escape') {
+                logout();
+            }
+        });
     </script>
 </body>
 </html>

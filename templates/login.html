@@ -4,257 +4,223 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ system_name }} - 登录</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif;
-            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 50%, #0d2137 100%);
+            font-family: "Consolas", "Microsoft YaHei", monospace;
+            background: #0A1628;
+            color: #E0E0E0;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 顶部状态栏 */
+        .top-bar {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-bar .system-name {
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .top-bar .version {
+            color: #B0C4DE;
+            font-size: 12px;
+        }
+        /* 登录区域 */
+        .login-area {
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 40px 20px;
         }
-        
-        .login-container {
-            width: 100%;
-            max-width: 480px;
-            padding: 20px;
-        }
-        
         .login-box {
-            background: #fff;
-            border-radius: 4px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            overflow: hidden;
+            background: #0D1B2A;
+            border: 3px solid #3A5A7C;
+            width: 100%;
+            max-width: 420px;
         }
-        
         .login-header {
-            background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%);
-            color: #fff;
-            padding: 25px 20px;
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 15px 20px;
             text-align: center;
         }
-        
         .login-header h1 {
-            font-size: 24px;
-            font-weight: bold;
+            color: #FFD700;
+            font-size: 18px;
+            letter-spacing: 4px;
             margin-bottom: 5px;
+        }
+        .login-header .subtitle {
+            color: #B0C4DE;
+            font-size: 12px;
+        }
+        .login-body {
+            padding: 25px 30px;
+        }
+        .input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .input-row label {
+            width: 80px;
+            color: #FFD700;
+            font-size: 14px;
+        }
+        .input-row input {
+            flex: 1;
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            color: #FFD700;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 16px;
             letter-spacing: 2px;
         }
-        
-        .login-header .subtitle {
-            font-size: 14px;
-            color: #a8c8e8;
+        .input-row input:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+        .input-row input::placeholder {
+            color: #4A6A8C;
             letter-spacing: 1px;
         }
-        
-        .login-body {
-            padding: 30px 40px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .form-control {
-            height: 40px;
-            border: 1px solid #ccc;
-            border-radius: 2px;
-            font-size: 16px;
-            padding: 8px 12px;
-        }
-        
-        .form-control:focus {
-            border-color: #1a4a7a;
-            box-shadow: 0 0 0 2px rgba(26, 74, 122, 0.2);
-        }
-        
-        .btn-login {
-            width: 100%;
-            height: 45px;
-            background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%);
-            color: #fff;
-            border: none;
-            border-radius: 2px;
-            font-size: 18px;
-            font-weight: bold;
-            letter-spacing: 3px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .btn-login:hover {
-            background: linear-gradient(180deg, #245a8a 0%, #1a4a6a 100%);
-        }
-        
-        .error-message {
-            background: #fee;
-            border: 1px solid #fcc;
-            color: #c00;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .login-footer {
-            text-align: center;
-            padding: 15px 40px 25px;
-            border-top: 1px solid #eee;
-        }
-        
-        .login-footer a {
-            color: #1a4a7a;
-            text-decoration: none;
-            font-size: 14px;
-            margin: 0 15px;
-        }
-        
-        .login-footer a:hover {
-            text-decoration: underline;
-        }
-        
-        .info-text {
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-            margin-top: 10px;
-        }
-        
-        .captcha-group {
+        /* 验证码区域 */
+        .captcha-row {
             display: flex;
-            gap: 10px;
             align-items: center;
+            margin-bottom: 20px;
         }
-        
-        .captcha-input {
-            flex: 1;
+        .captcha-row label {
+            width: 80px;
+            color: #FFD700;
+            font-size: 14px;
         }
-        
-        .captcha-image {
-            height: 40px;
-            cursor: pointer;
-            border: 1px solid #ccc;
-            border-radius: 2px;
-        }
-        
-        .captcha-placeholder {
-            padding: 8px 15px;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 2px;
-            font-family: monospace;
-            font-size: 18px;
+        .captcha-row input {
+            width: 120px;
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            color: #FFD700;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 16px;
             letter-spacing: 3px;
-            color: #333;
+        }
+        .captcha-row input:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+        .captcha-image {
+            margin-left: 15px;
+            border: 2px solid #3A5A7C;
+        }
+        .captcha-image img {
+            display: block;
+            height: 40px;
+        }
+        /* 错误提示 */
+        .error-msg {
+            background: #2A1A1A;
+            border: 1px solid #FF4444;
+            color: #FF4444;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        /* 登录按钮 */
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #1B3A5C;
+            border: 2px solid #B8860B;
+            color: #FFD700;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .login-btn:hover {
+            background: #B8860B;
+            color: #0A1628;
+        }
+        /* 底部信息 */
+        .footer-bar {
+            background: #1B3A5C;
+            border-top: 2px solid #3A5A7C;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .footer-bar .copyright {
+            color: #B0C4DE;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+        .footer-bar .tip {
+            color: #6B8299;
+            font-size: 11px;
+            margin-top: 3px;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
+    <div class="top-bar">
+        <span class="system-name">铁路客票发售和预订系统</span>
+        <span class="version">v5.0</span>
+    </div>
+    
+    <div class="login-area">
         <div class="login-box">
             <div class="login-header">
-                <h1>{{ system_name }}</h1>
-                <div class="subtitle">人工窗口售票系统</div>
+                <h1>售票员登录</h1>
+                <div class="subtitle">请输入工号和密码</div>
             </div>
-            
             <div class="login-body">
                 {% if error %}
-                <div class="error-message">{{ error }}</div>
+                <div class="error-msg">{{ error }}</div>
                 {% endif %}
                 
-                <form method="POST" action="{{ url_for('login') }}" id="loginForm">
-                    <div class="form-group">
-                        <label for="employee_no">工号</label>
-                        <input type="text" class="form-control" id="employee_no" name="employee_no" 
-                               placeholder="请输入工号" required autofocus>
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="input-row">
+                        <label>工号:</label>
+                        <input type="text" name="employee_no" placeholder="请输入工号" required autofocus value="{{ employee_no|default('') }}">
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="password">密码</label>
-                        <input type="password" class="form-control" id="password" name="password" 
-                               placeholder="请输入密码" required>
+                    <div class="input-row">
+                        <label>密码:</label>
+                        <input type="password" name="password" placeholder="请输入密码" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="captcha">验证码</label>
-                        <div class="captcha-group">
-                            <input type="text" class="form-control captcha-input" id="captcha" name="captcha" 
-                                   placeholder="请输入验证码" maxlength="4" required>
-                            {% if captcha_image %}
-                            <img src="{{ captcha_image }}" alt="验证码" class="captcha-image" id="captchaImage" 
-                                 title="点击刷新验证码" onclick="refreshCaptcha()">
-                            {% else %}
-                            <span class="captcha-placeholder" id="captchaCode"></span>
-                            {% endif %}
+                    <div class="input-row" style="display:none;">
+                        <label>机器号:</label>
+                        <input type="text" name="machine_code" value="M001">
+                    </div>
+                    <div class="captcha-row">
+                        <label>验证码:</label>
+                        <input type="text" name="captcha" placeholder="验证码" maxlength="4">
+                        {% if captcha_image %}
+                        <div class="captcha-image">
+                            <img src="{{ captcha_image }}" alt="验证码">
                         </div>
+                        {% endif %}
                     </div>
-                    
-                    <!-- 隐藏字段：机器码 -->
-                    <input type="hidden" id="machine_code" name="machine_code" value="">
-                    
-                    <button type="submit" class="btn-login">登 录</button>
-                    
-                    <div class="info-text">
-                        <p>默认账号: admin/admin123 | seller001/123456 | seller002/123456</p>
-                    </div>
+                    <button type="submit" class="login-btn">[ 确 认 登 录 ]</button>
                 </form>
-            </div>
-            
-            <div class="login-footer">
-                <a href="{{ url_for('register_bp.index') }}">工号注册</a>
-                <a href="{{ url_for('admin_login') }}">管理登录</a>
             </div>
         </div>
     </div>
     
-    <!-- 机器码采集脚本 -->
-    <script src="{{ url_for('static', filename='js/fingerprint.js') }}"></script>
-    <script>
-        // 页面加载时采集机器码
-        document.addEventListener('DOMContentLoaded', async function() {
-            const machineCode = await getMachineCode();
-            document.getElementById('machine_code').value = machineCode;
-            console.log('机器码已采集:', machineCode.substring(0, 16) + '...');
-        });
-        
-        // 表单提交时确保机器码已采集
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            const machineCodeField = document.getElementById('machine_code');
-            if (!machineCodeField.value) {
-                e.preventDefault();
-                machineCodeField.value = await getMachineCode();
-                // 延迟提交确保值已设置
-                setTimeout(() => this.submit(), 100);
-            }
-        });
-        
-        // 刷新验证码
-        function refreshCaptcha() {
-            fetch('/api/captcha')
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('captchaImage').src = data.image;
-                });
-        }
-        
-        // 如果有预填充的工号
-        {% if employee_no %}
-        document.getElementById('employee_no').value = '{{ employee_no }}';
-        {% endif %}
-    </script>
+    <div class="footer-bar">
+        <div class="copyright">铁路客票发售和预订系统总体组</div>
+        <div class="tip">请使用本人工号登录，操作记录将自动保存</div>
+    </div>
 </body>
 </html>

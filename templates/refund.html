@@ -8,109 +8,151 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: "Consolas", "Microsoft YaHei", monospace;
-            background: #1B3A5C;
-            color: #FFFFFF;
+            background: #0A1628;
+            color: #E0E0E0;
             min-height: 100vh;
-            overflow: hidden;
-        }
-        /* 顶部状态栏 */
-        .top-bar {
-            background: #0D2137;
-            border-bottom: 2px solid #3A5A7C;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .top-bar .status-info {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        .top-bar .station { color: #FFD700; font-weight: bold; }
-        .top-bar .divider { color: #6B8299; }
-        .top-bar .window { color: #FFFFFF; }
-        .top-bar .employee { color: #B0C4DE; }
-        .top-bar .time { color: #FFD700; font-size: 14px; }
-        /* 主内容区 */
-        .main-container {
-            display: flex;
-            height: calc(100vh - 85px);
-        }
-        /* 左侧输入面板 */
-        .input-panel {
-            width: 400px;
-            background: #0D2137;
-            border-right: 2px solid #3A5A7C;
-            padding: 15px;
             display: flex;
             flex-direction: column;
+        }
+        /* ===== 标题栏(48px) ===== */
+        .title-bar {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            height: 48px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .title-bar .left-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .title-bar .station-name {
+            color: #FFD700;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .title-bar .info-item { color: #B0C4DE; font-size: 13px; }
+        .title-bar .info-item span { color: #FFFFFF; }
+        .title-bar .right-info { display: flex; align-items: center; gap: 20px; }
+        .title-bar .time-display { color: #FFD700; font-size: 15px; }
+        /* ===== 功能菜单栏(36px) ===== */
+        .menu-bar {
+            background: #0D1B2A;
+            border-bottom: 2px solid #3A5A7C;
+            height: 36px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .menu-item {
+            padding: 0 18px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: #B0C4DE;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            border-right: 1px solid #2A4A6C;
+            transition: all 0.1s;
+        }
+        .menu-item:first-child { border-left: 1px solid #2A4A6C; }
+        .menu-item:hover, .menu-item.active {
+            background: #1B3A5C;
+            color: #FFD700;
+        }
+        .menu-item .key { color: #FFD700; margin-right: 5px; }
+        /* ===== 主内容区 ===== */
+        .main-content {
+            flex: 1;
+            display: flex;
+            padding: 15px;
+            gap: 15px;
+        }
+        /* 左侧输入区 */
+        .input-panel {
+            width: 400px;
+            background: #0D1B2A;
+            border: 2px solid #3A5A7C;
+            padding: 15px;
         }
         .panel-title {
             background: #1B3A5C;
-            border: 2px solid #3A5A7C;
+            border-bottom: 1px solid #3A5A7C;
             padding: 10px 15px;
-            font-size: 14px;
-            text-align: center;
-            color: #FFD700;
-            margin-bottom: 15px;
-        }
-        .input-group {
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-        }
-        .input-group label {
-            width: 90px;
             font-size: 13px;
             color: #FFD700;
+            margin: -15px -15px 15px -15px;
         }
-        .input-group label span.key {
-            color: #FFFFFF;
-            margin-right: 5px;
+        .input-group {
+            margin-bottom: 15px;
         }
-        .input-group input {
-            flex: 1;
-            background: #0F2B45;
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #FFD700;
+            margin-bottom: 8px;
+        }
+        .input-group label span.key { color: #FFFFFF; margin-right: 5px; }
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%;
+            background: #0A1628;
             border: 2px solid #3A5A7C;
-            color: #FFFFFF;
+            color: #FFD700;
             padding: 10px 12px;
             font-family: inherit;
             font-size: 14px;
         }
-        .input-group input:focus {
+        .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
             outline: none;
             border-color: #FFD700;
         }
-        .input-group input::placeholder { color: #6B8299; }
-        /* 退票原因选择 */
-        .reason-selector {
-            margin: 15px 0;
-            padding: 10px;
-            background: #0F2B45;
+        .input-group input::placeholder { color: #4A6A8C; }
+        .input-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        /* 退票费计算 */
+        .fee-calculation {
+            background: #0A1628;
             border: 2px solid #3A5A7C;
+            padding: 15px;
+            margin-bottom: 15px;
         }
-        .reason-selector .label {
-            font-size: 13px;
-            color: #FFD700;
-            margin-bottom: 10px;
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #1B3A5C;
         }
+        .fee-row:last-child { border-bottom: none; }
+        .fee-row .label { color: #B0C4DE; }
+        .fee-row .value { color: #FFFFFF; font-weight: bold; }
+        .fee-row .value.highlight { color: #FFD700; font-size: 16px; }
+        .fee-row .value.refund { color: #4CAF50; font-size: 18px; }
+        .fee-row .value.negative { color: #FF4444; }
+        /* 退票原因选项 */
         .reason-options {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 8px;
+            margin-top: 10px;
         }
         .reason-btn {
-            padding: 10px 12px;
-            background: #0D2137;
-            border: 2px solid #3A5A7C;
+            padding: 8px 12px;
+            background: #0D1B2A;
+            border: 1px solid #3A5A7C;
             color: #B0C4DE;
             cursor: pointer;
-            font-family: inherit;
-            font-size: 13px;
-            text-align: left;
+            font-size: 12px;
+            transition: all 0.15s;
         }
-        .reason-btn:hover { border-color: #FFD700; color: #FFFFFF; }
+        .reason-btn:hover { border-color: #B8860B; }
         .reason-btn.active {
             background: #1B3A5C;
             border-color: #FFD700;
@@ -118,9 +160,9 @@
         }
         /* 操作按钮 */
         .action-buttons {
-            margin-top: auto;
             display: flex;
             gap: 10px;
+            margin-top: 20px;
         }
         .action-btn {
             flex: 1;
@@ -131,581 +173,735 @@
             cursor: pointer;
             font-family: inherit;
             font-size: 14px;
-            text-align: center;
         }
         .action-btn:hover { border-color: #FFD700; color: #FFD700; }
         .action-btn.primary {
-            background: #FFD700;
-            color: #0D2137;
-            border-color: #FFD700;
+            background: #FF4444;
+            border-color: #FF4444;
+            color: #FFFFFF;
         }
-        .action-btn.primary:hover { background: #E5C100; }
-        /* 右侧信息面板 */
+        .action-btn.primary:hover { background: #CC0000; }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* 右侧信息区 */
         .info-panel {
             flex: 1;
-            padding: 15px;
             display: flex;
             flex-direction: column;
             gap: 15px;
-            overflow-y: auto;
         }
-        .info-box {
-            background: #0D2137;
+        .panel-box {
+            background: #0D1B2A;
             border: 2px solid #3A5A7C;
+        }
+        .panel-box-title {
+            color: #FFD700;
+            font-size: 13px;
+            padding: 10px 15px;
+            border-bottom: 1px solid #3A5A7C;
+            background: #1B3A5C;
+        }
+        .panel-box-body { padding: 15px; }
+        /* 原票信息 */
+        .ticket-info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .info-item {
+            background: #0A1628;
+            border: 1px solid #3A5A7C;
+            padding: 12px;
+        }
+        .info-item .label { color: #6B8299; font-size: 11px; margin-bottom: 5px; }
+        .info-item .value { color: #FFFFFF; font-size: 14px; font-weight: bold; }
+        .info-item .value.highlight { color: #FFD700; font-size: 18px; }
+        .info-item .value.warning { color: #FFC107; }
+        .info-item .value.danger { color: #FF4444; }
+        /* 退票规定 */
+        .refund-rules {
+            background: #0A1628;
+            border: 1px solid #3A5A7C;
             padding: 15px;
         }
-        .info-box-title {
-            color: #FFD700;
-            font-size: 14px;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #3A5A7C;
-        }
-        /* 原票信息 */
-        .original-ticket {
-            font-size: 14px;
-        }
-        .ticket-row {
+        .rule-item {
             display: flex;
             padding: 8px 0;
             border-bottom: 1px solid #1B3A5C;
+            font-size: 13px;
         }
-        .ticket-row:last-child { border-bottom: none; }
-        .ticket-label { color: #B0C4DE; width: 80px; }
-        .ticket-value { color: #FFFFFF; flex: 1; }
-        .ticket-value.highlight { color: #FFD700; }
-        /* 手续费计算 */
-        .fee-calculation {
-            background: #0A1628;
-            border: 2px solid #FFD700;
-            padding: 15px;
-            margin-top: 10px;
-        }
-        .fee-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            font-size: 14px;
-        }
-        .fee-label { color: #B0C4DE; }
-        .fee-value { color: #FFFFFF; }
-        .fee-row.total {
-            border-top: 1px solid #3A5A7C;
-            margin-top: 8px;
-            padding-top: 12px;
-            font-size: 16px;
-        }
-        .fee-row.total .fee-label { color: #FFD700; }
-        .fee-row.total .fee-value { color: #FFD700; font-weight: bold; font-size: 20px; }
-        /* 退票确认 */
-        .refund-confirm {
-            background: #0A1628;
-            border: 3px double #FFD700;
-            padding: 20px;
-            text-align: center;
-        }
-        .refund-confirm-title {
-            color: #FFD700;
-            font-size: 18px;
-            margin-bottom: 15px;
-        }
-        .refund-info {
-            font-size: 14px;
-            line-height: 1.8;
-            color: #FFFFFF;
-            text-align: left;
-            max-width: 350px;
-            margin: 0 auto 15px;
-        }
-        .confirm-inputs {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-        .confirm-input-group {
+        .rule-item:last-child { border-bottom: none; }
+        .rule-time { width: 150px; color: #B0C4DE; }
+        .rule-fee { color: #FFD700; }
+        /* ===== 操作区(60px) ===== */
+        .action-bar {
+            background: #1B3A5C;
+            border-top: 2px solid #3A5A7C;
+            height: 60px;
+            padding: 0 15px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
         }
-        .confirm-input-group label { color: #B0C4DE; font-size: 14px; }
-        .confirm-input-group input {
-            background: #0F2B45;
+        .action-bar .stats-info { display: flex; gap: 25px; }
+        .action-bar .stat-item { display: flex; align-items: center; gap: 8px; }
+        .action-bar .stat-label { color: #B0C4DE; font-size: 12px; }
+        .action-bar .stat-value { color: #FFD700; font-size: 16px; font-weight: bold; }
+        .action-bar .action-buttons { display: flex; gap: 10px; }
+        .action-bar .action-btn {
+            padding: 10px 25px;
+            background: #0D1B2A;
             border: 2px solid #3A5A7C;
-            color: #FFFFFF;
-            padding: 8px 12px;
+            color: #B0C4DE;
             font-family: inherit;
             font-size: 14px;
-            width: 120px;
+            cursor: pointer;
+            text-decoration: none;
         }
-        .confirm-input-group input:focus { border-color: #FFD700; outline: none; }
-        /* 底部功能栏 */
-        .bottom-bar {
-            background: #0D2137;
-            border-top: 2px solid #3A5A7C;
-            padding: 8px 20px;
-            display: flex;
-            justify-content: center;
-            gap: 25px;
+        .action-bar .action-btn:hover { border-color: #FFD700; color: #FFD700; }
+        .action-bar .action-btn.danger {
+            background: #FF4444;
+            border-color: #FF4444;
+            color: #FFFFFF;
+        }
+        /* 模态框 */
+        .modal-overlay {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
-        .bottom-bar .func-hint { color: #6B8299; font-size: 12px; }
-        .bottom-bar .func-hint kbd { 
-            background: #1B3A5C; 
-            border: 1px solid #3A5A7C; 
-            color: #FFD700; 
-            padding: 2px 6px; 
-            margin-right: 5px; 
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #0D1B2A;
+            border: 3px solid #3A5A7C;
+            width: 450px;
         }
-        /* 隐藏状态 */
-        .hidden { display: none !important; }
+        .modal-header {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { color: #FFD700; font-size: 15px; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #B0C4DE;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: #FF4444; }
+        .modal-body { padding: 20px; }
+        /* 退票确认票面 */
+        .ticket-slip {
+            background: #FFFFFF;
+            color: #333;
+            border: 2px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .slip-header {
+            text-align: center;
+            border-bottom: 2px dashed #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .slip-header h4 { color: #CC0000; font-size: 18px; }
+        .slip-row {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .slip-label { width: 80px; color: #666; }
+        .slip-value { flex: 1; color: #333; font-weight: bold; }
+        .slip-footer {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed #ccc;
+            text-align: center;
+        }
+        .slip-amount { color: #CC0000; font-size: 24px; font-weight: bold; }
+        /* 提示信息 */
+        .error-msg {
+            background: #2A1A1A;
+            border: 1px solid #FF4444;
+            color: #FF4444;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .info-msg {
+            background: #1A2A1A;
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .warning-msg {
+            background: #2A2A1A;
+            border: 1px solid #FFC107;
+            color: #FFC107;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
-    <!-- 顶部状态栏 -->
-    <div class="top-bar">
-        <div class="status-info">
-            <span class="station">{{ session.get('station_name', '北京站') }}</span>
-            <span class="divider">|</span>
-            <span class="window">窗口{{ session.get('window_no', '1') }}</span>
-            <span class="divider">|</span>
-            <span class="employee">工号:{{ session.get('employee_no', '') }} {{ session.get('user_name', '') }}</span>
+    <!-- 标题栏 -->
+    <div class="title-bar">
+        <div class="left-info">
+            <div class="station-name">{{ session.get('station_name', '北京') }}</div>
+            <div class="info-item">窗口:<span>{{ session.get('window_no', '101号口') }}</span></div>
+            <div class="info-item">工号:<span>{{ session.get('employee_no', 'N/A') }}</span></div>
+            <div class="info-item">班次:<span>{{ session.get('shift_name', '白班') }}</span></div>
         </div>
-        <div class="time" id="current-time">--:--:--</div>
+        <div class="right-info">
+            <div class="time-display" id="current-time">00:00:00</div>
+        </div>
     </div>
-
+    
+    <!-- 功能菜单栏 -->
+    <div class="menu-bar">
+        <a href="{{ url_for('main') }}" class="menu-item"><span class="key">H</span>首页</a>
+        <a href="{{ url_for('sell') }}" class="menu-item"><span class="key">G</span>售票</a>
+        <a href="{{ url_for('refund') }}" class="menu-item active"><span class="key">T</span>退票</a>
+        <a href="{{ url_for('query') }}" class="menu-item"><span class="key">I</span>查询</a>
+        <a href="{{ url_for('daily_report') }}" class="menu-item"><span class="key">R</span>报表</a>
+        <a href="{{ url_for('close_shift') }}" class="menu-item"><span class="key">X</span>交班</a>
+    </div>
+    
     <!-- 主内容区 -->
-    <div class="main-container">
-        <!-- 左侧输入面板 -->
+    <div class="main-content">
+        <!-- 左侧输入区 -->
         <div class="input-panel">
-            <div class="panel-title">◇ 退票输入</div>
+            <div class="panel-title">[ 退 票 输 入 ]</div>
             
-            <div class="input-group">
-                <label><span class="key">[F1]</span>票号:</label>
-                <input type="text" id="ticket-no" placeholder="输入票号 如A000001" maxlength="20">
-            </div>
+            <div class="info-msg" id="info-msg" style="display:none;"></div>
+            <div class="warning-msg" id="warning-msg" style="display:none;"></div>
+            <div class="error-msg" id="error-msg" style="display:none;"></div>
             
-            <div class="input-group">
-                <label><span class="key">[F2]</span>原票号:</label>
-                <input type="text" id="original-ticket-no" placeholder="或输入原票号" maxlength="20">
-            </div>
-            
-            <div class="reason-selector">
-                <div class="label">退票原因[F3]:</div>
-                <div class="reason-options">
-                    <button class="reason-btn" data-reason="change">变更行程</button>
-                    <button class="reason-btn" data-reason="illness">因病</button>
-                    <button class="reason-btn" data-reason="accident">事故</button>
-                    <button class="reason-btn" data-reason="late">晚到</button>
-                    <button class="reason-btn" data-reason="cancel">车次取消</button>
-                    <button class="reason-btn" data-reason="other">其他</button>
+            <form id="refund-form">
+                <div class="input-group">
+                    <label><span class="key">[T]</span>票号/身份证:</label>
+                    <input type="text" id="ticket-no" placeholder="输入票号或刷身份证" autofocus>
                 </div>
-            </div>
+                
+                <button type="button" class="action-btn" onclick="queryTicket()" style="margin-bottom:15px;">[查询车票]</button>
+            </form>
             
-            <div class="action-buttons">
-                <button class="action-btn primary" id="query-btn">[Enter] 查询原票</button>
-                <button class="action-btn" id="reset-btn">[F6] 重置</button>
-            </div>
-        </div>
-
-        <!-- 右侧信息面板 -->
-        <div class="info-panel">
-            <!-- 原票信息 -->
-            <div class="info-box" id="original-ticket-box">
-                <div class="info-box-title">◇ 原票信息</div>
-                <div id="original-ticket-content">
-                    <div style="color: #6B8299; text-align: center; padding: 30px;">
-                        请输入票号查询原票信息
-                    </div>
-                </div>
-            </div>
-
-            <!-- 手续费计算 -->
-            <div class="info-box hidden" id="fee-calculation-box">
-                <div class="info-box-title">◇ 手续费计算</div>
+            <!-- 退票信息确认 -->
+            <div id="refund-info" style="display:none;">
                 <div class="fee-calculation">
                     <div class="fee-row">
-                        <span class="fee-label">原票价:</span>
-                        <span class="fee-value" id="fee-original">¥0.00</span>
+                        <span class="label">原票价:</span>
+                        <span class="value" id="original-price">0.00元</span>
                     </div>
                     <div class="fee-row">
-                        <span class="fee-label">退票时间:</span>
-                        <span class="fee-value" id="fee-time-diff">--</span>
+                        <span class="label">退票费:</span>
+                        <span class="value" id="refund-fee">0.00元</span>
                     </div>
                     <div class="fee-row">
-                        <span class="fee-label">手续费率:</span>
-                        <span class="fee-value" id="fee-rate">--</span>
+                        <span class="label">应退金额:</span>
+                        <span class="value refund" id="refund-amount">0.00元</span>
                     </div>
                     <div class="fee-row">
-                        <span class="fee-label">手续费:</span>
-                        <span class="fee-value" id="fee-amount">¥0.00</span>
+                        <span class="label">退款方式:</span>
+                        <span class="value" id="refund-method">原路退回</span>
                     </div>
-                    <div class="fee-row total">
-                        <span class="fee-label">应退金额:</span>
-                        <span class="fee-value" id="fee-refund">¥0.00</span>
+                </div>
+                
+                <div class="input-group">
+                    <label>退票原因:</label>
+                    <div class="reason-options">
+                        <button type="button" class="reason-btn" data-reason="行程变更">行程变更</button>
+                        <button type="button" class="reason-btn" data-reason="时间不符">时间不符</button>
+                        <button type="button" class="reason-btn" data-reason="重复购票">重复购票</button>
+                        <button type="button" class="reason-btn" data-reason="伤病改签">伤病改签</button>
+                        <button type="button" class="reason-btn" data-reason="列车停运">列车停运</button>
+                        <button type="button" class="reason-btn" data-reason="其他原因">其他原因</button>
+                    </div>
+                    <input type="hidden" id="refund-reason" value="">
+                </div>
+                
+                <div class="input-group">
+                    <label>备注(可选):</label>
+                    <textarea id="refund-remark" placeholder="输入退票备注信息"></textarea>
+                </div>
+                
+                <div class="action-buttons">
+                    <button type="button" class="action-btn" onclick="resetRefund()">[重置]</button>
+                    <button type="button" class="action-btn primary" id="confirm-refund-btn" onclick="showConfirmModal()" disabled>[确认退票]</button>
+                </div>
+            </div>
+            
+            <!-- 退票规定 -->
+            <div style="margin-top:20px;">
+                <div style="color:#FFD700;font-size:12px;margin-bottom:10px;">退票费规定:</div>
+                <div class="refund-rules">
+                    <div class="rule-item">
+                        <span class="rule-time">开车前15天以上</span>
+                        <span class="rule-fee">免收退票费</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-time">开车前48小时以上</span>
+                        <span class="rule-fee">核收票价5%</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-time">开车前24-48小时</span>
+                        <span class="rule-fee">核收票价10%</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-time">开车前24小时内</span>
+                        <span class="rule-fee">核收票价20%</span>
                     </div>
                 </div>
             </div>
-
-            <!-- 退票确认 -->
-            <div class="info-box hidden" id="refund-confirm-box">
-                <div class="refund-confirm">
-                    <div class="refund-confirm-title">★ 确认退票 ★</div>
-                    <div class="refund-info">
-                        <div>票号: <span id="refund-ticket-no" style="color: #FFD700;"></span></div>
-                        <div>车次: <span id="refund-train"></span></div>
-                        <div>区段: <span id="refund-route"></span></div>
-                        <div>席别: <span id="refund-seat"></span></div>
-                        <div>退款: <span style="color: #FFD700; font-size: 18px;" id="refund-amount-display">¥0.00</span></div>
-                    </div>
-                    <div class="confirm-inputs">
-                        <div class="confirm-input-group">
-                            <label>确认退票:</label>
-                            <input type="text" id="confirm-yesno" value="" maxlength="1" placeholder="Y/N">
+        </div>
+        
+        <!-- 右侧信息区 -->
+        <div class="info-panel">
+            <!-- 原票信息 -->
+            <div class="panel-box">
+                <div class="panel-box-title">原票信息</div>
+                <div class="panel-box-body">
+                    <div class="ticket-info-grid" id="ticket-info-grid">
+                        <div class="info-item">
+                            <div class="label">票号</div>
+                            <div class="value highlight" id="info-ticket-no">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">车次</div>
+                            <div class="value" id="info-train">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">发站</div>
+                            <div class="value" id="info-from">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">到站</div>
+                            <div class="value" id="info-to">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">席别</div>
+                            <div class="value" id="info-seat">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">票种</div>
+                            <div class="value" id="info-type">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">乘车日期</div>
+                            <div class="value" id="info-date">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">状态</div>
+                            <div class="value" id="info-status">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">票价</div>
+                            <div class="value highlight" id="info-price">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">开车时间</div>
+                            <div class="value" id="info-departure">--</div>
                         </div>
                     </div>
-                    <div style="margin-top: 15px; color: #B0C4DE; font-size: 13px;">
-                        按Y确认退票，按N取消
+                </div>
+            </div>
+            
+            <!-- 时间状态 -->
+            <div class="panel-box">
+                <div class="panel-box-title">退票时间状态</div>
+                <div class="panel-box-body">
+                    <div class="ticket-info-grid">
+                        <div class="info-item">
+                            <div class="label">当前时间</div>
+                            <div class="value" id="current-datetime">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">开车时间</div>
+                            <div class="value" id="departure-datetime">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">剩余时间</div>
+                            <div class="value" id="remaining-time">--</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">退票费率</div>
+                            <div class="value" id="fee-rate">--</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- 底部功能键栏 -->
-    <div class="bottom-bar">
-        <span class="func-hint"><kbd>F1</kbd>票号</span>
-        <span class="func-hint"><kbd>F2</kbd>原票号</span>
-        <span class="func-hint"><kbd>F3</kbd>原因</span>
-        <span class="func-hint"><kbd>F6</kbd>重置</span>
-        <span class="func-hint"><kbd>Enter</kbd>查询</span>
-        <span class="func-hint"><kbd>ESC</kbd>返回</span>
+    
+    <!-- 操作区 -->
+    <div class="action-bar">
+        <div class="stats-info">
+            <div class="stat-item">
+                <span class="stat-label">退票费:</span>
+                <span class="stat-value" id="bar-fee">0.00元</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">应退:</span>
+                <span class="stat-value" id="bar-refund">0.00元</span>
+            </div>
+        </div>
+        <div class="action-buttons">
+            <a href="{{ url_for('main') }}" class="action-btn">[H]首页</a>
+            <a href="{{ url_for('sell') }}" class="action-btn">[G]售票</a>
+            <a href="{{ url_for('refund') }}" class="action-btn danger">[T]退票</a>
+        </div>
     </div>
-
+    
+    <!-- 确认退票模态框 -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>[ 确 认 退 票 ]</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="ticket-slip">
+                    <div class="slip-header">
+                        <h4>退 票 报 废 单</h4>
+                    </div>
+                    <div class="slip-row">
+                        <span class="slip-label">票号:</span>
+                        <span class="slip-value" id="slip-ticket-no">--</span>
+                    </div>
+                    <div class="slip-row">
+                        <span class="slip-label">车次:</span>
+                        <span class="slip-value" id="slip-train">--</span>
+                    </div>
+                    <div class="slip-row">
+                        <span class="slip-label">区段:</span>
+                        <span class="slip-value" id="slip-route">--</span>
+                    </div>
+                    <div class="slip-row">
+                        <span class="slip-label">原票价:</span>
+                        <span class="slip-value" id="slip-original">--</span>
+                    </div>
+                    <div class="slip-row">
+                        <span class="slip-label">退票费:</span>
+                        <span class="slip-value" id="slip-fee">--</span>
+                    </div>
+                    <div class="slip-footer">
+                        <div>应退金额</div>
+                        <div class="slip-amount" id="slip-refund">0.00元</div>
+                    </div>
+                </div>
+                
+                <div style="display:flex;gap:10px;">
+                    <button class="action-btn" style="flex:1;" onclick="closeModal()">[E]取消</button>
+                    <button class="action-btn primary" style="flex:1;" onclick="confirmRefund()">[Enter]确认退票</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 退票成功模态框 -->
+    <div class="modal-overlay" id="success-modal">
+        <div class="modal-box" style="border-color:#4CAF50;">
+            <div class="modal-header" style="border-color:#4CAF50;">
+                <h3 style="color:#4CAF50;">[ 退 票 成 功 ]</h3>
+                <button class="modal-close" onclick="closeSuccessModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div style="color:#4CAF50;font-size:48px;margin-bottom:20px;">√</div>
+                <div style="color:#FFD700;font-size:24px;margin-bottom:15px;">退票成功!</div>
+                <div style="color:#B0C4DE;margin-bottom:10px;">退款金额: <span id="success-refund" style="color:#4CAF50;font-size:20px;">0.00元</span></div>
+                <div style="color:#B0C4DE;">请退还旅客相应款项</div>
+                <div style="margin-top:25px;display:flex;gap:10px;">
+                    <button class="action-btn" style="flex:1;" onclick="closeSuccessModal();resetRefund();">[继续退票]</button>
+                    <button class="action-btn" style="flex:1;" onclick="location.href='{{ url_for('main') }}';">[返回首页]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        // BroadcastChannel 通信
-        const channel = new BroadcastChannel('trs-display');
-
-        // 当前状态
-        let currentState = {
-            ticketNo: '',
-            originalTicket: null,
-            reason: '',
-            refund_fee: 0,
-            refund_amount: 0
-        };
-
-        // DOM元素
-        const ticketNoInput = document.getElementById('ticket-no');
-        const originalTicketNoInput = document.getElementById('original-ticket-no');
-        const queryBtn = document.getElementById('query-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const feeBox = document.getElementById('fee-calculation-box');
-        const confirmBox = document.getElementById('refund-confirm-box');
-        const confirmYesno = document.getElementById('confirm-yesno');
-
-        // 初始化
-        function init() {
-            updateTime();
-            setInterval(updateTime, 1000);
-
-            ticketNoInput.addEventListener('keydown', handleTicketInput);
-            originalTicketNoInput.addEventListener('keydown', handleTicketInput);
-            queryBtn.addEventListener('click', queryTicket);
-            resetBtn.addEventListener('click', resetForm);
-            confirmYesno.addEventListener('keydown', handleConfirm);
-
-            // 退票原因选择
-            document.querySelectorAll('.reason-btn').forEach(btn => {
-                btn.addEventListener('click', () => selectReason(btn));
-            });
-
-            // 发送到副屏
-            sendToPassengerDisplay('idle');
-        }
-
+        // 全局变量
+        let currentTicket = null;
+        let currentRefundAmount = 0;
+        
         // 更新时间
         function updateTime() {
             const now = new Date();
-            const timeStr = now.toLocaleString('zh-CN', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            }).replace(/\//g, '-');
-            document.getElementById('current-time').textContent = timeStr;
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('zh-CN', {hour12: false});
+            document.getElementById('current-datetime').textContent = now.toLocaleString('zh-CN');
         }
-
-        // 处理票号输入
-        function handleTicketInput(e) {
-            if (e.key === 'Enter') {
-                queryTicket();
-            }
-        }
-
-        // 查询原票
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // 查询车票
         function queryTicket() {
-            const ticketNo = ticketNoInput.value.trim() || originalTicketNoInput.value.trim();
+            const ticketNo = document.getElementById('ticket-no').value.trim();
+            
             if (!ticketNo) {
-                alert('请输入票号');
+                showError('请输入票号或刷身份证');
                 return;
             }
-
-            fetch(`/api/query-ticket?ticket_id=${encodeURIComponent(ticketNo)}`)
+            
+            fetch('/api/query-ticket?ticket_no=' + encodeURIComponent(ticketNo))
                 .then(r => r.json())
                 .then(data => {
-                    if (data.status === 'success' && data.data) {
-                        currentState.ticketNo = ticketNo;
-                        currentState.originalTicket = data.data;
-                        displayOriginalTicket(data.data);
-                        calculateRefund(data.data);
+                    if (data.status === 'success') {
+                        currentTicket = data.data;
+                        displayTicketInfo(currentTicket);
                     } else {
-                        document.getElementById('original-ticket-content').innerHTML = 
-                            '<div style="color: #FF4444; text-align: center; padding: 30px;">未找到该票或票已退款</div>';
-                        feeBox.classList.add('hidden');
-                        confirmBox.classList.add('hidden');
+                        showError(data.message || '未找到该车票');
+                        hideRefundInfo();
                     }
                 })
                 .catch(err => {
-                    console.error(err);
-                    alert('查询失败');
+                    showError('查询失败: ' + err);
                 });
         }
-
-        // 显示原票信息
-        function displayOriginalTicket(ticket) {
-            const seatNames = {
-                'business': '商务座',
-                'first': '一等座',
-                'second': '二等座',
-                'soft_seat': '软座',
-                'hard_seat': '硬座',
-                'soft_sleeper': '软卧',
-                'hard_sleeper': '硬卧'
-            };
+        
+        // 显示车票信息
+        function displayTicketInfo(ticket) {
+            hideAllMessages();
             
-            const ticketTypeNames = {
-                'adult': '全票',
-                'child': '孩票',
-                'student': '学票',
-                'military': '军残'
-            };
-
-            document.getElementById('original-ticket-content').innerHTML = `
-                <div class="original-ticket">
-                    <div class="ticket-row">
-                        <span class="ticket-label">票号:</span>
-                        <span class="ticket-value highlight">${ticket.ticket_id}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">车次:</span>
-                        <span class="ticket-value highlight">${ticket.train_number}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">发站:</span>
-                        <span class="ticket-value">${ticket.from_station_name || ticket.from_station}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">到站:</span>
-                        <span class="ticket-value">${ticket.to_station_name || ticket.to_station}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">发时:</span>
-                        <span class="ticket-value">${ticket.departure_time || ticket.travel_date}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">席别:</span>
-                        <span class="ticket-value">${seatNames[ticket.seat_type] || ticket.seat_type}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">票种:</span>
-                        <span class="ticket-value">${ticketTypeNames[ticket.ticket_type] || ticket.ticket_type}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">票价:</span>
-                        <span class="ticket-value highlight">¥${ticket.price}</span>
-                    </div>
-                    <div class="ticket-row">
-                        <span class="ticket-label">状态:</span>
-                        <span class="ticket-value">${ticket.status === 'sold' ? '已售' : ticket.status}</span>
-                    </div>
-                </div>
-            `;
+            document.getElementById('info-ticket-no').textContent = ticket.ticket_id;
+            document.getElementById('info-train').textContent = ticket.train_number;
+            document.getElementById('info-from').textContent = ticket.from_station;
+            document.getElementById('info-to').textContent = ticket.to_station;
+            document.getElementById('info-seat').textContent = ticket.seat_type;
+            document.getElementById('info-type').textContent = ticket.ticket_type === 'adult' ? '全价' : ticket.ticket_type;
+            document.getElementById('info-date').textContent = ticket.travel_date;
+            document.getElementById('info-status').textContent = ticket.status;
+            document.getElementById('info-price').textContent = ticket.price + '元';
+            document.getElementById('info-departure').textContent = ticket.departure_time || '--';
+            
+            // 状态颜色
+            const statusEl = document.getElementById('info-status');
+            if (ticket.status === 'sold') {
+                statusEl.className = 'value warning';
+            } else if (ticket.status === 'refunded') {
+                statusEl.className = 'value danger';
+                showError('该票已退,不能再次退票');
+                hideRefundInfo();
+                return;
+            } else if (ticket.status === 'used') {
+                statusEl.className = 'value danger';
+                showError('该票已使用,不能退票');
+                hideRefundInfo();
+                return;
+            }
+            
+            // 计算退票费
+            calculateRefundFee(ticket);
+            
+            // 显示退票信息区域
+            document.getElementById('refund-info').style.display = 'block';
+            document.getElementById('confirm-refund-btn').disabled = false;
         }
-
-        // 计算退票手续费
-        function calculateRefund(ticket) {
-            const originalPrice = parseFloat(ticket.price);
+        
+        // 计算退票费
+        function calculateRefundFee(ticket) {
+            const travelDate = ticket.travel_date;
+            const departureTime = ticket.departure_time || '08:00';
+            const departureDateTime = new Date(travelDate + 'T' + departureTime);
             const now = new Date();
             
-            // 假设发车时间（实际应从数据库获取）
-            let departureTime;
-            try {
-                departureTime = new Date(`${ticket.travel_date}T${ticket.departure_time || '08:00'}:00`);
-            } catch {
-                departureTime = new Date(ticket.travel_date);
-            }
+            document.getElementById('departure-datetime').textContent = departureDateTime.toLocaleString('zh-CN');
             
-            const hoursUntilDeparture = (departureTime - now) / (1000 * 60 * 60);
+            // 计算剩余时间
+            const diffMs = departureDateTime - now;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            const diffDays = diffHours / 24;
             
-            let feeRate, rateText;
-            if (hoursUntilDeparture >= 360) {
-                feeRate = 0;
-                rateText = '免收(开车前15天以上)';
-            } else if (hoursUntilDeparture >= 48) {
-                feeRate = 0.05;
-                rateText = '5%(开车前48小时以上)';
-            } else if (hoursUntilDeparture >= 24) {
-                feeRate = 0.10;
-                rateText = '10%(开车前24-48小时)';
-            } else if (hoursUntilDeparture >= 0) {
-                feeRate = 0.20;
-                rateText = '20%(开车前24小时内)';
+            let remainingText = '';
+            if (diffMs < 0) {
+                remainingText = '已开车';
+                document.getElementById('remaining-time').className = 'value danger';
+            } else if (diffDays >= 1) {
+                remainingText = Math.floor(diffDays) + '天' + Math.floor(diffHours % 24) + '小时';
+                document.getElementById('remaining-time').className = 'value';
             } else {
-                feeRate = 1.0;
-                rateText = '100%(已过开车时间)';
+                remainingText = Math.floor(diffHours) + '小时' + Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)) + '分钟';
+                document.getElementById('remaining-time').className = 'value warning';
             }
-
-            const refund_fee = Math.round(originalPrice * feeRate * 100) / 100;
-            const refund_amount = Math.round((originalPrice - refund_fee) * 100) / 100;
-
-            currentState.refund_fee = refund_fee;
-            currentState.refund_amount = refund_amount;
-
-            document.getElementById('fee-original').textContent = `¥${originalPrice.toFixed(2)}`;
-            document.getElementById('fee-time-diff').textContent = 
-                hoursUntilDeparture > 0 ? `${Math.floor(hoursUntilDeparture)}小时` : '已过发车时间';
+            document.getElementById('remaining-time').textContent = remainingText;
+            
+            // 计算退票费率
+            let rate = 0.20;
+            let rateText = '20%';
+            if (diffHours >= 360) {
+                rate = 0;
+                rateText = '免收';
+            } else if (diffHours >= 48) {
+                rate = 0.05;
+                rateText = '5%';
+            } else if (diffHours >= 24) {
+                rate = 0.10;
+                rateText = '10%';
+            }
             document.getElementById('fee-rate').textContent = rateText;
-            document.getElementById('fee-amount').textContent = `¥${refund_fee.toFixed(2)}`;
-            document.getElementById('fee-refund').textContent = `¥${refund_amount.toFixed(2)}`;
-
-            // 更新确认区
-            document.getElementById('refund-ticket-no').textContent = ticket.ticket_id;
-            document.getElementById('refund-train').textContent = ticket.train_number;
-            document.getElementById('refund-route').textContent = 
-                `${ticket.from_station_name || ticket.from_station} → ${ticket.to_station_name || ticket.to_station}`;
-            document.getElementById('refund-seat').textContent = 
-                document.querySelector('.original-ticket .ticket-row:nth-child(6) .ticket-value').textContent;
-            document.getElementById('refund-amount-display').textContent = `¥${refund_amount.toFixed(2)}`;
-
-            feeBox.classList.remove('hidden');
-            confirmBox.classList.remove('hidden');
-            confirmYesno.value = '';
-            confirmYesno.focus();
-
-            // 发送到副屏
-            sendToPassengerDisplay('refund', {
-                train: ticket.train_number,
-                from: ticket.from_station_name || ticket.from_station,
-                to: ticket.to_station_name || ticket.to_station,
-                refundAmount: refund_amount
-            });
-        }
-
-        // 选择退票原因
-        function selectReason(btn) {
-            document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentState.reason = btn.dataset.reason;
-        }
-
-        // 处理确认
-        function handleConfirm(e) {
-            if (e.key === 'Enter' || e.key === 'y' || e.key === 'Y' || e.key === 'n' || e.key === 'N') {
-                const val = confirmYesno.value.toUpperCase();
-                if (val === 'Y') {
-                    processRefund();
-                } else if (val === 'N') {
-                    confirmBox.classList.add('hidden');
-                    sendToPassengerDisplay('idle');
-                }
+            
+            // 计算费用
+            const originalPrice = parseFloat(ticket.price);
+            const refundFee = originalPrice * rate;
+            const refundAmount = originalPrice - refundFee;
+            
+            currentRefundAmount = refundAmount;
+            
+            document.getElementById('original-price').textContent = originalPrice.toFixed(2) + '元';
+            document.getElementById('refund-fee').textContent = refundFee.toFixed(2) + '元';
+            document.getElementById('refund-amount').textContent = refundAmount.toFixed(2) + '元';
+            document.getElementById('bar-fee').textContent = refundFee.toFixed(2) + '元';
+            document.getElementById('bar-refund').textContent = refundAmount.toFixed(2) + '元';
+            
+            if (diffMs < 0) {
+                showError('已开车的车票不能办理退票');
+                document.getElementById('confirm-refund-btn').disabled = true;
             }
         }
-
-        // 处理退票
-        function processRefund() {
+        
+        // 选择退票原因
+        document.querySelectorAll('.reason-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById('refund-reason').value = this.dataset.reason;
+            });
+        });
+        
+        // 显示确认模态框
+        function showConfirmModal() {
+            if (!currentTicket) return;
+            
+            document.getElementById('slip-ticket-no').textContent = currentTicket.ticket_id;
+            document.getElementById('slip-train').textContent = currentTicket.train_number;
+            document.getElementById('slip-route').textContent = currentTicket.from_station + ' → ' + currentTicket.to_station;
+            document.getElementById('slip-original').textContent = currentTicket.price + '元';
+            document.getElementById('slip-fee').textContent = (currentTicket.price * (parseFloat(document.getElementById('fee-rate').textContent.replace('%','')) / 100)).toFixed(2) + '元';
+            document.getElementById('slip-refund').textContent = currentRefundAmount.toFixed(2) + '元';
+            
+            document.getElementById('confirm-modal').classList.add('show');
+        }
+        
+        // 确认退票
+        function confirmRefund() {
             const formData = new FormData();
-            formData.append('ticket_no', currentState.ticketNo);
-            formData.append('reason', currentState.reason);
-            formData.append('refund_fee', currentState.refund_fee);
-            formData.append('actual_refund', currentState.actualRefund);
-
-            fetch('/api/process-refund', {
+            formData.append('ticket_no', currentTicket.ticket_id);
+            formData.append('reason', document.getElementById('refund-reason').value || '其他原因');
+            formData.append('refund_fee', (currentTicket.price * (parseFloat(document.getElementById('fee-rate').textContent.replace('%','')) / 100)).toFixed(2));
+            formData.append('actual_refund', currentRefundAmount.toFixed(2));
+            formData.append('remark', document.getElementById('refund-remark').value);
+            
+            fetch('{{ url_for("api_process_refund") }}', {
                 method: 'POST',
                 body: formData
             })
             .then(r => r.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // 发送到副屏
-                    sendToPassengerDisplay('success');
-
-                    document.getElementById('original-ticket-content').innerHTML = 
-                        `<div style="color: #4CAF50; text-align: center; padding: 30px; font-size: 18px;">
-                            <div>★ 退票成功 ★</div>
-                            <div style="margin-top: 10px;">退款金额: ¥${currentState.refund_amount.toFixed(2)}</div>
-                            <div style="margin-top: 10px;">手续费: ¥${currentState.refund_fee.toFixed(2)}</div>
-                        </div>`;
-                    
-                    feeBox.classList.add('hidden');
-                    confirmBox.classList.add('hidden');
-
-                    // 3秒后重置
-                    setTimeout(resetForm, 3000);
+                    closeModal();
+                    document.getElementById('success-refund').textContent = data.actual_refund + '元';
+                    document.getElementById('success-modal').classList.add('show');
                 } else {
-                    alert(data.message || '退票失败');
+                    alert('退票失败: ' + data.message);
                 }
             })
             .catch(err => {
-                console.error(err);
-                alert('退票请求失败');
+                alert('退票失败: ' + err);
             });
         }
-
-        // 重置表单
-        function resetForm() {
-            ticketNoInput.value = '';
-            originalTicketNoInput.value = '';
-            currentState = {
-                ticketNo: '',
-                originalTicket: null,
-                reason: '',
-                refund_fee: 0,
-                refund_amount: 0
-            };
-
+        
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('confirm-modal').classList.remove('show');
+        }
+        
+        function closeSuccessModal() {
+            document.getElementById('success-modal').classList.remove('show');
+        }
+        
+        // 重置退票表单
+        function resetRefund() {
+            document.getElementById('ticket-no').value = '';
+            document.getElementById('refund-reason').value = '';
+            document.getElementById('refund-remark').value = '';
             document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('active'));
+            hideAllMessages();
+            hideRefundInfo();
+            currentTicket = null;
             
-            document.getElementById('original-ticket-content').innerHTML = 
-                '<div style="color: #6B8299; text-align: center; padding: 30px;">请输入票号查询原票信息</div>';
-            
-            feeBox.classList.add('hidden');
-            confirmBox.classList.add('hidden');
-
-            sendToPassengerDisplay('idle');
-            ticketNoInput.focus();
+            // 重置显示
+            document.querySelectorAll('#ticket-info-grid .info-item .value').forEach(el => {
+                if (!el.classList.contains('highlight')) {
+                    el.textContent = '--';
+                }
+            });
+            document.getElementById('info-ticket-no').textContent = '--';
+            document.getElementById('info-price').textContent = '--';
+            document.getElementById('info-status').textContent = '--';
+            document.getElementById('remaining-time').textContent = '--';
+            document.getElementById('fee-rate').textContent = '--';
+            document.getElementById('current-datetime').textContent = '--';
+            document.getElementById('departure-datetime').textContent = '--';
         }
-
-        // 发送到副屏
-        function sendToPassengerDisplay(type, data = {}) {
-            channel.postMessage({ type, data, timestamp: Date.now() });
+        
+        function hideRefundInfo() {
+            document.getElementById('refund-info').style.display = 'none';
+            document.getElementById('confirm-refund-btn').disabled = true;
         }
-
+        
+        function showError(msg) {
+            hideAllMessages();
+            const el = document.getElementById('error-msg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+        
+        function hideAllMessages() {
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('warning-msg').style.display = 'none';
+            document.getElementById('info-msg').style.display = 'none';
+        }
+        
         // 键盘快捷键
         document.addEventListener('keydown', function(e) {
-            if (e.key.startsWith('F') && e.key.length === 2) {
-                e.preventDefault();
+            if (e.altKey) {
+                switch(e.key.toUpperCase()) {
+                    case 'G': location.href = '{{ url_for("sell") }}'; break;
+                    case 'T': location.href = '{{ url_for("refund") }}'; break;
+                    case 'I': location.href = '{{ url_for("query") }}'; break;
+                    case 'H': location.href = '{{ url_for("main") }}'; break;
+                }
             }
-
-            if (e.key === 'F1') { ticketNoInput.focus(); }
-            if (e.key === 'F2') { originalTicketNoInput.focus(); }
-            if (e.key === 'F6') { resetForm(); }
-            if (e.key === 'Escape') { window.location.href = '/main'; }
+            
+            if (e.key === 'Enter' && document.getElementById('confirm-modal').classList.contains('show')) {
+                e.preventDefault();
+                confirmRefund();
+            }
+            
+            if ((e.key === 'e' || e.key === 'E') && document.getElementById('confirm-modal').classList.contains('show')) {
+                closeModal();
+            }
         });
-
-        // 初始化
-        init();
+        
+        // 回车查询
+        document.getElementById('ticket-no').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                queryTicket();
+            }
+        });
     </script>
 </body>
 </html>

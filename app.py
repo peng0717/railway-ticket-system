@@ -2610,9 +2610,9 @@ def shift_select():
             try:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    INSERT INTO shifts (employee_no, shift_type, start_time, status, created_at)
-                    VALUES (?, ?, ?, 'active', ?)
-                """, (session['employee_no'], shift_type, datetime.now().isoformat(), datetime.now().isoformat()))
+                    INSERT INTO shifts (employee_no, shift_type, start_time, status, created_at, user_id)
+                    VALUES (?, ?, ?, 'active', ?, ?)
+                """, (session['employee_no'], shift_type, datetime.now().isoformat(), datetime.now().isoformat(), session['user_id']))
                 shift_id = cursor.lastrowid
                 conn.commit()
                 cursor.close()
@@ -2652,31 +2652,120 @@ def main():
         if not can_sell:
             flash('您已达到本班次票额上限，请结班', 'warning')
     
+    # 获取班次统计
+    shift_stats = {
+        'ticket_count': 0,
+        'refund_count': 0,
+        'revenue': 0.00,
+        'refund_amount': 0
+    }
+    recent_tickets = []
+    
+    if 'shift_id' in session:
+        conn = get_db_dict_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                # 获取售票统计
+                cursor.execute("""
+                    SELECT COUNT(*) as cnt, COALESCE(SUM(price), 0) as amount
+                    FROM tickets WHERE shift_id = ? AND status = 'sold'
+                """, (session['shift_id'],))
+                row = cursor.fetchone()
+                shift_stats['ticket_count'] = row['cnt'] if row else 0
+                shift_stats['revenue'] = float(row['amount']) if row and row['amount'] else 0.00
+                
+                # 获取退票统计
+                cursor.execute("""
+                    SELECT COUNT(*) as cnt, COALESCE(SUM(refund_amount), 0) as amount
+                    FROM refunds WHERE shift_id = ?
+                """, (session['shift_id'],))
+                row = cursor.fetchone()
+                shift_stats['refund_count'] = row['cnt'] if row else 0
+                shift_stats['refund_amount'] = float(row['amount']) if row and row['amount'] else 0.00
+                
+                # 获取最近10条售票记录
+                cursor.execute("""
+                    SELECT ticket_id, train_number, from_station, to_station, 
+                           seat_type, price, status
+                    FROM tickets WHERE shift_id = ? AND status = 'sold'
+                    ORDER BY created_at DESC LIMIT 10
+                """, (session['shift_id'],))
+                recent_tickets = cursor.fetchall()
+                
+                cursor.close()
+                conn.close()
+            except Exception as e:
+                print(f"获取班次统计失败: {e}")
+                if conn:
+                    conn.close()
+    
     return render_template('index.html', 
                            system_name=config.SYSTEM_NAME,
-                           version=config.SYSTEM_VERSION)
+                           version=config.SYSTEM_VERSION,
+                           shift_stats=shift_stats,
+                           recent_tickets=recent_tickets)
 
 @app.route('/sell', methods=['GET', 'POST'])
 @login_required
 def sell():
     """售票页面"""
-    if request.method == 'POST':
-        train_no = request.form.get('train_no', '').strip()
-        date = request.form.get('date', '')
-        from_station = request.form.get('from_station', '').strip()
-        to_station = request.form.get('to_station', '').strip()
-        seat_type = request.form.get('seat_type', '')
-        
-        if not all([train_no, date, from_station, to_station, seat_type]):
-            return render_template('sell.html', 
-                                   error='请填写完整信息',
-                                   system_name=config.SYSTEM_NAME)
-        
-        return render_template('sell.html',
-                               success='售票功能开发中',
-                               system_name=config.SYSTEM_NAME)
+    default_date = datetime.now().strftime('%Y-%m-%d')
+    trains = []
+    train_number = ''
+    from_station = ''
+    from_station_code = ''
+    to_station = ''
+    to_station_code = ''
     
-    return render_template('sell.html', system_name=config.SYSTEM_NAME)
+    if request.method == 'GET':
+        # 处理查询参数
+        train_number = request.args.get('train_number', '').strip()
+        from_station = request.args.get('from_station_name', '').strip()
+        from_station_code = request.args.get('from_station', '').strip()
+        to_station = request.args.get('to_station_name', '').strip()
+        to_station_code = request.args.get('to_station', '').strip()
+        date = request.args.get('date', default_date)
+        
+        # 如果有发到站，查询车次
+        if from_station_code and to_station_code:
+            conn = get_db_dict_connection()
+            if conn:
+                try:
+                    cursor = conn.cursor()
+                    # 查询经过这两个站的车次
+                    cursor.execute("""
+                        SELECT DISTINCT t.train_id, t.train_number, t.train_type,
+                               t.start_station, t.end_station, t.start_time, t.end_time,
+                               t.duration
+                        FROM trains t
+                        WHERE t.start_station = ? OR t.end_station = ?
+                        OR EXISTS (
+                            SELECT 1 FROM train_stops ts1, train_stops ts2
+                            WHERE ts1.train_id = t.train_id AND ts2.train_id = t.train_id
+                            AND ts1.station_code = ? AND ts2.station_code = ?
+                            AND ts1.stop_sequence < ts2.stop_sequence
+                        )
+                        LIMIT 20
+                    """, (from_station_code, to_station_code, from_station_code, to_station_code))
+                    
+                    trains = cursor.fetchall()
+                    cursor.close()
+                    conn.close()
+                except Exception as e:
+                    print(f"查询车次失败: {e}")
+                    if conn:
+                        conn.close()
+    
+    return render_template('sell.html', 
+                           system_name=config.SYSTEM_NAME,
+                           default_date=default_date,
+                           trains=trains,
+                           train_number=train_number,
+                           from_station=from_station,
+                           from_station_code=from_station_code,
+                           to_station=to_station,
+                           to_station_code=to_station_code)
 
 @app.route('/query')
 @login_required
@@ -2690,63 +2779,79 @@ def refund():
     """退票页面"""
     return render_template('refund.html', system_name=config.SYSTEM_NAME)
 
-@app.route('/close_shift', methods=['POST'])
+@app.route('/close_shift', methods=['GET', 'POST'])
 @login_required
 def close_shift():
-    """关闭班次"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            
-            # 统计本班次数据
-            cursor.execute("""
-                SELECT COUNT(*) as cnt, SUM(price) as amount
-                FROM tickets WHERE shift_id = ? AND status = 'sold'
-            """, (session['shift_id'],))
-            ticket_stats = cursor.fetchone()
-            
-            cursor.execute("""
-                SELECT COUNT(*) as cnt, SUM(actual_refund) as amount
-                FROM refunds WHERE shift_id = ?
-            """, (session['shift_id'],))
-            refund_stats = cursor.fetchone()
-            
-            # 更新班次记录
-            cursor.execute("""
-                UPDATE shifts SET 
-                    status = 'closed', 
-                    end_time = ?,
-                    total_tickets = ?,
-                    total_amount = ?,
-                    total_refunds = ?,
-                    actual_refund = ?
-                WHERE shift_id = ?
-            """, (
-                datetime.now().isoformat(),
-                ticket_stats[0] or 0,
-                ticket_stats[1] or 0,
-                refund_stats[0] or 0,
-                refund_stats[1] or 0,
-                session['shift_id']
-            ))
-            
-            conn.commit()
-            cursor.close()
-            conn.close()
-            
-            log_operation('shift_close')
-            
-            session.pop('shift_id', None)
-            session.pop('shift_type', None)
-            session.pop('shift_name', None)
-            
-            flash('班次已关闭', 'info')
-        except Exception as e:
-            print(f"关闭班次失败: {e}")
-            flash('关闭班次失败', 'error')
+    """关闭班次页面"""
+    if 'shift_id' not in session:
+        return redirect(url_for('shift_select'))
     
-    return redirect(url_for('shift_select'))
+    if request.method == 'POST':
+        conn = get_db_connection()
+        if conn:
+            try:
+                cursor = conn.cursor()
+                
+                # 统计本班次数据
+                cursor.execute("""
+                    SELECT COUNT(*) as cnt, COALESCE(SUM(price), 0) as amount
+                    FROM tickets WHERE shift_id = ? AND status = 'sold'
+                """, (session['shift_id'],))
+                ticket_stats = cursor.fetchone()
+                
+                cursor.execute("""
+                    SELECT COUNT(*) as cnt, COALESCE(SUM(refund_amount), 0) as amount
+                    FROM refunds WHERE shift_id = ?
+                """, (session['shift_id'],))
+                refund_stats = cursor.fetchone()
+                
+                # 更新班次记录
+                cursor.execute("""
+                    UPDATE shifts SET 
+                        status = 'closed', 
+                        end_time = ?,
+                        ticket_count = ?,
+                        total_tickets = ?,
+                        total_amount = ?,
+                        refund_count = ?,
+                        total_refunds = ?,
+                        actual_refund = ?,
+                        refund_amount = ?,
+                        actual_amount = ? - ?
+                    WHERE shift_id = ?
+                """, (
+                    datetime.now().isoformat(),
+                    ticket_stats[0] or 0,
+                    ticket_stats[0] or 0,
+                    ticket_stats[1] or 0,
+                    refund_stats[0] or 0,
+                    refund_stats[0] or 0,
+                    refund_stats[1] or 0,
+                    refund_stats[1] or 0,
+                    (ticket_stats[1] or 0),
+                    (refund_stats[1] or 0),
+                    session['shift_id']
+                ))
+                
+                conn.commit()
+                cursor.close()
+                conn.close()
+                
+                log_operation('shift_close')
+                
+                session.pop('shift_id', None)
+                session.pop('shift_type', None)
+                session.pop('shift_name', None)
+                
+                flash('班次已关闭', 'info')
+            except Exception as e:
+                print(f"关闭班次失败: {e}")
+                flash('关闭班次失败', 'error')
+        
+        return redirect(url_for('shift_select'))
+    
+    # GET请求返回交班页面
+    return render_template('shifts/close.html', system_name=config.SYSTEM_NAME)
 
 # ==================== API 路由 ====================
 
@@ -2862,6 +2967,319 @@ def api_train_detail():
         if conn:
             conn.close()
         return jsonify({'status': 'error', 'message': '获取车次详情失败'})
+
+@app.route('/api/shift-stats')
+@login_required
+def api_shift_stats():
+    """获取班次统计"""
+    if 'shift_id' not in session:
+        return jsonify({'status': 'error', 'message': '请先选择班次'})
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 获取售票统计
+        cursor.execute("""
+            SELECT COUNT(*) as cnt, COALESCE(SUM(price), 0) as amount
+            FROM tickets WHERE shift_id = ? AND status = 'sold'
+        """, (session['shift_id'],))
+        ticket_row = cursor.fetchone()
+        
+        # 获取退票统计
+        cursor.execute("""
+            SELECT COUNT(*) as cnt, COALESCE(SUM(refund_amount), 0) as amount
+            FROM refunds WHERE shift_id = ?
+        """, (session['shift_id'],))
+        refund_row = cursor.fetchone()
+        
+        # 获取班次开始时间
+        cursor.execute("""
+            SELECT start_time FROM shifts WHERE shift_id = ?
+        """, (session['shift_id'],))
+        shift_row = cursor.fetchone()
+        
+        # 获取席别明细
+        cursor.execute("""
+            SELECT seat_type, COUNT(*) as cnt, SUM(price) as amount
+            FROM tickets WHERE shift_id = ? AND status = 'sold'
+            GROUP BY seat_type
+        """, (session['shift_id'],))
+        detail_rows = cursor.fetchall()
+        
+        details = {}
+        for row in detail_rows:
+            seat_key = row['seat_type'].lower().replace('座', '_seat').replace('卧', '_sleeper')
+            details[f"{seat_key}_count"] = row['cnt']
+            details[f"{seat_key}_amount"] = float(row['amount']) if row['amount'] else 0
+        
+        cursor.close()
+        conn.close()
+        
+        revenue = float(ticket_row['amount']) if ticket_row and ticket_row['amount'] else 0
+        refund_amount = float(refund_row['amount']) if refund_row and refund_row['amount'] else 0
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'ticket_count': ticket_row['cnt'] if ticket_row else 0,
+                'refund_count': refund_row['cnt'] if refund_row else 0,
+                'revenue': revenue,
+                'refund_amount': refund_amount,
+                'actual_amount': revenue - refund_amount,
+                'start_time': shift_row['start_time'] if shift_row else None,
+                'details': details
+            }
+        })
+    except Exception as e:
+        print(f"获取班次统计失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '获取班次统计失败'})
+
+@app.route('/api/seat-availability')
+@login_required
+def api_seat_availability():
+    """获取席别余票"""
+    train_id = request.args.get('train_id', '').strip()
+    date = request.args.get('date', '').strip()
+    from_code = request.args.get('from', '').strip()
+    to_code = request.args.get('to', '').strip()
+    
+    if not train_id:
+        return jsonify({'status': 'error', 'message': '请提供车次'})
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 简化的席别余票查询
+        # 实际应该从座位库存表查询，这里用模拟数据
+        seats = [
+            {'seat_type': '二等座', 'price': 200.00, 'count': 50},
+            {'seat_type': '一等座', 'price': 350.00, 'count': 20},
+            {'seat_type': '商务座', 'price': 600.00, 'count': 5},
+            {'seat_type': '硬座', 'price': 150.00, 'count': 80},
+            {'seat_type': '软座', 'price': 250.00, 'count': 30},
+            {'seat_type': '硬卧', 'price': 280.00, 'count': 40},
+            {'seat_type': '软卧', 'price': 450.00, 'count': 15},
+            {'seat_type': '无座', 'price': 150.00, 'count': 20},
+        ]
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'data': seats})
+    except Exception as e:
+        print(f"获取席别余票失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '获取席别余票失败'})
+
+@app.route('/api/remaining-tickets')
+@login_required
+def api_remaining_tickets():
+    """余票查询"""
+    date = request.args.get('date', '').strip()
+    from_station = request.args.get('from', '').strip()
+    to_station = request.args.get('to', '').strip()
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 查询经过发到站的车次
+        cursor.execute("""
+            SELECT DISTINCT t.train_id, t.train_number, t.train_type,
+                   t.start_station, t.end_station, t.start_time, t.duration
+            FROM trains t
+            WHERE t.train_number LIKE ?
+            ORDER BY t.start_time
+            LIMIT 30
+        """, (f'%{from_station[:2] if len(from_station) > 1 else from_station}%',))
+        
+        trains = []
+        for t in cursor.fetchall():
+            trains.append({
+                'train_number': t['train_number'],
+                'from_station': t['start_station'],
+                'to_station': t['end_station'],
+                'departure_time': t['start_time'],
+                'duration': t['duration'] or '--',
+                'business': 5,
+                'first': 20,
+                'second': 50,
+                'hard_seat': 80,
+                'soft_seat': 30,
+                'hard_sleeper': 40,
+                'soft_sleeper': 15
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'data': trains})
+    except Exception as e:
+        print(f"余票查询失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '查询失败'})
+
+@app.route('/api/train-price')
+@login_required
+def api_train_price():
+    """票价查询"""
+    from_station = request.args.get('from', '').strip()
+    to_station = request.args.get('to', '').strip()
+    seat = request.args.get('seat', '').strip()
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT train_number, from_station, to_station, seat_type, base_price as price
+            FROM ticket_prices
+            WHERE from_station = ? AND to_station = ?
+        """
+        params = [from_station, to_station]
+        
+        if seat:
+            query += " AND seat_type = ?"
+            params.append(seat)
+        
+        cursor.execute(query, params)
+        prices = []
+        for p in cursor.fetchall():
+            prices.append({
+                'train_number': p['train_number'],
+                'from_station': p['from_station'],
+                'to_station': p['to_station'],
+                'seat_type': p['seat_type'],
+                'price': float(p['price']) if p['price'] else 0
+            })
+        
+        # 如果没有票价数据，返回模拟数据
+        if not prices:
+            prices = [
+                {'train_number': 'G1', 'from_station': from_station, 'to_station': to_station, 'seat_type': '二等座', 'price': 200.00},
+                {'train_number': 'G1', 'from_station': from_station, 'to_station': to_station, 'seat_type': '一等座', 'price': 350.00},
+                {'train_number': 'G1', 'from_station': from_station, 'to_station': to_station, 'seat_type': '商务座', 'price': 600.00},
+            ]
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'data': prices})
+    except Exception as e:
+        print(f"票价查询失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '查询失败'})
+
+@app.route('/api/shift-tickets')
+@login_required
+def api_shift_tickets():
+    """获取班次内售票记录"""
+    if 'shift_id' not in session:
+        return jsonify({'status': 'error', 'message': '请先选择班次'})
+    
+    date = request.args.get('date', '').strip()
+    ticket_no = request.args.get('ticket_no', '').strip()
+    status = request.args.get('status', '').strip()
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT ticket_id, train_number, from_station, to_station,
+                   seat_type, price, ticket_type, status, sold_at
+            FROM tickets WHERE shift_id = ?
+        """
+        params = [session['shift_id']]
+        
+        if ticket_no:
+            query += " AND ticket_id LIKE ?"
+            params.append(f'%{ticket_no}%')
+        
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+        
+        query += " ORDER BY sold_at DESC LIMIT 50"
+        
+        cursor.execute(query, params)
+        tickets = [dict(t) for t in cursor.fetchall()]
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'data': tickets})
+    except Exception as e:
+        print(f"获取售票记录失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '查询失败'})
+
+@app.route('/api/train-stops')
+@login_required
+def api_train_stops():
+    """获取车次经停站"""
+    train_number = request.args.get('train_number', '').strip()
+    from_station = request.args.get('from', '').strip()
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        if train_number:
+            cursor.execute("""
+                SELECT train_id FROM trains WHERE train_number = ?
+            """, (train_number,))
+            row = cursor.fetchone()
+            train_id = row['train_id'] if row else 0
+        else:
+            train_id = 0
+        
+        cursor.execute("""
+            SELECT ts.stop_sequence, ts.station_code, s.station_name,
+                   ts.arrival_time, ts.departure_time, ts.distance_from_start
+            FROM train_stops ts
+            LEFT JOIN stations s ON ts.station_code = s.station_code
+            WHERE ts.train_id = ?
+            ORDER BY ts.stop_sequence
+        """, (train_id,))
+        
+        stops = [dict(s) for s in cursor.fetchall()]
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'data': stops})
+    except Exception as e:
+        print(f"获取经停站失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '查询失败'})
 
 @app.route('/api/search-trains')
 @login_required
@@ -3037,6 +3455,8 @@ def api_sell_ticket():
     ticket_type = request.form.get('ticket_type', 'adult').strip()
     price = float(request.form.get('price', 0))
     payment = float(request.form.get('payment', 0))
+    passenger_name = request.form.get('passenger_name', '').strip()
+    id_number = request.form.get('id_number', '').strip()
     
     if not all([train_number, date, from_station, to_station, seat_type]):
         return jsonify({'status': 'error', 'message': '信息不完整'})
@@ -3054,6 +3474,21 @@ def api_sell_ticket():
         # 生成票号
         ticket_no = get_next_ticket_id()
         
+        # 获取开车时间
+        departure_time = ''
+        try:
+            cursor.execute("""
+                SELECT start_time FROM trains WHERE train_id = ?
+            """, (int(train_id) if train_id.isdigit() else 0,))
+            row = cursor.fetchone()
+            if row:
+                departure_time = row[0] or ''
+        except:
+            pass
+        
+        # 获取窗口号
+        window_no = session.get('window_no', '101号口')
+        
         # 插入票记录 - 使用实际数据库字段
         cursor.execute("""
             INSERT INTO tickets (
@@ -3062,26 +3497,39 @@ def api_sell_ticket():
                 travel_date, departure_time,
                 seat_type, ticket_type, price,
                 passenger_name, id_number,
-                status, payment_method, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, payment_method, 
+                seller_id, window_no, sold_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             ticket_no,
             session['shift_id'],
             train_number,
-            train_id or None,
-            from_station,
-            to_station,
+            int(train_id) if train_id.isdigit() else None,
+            from_station_name or from_station,
+            to_station_name or to_station,
             date,
-            '',  # departure_time
+            departure_time,
             seat_type,
             ticket_type,
             price,
-            '',  # passenger_name
-            '',  # id_number
+            passenger_name or '旅客',
+            id_number or '',
             'sold',
-            'cash' if payment > price else 'electronic',
+            'cash' if payment >= price else 'electronic',
+            session.get('user_id'),
+            window_no,
+            datetime.now().isoformat(),
             datetime.now().isoformat()
         ))
+        
+        # 更新班次统计
+        cursor.execute("""
+            UPDATE shifts SET 
+                ticket_count = ticket_count + 1,
+                revenue = revenue + ?,
+                actual_amount = actual_amount + ?
+            WHERE shift_id = ?
+        """, (price, price - price * 0.1, session['shift_id']))  # 简化计算
         
         conn.commit()
         cursor.close()
@@ -3090,11 +3538,12 @@ def api_sell_ticket():
         # 记录日志
         log_operation('sell', ticket_id=ticket_no, details={
             'train': train_number,
-            'from': from_station,
-            'to': to_station,
+            'from': from_station_name or from_station,
+            'to': to_station_name or to_station,
             'seat': seat_type,
             'price': price,
-            'payment': payment
+            'payment': payment,
+            'passenger': passenger_name
         })
         
         return jsonify({
@@ -3155,6 +3604,7 @@ def api_process_refund():
     reason = request.form.get('reason', '').strip()
     refund_fee = float(request.form.get('refund_fee', 0))
     actual_refund = float(request.form.get('actual_refund', 0))
+    remark = request.form.get('remark', '').strip()
     
     if not ticket_no:
         return jsonify({'status': 'error', 'message': '请提供票号'})
@@ -3185,21 +3635,32 @@ def api_process_refund():
             UPDATE tickets SET status = 'refunded' WHERE ticket_id = ?
         """, (ticket_no,))
         
-        # 插入退款记录 - 使用实际数据库字段
+        # 插入退款记录 - 使用实际数据库字段，包含operator_id
         cursor.execute("""
             INSERT INTO refunds (
                 ticket_id, shift_id, refund_amount, refund_fee,
-                refund_reason, refund_type, refund_time
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                refund_reason, refund_type, refund_time,
+                operator_id, remark
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             ticket_no,
             session['shift_id'],
             actual_refund,
             refund_fee,
-            reason,
+            reason or '其他原因',
             'window',  # refund_type
-            datetime.now().isoformat()
+            datetime.now().isoformat(),
+            session.get('user_id'),  # operator_id
+            remark
         ))
+        
+        # 更新班次统计
+        cursor.execute("""
+            UPDATE shifts SET 
+                refund_count = refund_count + 1,
+                refund_amount = refund_amount + ?
+            WHERE shift_id = ?
+        """, (actual_refund, session['shift_id']))
         
         conn.commit()
         cursor.close()

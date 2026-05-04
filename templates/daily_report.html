@@ -1,157 +1,377 @@
-{% extends "base.html" %}
-
-{% block title %}对账单 - {{ system_name }}{% endblock %}
-
-{% block content %}
-<div class="container" style="max-width: 900px; margin: 0 auto; padding: 20px;">
-    <div class="header" style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #c9a84c; margin-bottom: 5px;">{{ system_name }}</h1>
-        <h2 style="color: #fff; margin: 0;">班次对账单</h2>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本班统计 - {{ system_name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Consolas", "Microsoft YaHei", monospace;
+            background: #0A1628;
+            color: #E0E0E0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* ===== 标题栏(48px) ===== */
+        .title-bar {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            height: 48px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .title-bar .left-info { display: flex; align-items: center; gap: 20px; }
+        .title-bar .station-name { color: #FFD700; font-size: 16px; font-weight: bold; letter-spacing: 2px; }
+        .title-bar .info-item { color: #B0C4DE; font-size: 13px; }
+        .title-bar .info-item span { color: #FFFFFF; }
+        .title-bar .right-info { display: flex; align-items: center; gap: 20px; }
+        .title-bar .time-display { color: #FFD700; font-size: 15px; }
+        .title-bar .module-title { color: #FFC107; font-size: 14px; }
+        /* ===== 功能菜单栏(36px) ===== */
+        .menu-bar {
+            background: #0D1B2A;
+            border-bottom: 2px solid #3A5A7C;
+            height: 36px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .menu-item {
+            padding: 0 18px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: #B0C4DE;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            border-right: 1px solid #2A4A6C;
+            transition: all 0.1s;
+        }
+        .menu-item:first-child { border-left: 1px solid #2A4A6C; }
+        .menu-item:hover, .menu-item.active { background: #1B3A5C; color: #FFD700; }
+        .menu-item .key { color: #FFD700; margin-right: 5px; }
+        /* ===== 主内容区 ===== */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .report-panel {
+            background: #0D1B2A;
+            border: 2px solid #3A5A7C;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .panel-header {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        .panel-header h1 { color: #FFD700; font-size: 18px; letter-spacing: 4px; }
+        .panel-header .subtitle { color: #B0C4DE; font-size: 12px; margin-top: 5px; }
+        .panel-body { padding: 20px; }
+        /* 信息区块 */
+        .info-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #3A5A7C;
+        }
+        .section-title {
+            color: #FFD700;
+            font-size: 13px;
+            margin-bottom: 12px;
+            padding-bottom: 5px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .info-box {
+            background: #0A1628;
+            border: 1px solid #3A5A7C;
+            padding: 12px;
+            text-align: center;
+        }
+        .info-box .label { color: #6B8299; font-size: 11px; }
+        .info-box .value { color: #FFFFFF; font-size: 16px; font-weight: bold; margin-top: 5px; }
+        .info-box .value.highlight { color: #FFD700; font-size: 20px; }
+        .info-box .value.success { color: #4CAF50; }
+        .info-box .value.danger { color: #FF4444; }
+        /* 统计卡片 */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-card .value { font-size: 28px; font-weight: bold; }
+        .stat-card .label { color: #6B8299; font-size: 12px; margin-top: 8px; }
+        .stat-card.green { border-color: #4CAF50; }
+        .stat-card.green .value { color: #4CAF50; }
+        .stat-card.orange { border-color: #FF9800; }
+        .stat-card.orange .value { color: #FF9800; }
+        .stat-card.blue { border-color: #2196F3; }
+        .stat-card.blue .value { color: #2196F3; }
+        .stat-card.red { border-color: #FF4444; }
+        .stat-card.red .value { color: #FF4444; }
+        /* 席别明细表 */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .detail-table th {
+            background: #1B3A5C;
+            color: #FFD700;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #3A5A7C;
+            font-size: 13px;
+        }
+        .detail-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1B3A5C;
+            font-size: 13px;
+        }
+        .detail-table tr:hover td { background: #152A45; }
+        /* 净收入 */
+        .net-income {
+            background: linear-gradient(135deg, #1B3A5C 0%, #0D3654 100%);
+            border: 2px solid #B8860B;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .net-income .label { color: #B0C4DE; font-size: 14px; }
+        .net-income .value { color: #4CAF50; font-size: 36px; font-weight: bold; margin-top: 10px; }
+        /* 售票记录 */
+        .ticket-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        /* ===== 操作区(60px) ===== */
+        .action-bar {
+            background: #1B3A5C;
+            border-top: 2px solid #3A5A7C;
+            height: 60px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+        .action-bar .action-btn {
+            padding: 10px 30px;
+            background: #0D1B2A;
+            border: 2px solid #3A5A7C;
+            color: #B0C4DE;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .action-bar .action-btn:hover { border-color: #FFD700; color: #FFD700; }
+    </style>
+</head>
+<body>
+    <!-- 标题栏 -->
+    <div class="title-bar">
+        <div class="left-info">
+            <div class="station-name">{{ session.get('station_name', '北京') }}</div>
+            <div class="info-item">窗口:<span>{{ session.get('window_no', '101号口') }}</span></div>
+            <div class="info-item">工号:<span>{{ session.get('employee_no', 'N/A') }}</span></div>
+        </div>
+        <div class="module-title">[ 本 班 统 计 ]</div>
+        <div class="right-info">
+            <div class="time-display" id="current-time">00:00:00</div>
+        </div>
     </div>
     
-    <div class="report-card" style="background: #fff; border-radius: 8px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-        <!-- 班次信息 -->
-        <div style="border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 20px;">
-            <h3 style="color: #333; margin-bottom: 10px;">班次信息</h3>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                <div>
-                    <span style="color: #666; font-size: 14px;">工号</span>
-                    <p style="margin: 5px 0 0; font-weight: bold;">{{ session.get('employee_no', '-') }}</p>
-                </div>
-                <div>
-                    <span style="color: #666; font-size: 14px;">姓名</span>
-                    <p style="margin: 5px 0 0; font-weight: bold;">{{ session.get('user_name', '-') }}</p>
-                </div>
-                <div>
-                    <span style="color: #666; font-size: 14px;">窗口</span>
-                    <p style="margin: 5px 0 0; font-weight: bold;">{{ session.get('window_no', '-') }}</p>
-                </div>
-                <div>
-                    <span style="color: #666; font-size: 14px;">班次类型</span>
-                    <p style="margin: 5px 0 0; font-weight: bold;">{{ report.shift.shift_type if report.shift else '-' }}</p>
-                </div>
-                <div>
-                    <span style="color: #666; font-size: 14px;">开始时间</span>
-                    <p style="margin: 5px 0 0; font-weight: bold;">{{ report.shift.start_time[:16] if report.shift and report.shift.start_time else '-' }}</p>
-                </div>
-                <div>
-                    <span style="color: #666; font-size: 14px;">车站</span>
-                    <p style="margin: 5px 0 0; font-weight: bold;">{{ session.get('station_name', '-') }} ({{ session.get('station_code', '-') }})</p>
-                </div>
+    <!-- 功能菜单栏 -->
+    <div class="menu-bar">
+        <a href="{{ url_for('main') }}" class="menu-item"><span class="key">H</span>首页</a>
+        <a href="{{ url_for('sell') }}" class="menu-item"><span class="key">G</span>售票</a>
+        <a href="{{ url_for('refund') }}" class="menu-item"><span class="key">T</span>退票</a>
+        <a href="{{ url_for('query') }}" class="menu-item"><span class="key">I</span>查询</a>
+        <a href="{{ url_for('daily_report') }}" class="menu-item active"><span class="key">R</span>报表</a>
+        <a href="{{ url_for('close_shift') }}" class="menu-item"><span class="key">X</span>交班</a>
+    </div>
+    
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <div class="report-panel">
+            <div class="panel-header">
+                <h1>本 班 统 计</h1>
+                <div class="subtitle">{{ session.get('station_name', '北京') }} {{ session.get('window_no', '101号口') }}</div>
             </div>
-        </div>
-        
-        <!-- 统计汇总 -->
-        <div style="border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 20px;">
-            <h3 style="color: #333; margin-bottom: 15px;">统计汇总</h3>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center;">
-                <div style="background: #e8f5e9; padding: 15px; border-radius: 8px;">
-                    <div style="font-size: 28px; font-weight: bold; color: #2e7d32;">{{ report.total_tickets }}</div>
-                    <div style="color: #666; font-size: 14px;">售票数</div>
+            
+            <div class="panel-body">
+                <!-- 基本信息 -->
+                <div class="info-section">
+                    <div class="section-title">班次信息</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="label">工号</div>
+                            <div class="value">{{ session.get('employee_no', '-') }}</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="label">姓名</div>
+                            <div class="value">{{ session.get('user_name', '-') }}</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="label">班次类型</div>
+                            <div class="value">{{ session.get('shift_name', '-') }}</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="label">车站</div>
+                            <div class="value">{{ session.get('station_name', '-') }}</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
-                    <div style="font-size: 28px; font-weight: bold; color: #ef6c00;">{{ report.total_refunds }}</div>
-                    <div style="color: #666; font-size: 14px;">退票数</div>
+                
+                <!-- 统计卡片 -->
+                <div class="stats-row">
+                    <div class="stat-card green">
+                        <div class="value">{{ report.total_tickets|default(0) }}</div>
+                        <div class="label">售票数(张)</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="value">{{ report.total_refunds|default(0) }}</div>
+                        <div class="label">退票数(张)</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="value">{{ "%.2f"|format(report.total_amount|default(0)) }}</div>
+                        <div class="label">售票金额(元)</div>
+                    </div>
+                    <div class="stat-card red">
+                        <div class="value">{{ "%.2f"|format(report.refund_amount|default(0)) }}</div>
+                        <div class="label">退票金额(元)</div>
+                    </div>
                 </div>
-                <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
-                    <div style="font-size: 28px; font-weight: bold; color: #1565c0;">¥{{ "%.2f"|format(report.total_amount) }}</div>
-                    <div style="color: #666; font-size: 14px;">售票金额</div>
+                
+                <!-- 收款方式 -->
+                <div class="info-section">
+                    <div class="section-title">收款方式</div>
+                    <div class="stats-row" style="grid-template-columns: repeat(2, 1fr);">
+                        <div class="stat-card blue">
+                            <div class="value">{{ "%.2f"|format(report.cash_amount|default(0)) }}</div>
+                            <div class="label">现金收款(元)</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="value">{{ "%.2f"|format(report.electronic_amount|default(0)) }}</div>
+                            <div class="label">电子支付(元)</div>
+                        </div>
+                    </div>
                 </div>
-                <div style="background: #fce4ec; padding: 15px; border-radius: 8px;">
-                    <div style="font-size: 28px; font-weight: bold; color: #c62828;">¥{{ "%.2f"|format(report.refund_amount) }}</div>
-                    <div style="color: #666; font-size: 14px;">退票金额</div>
+                
+                <!-- 净收入 -->
+                <div class="net-income">
+                    <div class="label">净收入（售票金额 - 退票金额）</div>
+                    <div class="value">¥{{ "%.2f"|format(report.net_amount|default(0)) }}</div>
                 </div>
+                
+                <!-- 席别明细 -->
+                {% if report.seat_stats %}
+                <div class="info-section">
+                    <div class="section-title">席别明细</div>
+                    <table class="detail-table">
+                        <thead>
+                            <tr>
+                                <th>席别</th>
+                                <th style="text-align:right;">张数</th>
+                                <th style="text-align:right;">金额(元)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in report.seat_stats %}
+                            <tr>
+                                <td>{{ stat.seat_type }}</td>
+                                <td style="text-align:right;">{{ stat.count }}</td>
+                                <td style="text-align:right;">{{ "%.2f"|format(stat.amount) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                
+                <!-- 最近售票记录 -->
+                {% if report.tickets %}
+                <div class="info-section">
+                    <div class="section-title">最近售票记录</div>
+                    <div class="ticket-list">
+                        <table class="detail-table">
+                            <thead>
+                                <tr>
+                                    <th>票号</th>
+                                    <th>车次</th>
+                                    <th>发站</th>
+                                    <th>到站</th>
+                                    <th>席别</th>
+                                    <th style="text-align:right;">票价</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ticket in report.tickets[:20] %}
+                                <tr>
+                                    <td style="color:#FFD700;">{{ ticket.ticket_id }}</td>
+                                    <td>{{ ticket.train_number }}</td>
+                                    <td>{{ ticket.from_station }}</td>
+                                    <td>{{ ticket.to_station }}</td>
+                                    <td>{{ ticket.seat_type }}</td>
+                                    <td style="text-align:right;">{{ "%.2f"|format(ticket.price) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-        </div>
-        
-        <!-- 收款方式 -->
-        <div style="border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 20px;">
-            <h3 style="color: #333; margin-bottom: 15px;">收款方式</h3>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; text-align: center;">
-                <div style="background: #f5f5f5; padding: 15px; border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #333;">¥{{ "%.2f"|format(report.cash_amount) }}</div>
-                    <div style="color: #666; font-size: 14px;">现金收款</div>
-                </div>
-                <div style="background: #f5f5f5; padding: 15px; border-radius: 8px;">
-                    <div style="font-size: 24px; font-weight: bold; color: #333;">¥{{ "%.2f"|format(report.electronic_amount) }}</div>
-                    <div style="color: #666; font-size: 14px;">电子支付</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 净收入 -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px; text-align: center; color: #fff; margin-bottom: 20px;">
-            <div style="font-size: 36px; font-weight: bold;">¥{{ "%.2f"|format(report.net_amount) }}</div>
-            <div style="font-size: 14px; opacity: 0.9;">净收入（售票金额 - 退票金额）</div>
-        </div>
-        
-        <!-- 按席别统计 -->
-        {% if report.seat_stats %}
-        <div style="border-bottom: 2px dashed #ddd; padding-bottom: 15px; margin-bottom: 20px;">
-            <h3 style="color: #333; margin-bottom: 15px;">按席别统计</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: #f5f5f5;">
-                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">席别</th>
-                        <th style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">张数</th>
-                        <th style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">金额</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for seat_type, stats in report.seat_stats.items() %}
-                    <tr>
-                        <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ seat_type }}</td>
-                        <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">{{ stats.count }}</td>
-                        <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">¥{{ "%.2f"|format(stats.amount) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% endif %}
-        
-        <!-- 最近售票记录 -->
-        {% if report.tickets %}
-        <div style="margin-bottom: 20px;">
-            <h3 style="color: #333; margin-bottom: 15px;">最近售票记录（前20条）</h3>
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                <thead>
-                    <tr style="background: #f5f5f5;">
-                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">票号</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">车次</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">席别</th>
-                        <th style="padding: 8px; text-align: right; border-bottom: 1px solid #ddd;">票价</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">时间</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ticket in report.tickets %}
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ ticket.ticket_id if ticket.ticket_id else '-' }}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ ticket.train_no if ticket.train_no else '-' }}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ ticket.seat_type if ticket.seat_type else '-' }}</td>
-                        <td style="padding: 8px; text-align: right; border-bottom: 1px solid #eee;">¥{{ "%.2f"|format(ticket.price|float) if ticket.price else '0.00' }}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ ticket.created_at[:16] if ticket.created_at else '-' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% endif %}
-        
-        <!-- 操作按钮 -->
-        <div style="text-align: center; margin-top: 25px;">
-            <button onclick="window.print()" class="btn btn-primary" style="padding: 12px 30px; font-size: 16px; margin-right: 15px;">打印对账单</button>
-            <a href="{{ url_for('main') }}" class="btn btn-outline" style="padding: 12px 30px; font-size: 16px; text-decoration: none;">返回主页</a>
         </div>
     </div>
-</div>
-
-<style>
-@media print {
-    .btn, .header h1, .header h2 { display: none !important; }
-    .report-card { box-shadow: none !important; border: 1px solid #ddd; }
-    body { background: #fff !important; }
-}
-</style>
-{% endblock %}
+    
+    <!-- 操作区 -->
+    <div class="action-bar">
+        <a href="{{ url_for('main') }}" class="action-btn">[H]返回首页</a>
+        <a href="{{ url_for('sell') }}" class="action-btn">[G]继续售票</a>
+        <a href="{{ url_for('close_shift') }}" class="action-btn">[X]交班结账</a>
+    </div>
+    
+    <script>
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('zh-CN', {hour12: false});
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.altKey) {
+                switch(e.key.toUpperCase()) {
+                    case 'G': location.href = '{{ url_for("sell") }}'; break;
+                    case 'T': location.href = '{{ url_for("refund") }}'; break;
+                    case 'I': location.href = '{{ url_for("query") }}'; break;
+                    case 'R': location.href = '{{ url_for("daily_report") }}'; break;
+                    case 'X': location.href = '{{ url_for("close_shift") }}'; break;
+                    case 'H': location.href = '{{ url_for("main") }}'; break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

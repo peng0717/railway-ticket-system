@@ -3,380 +3,668 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ system_name }} - 交班</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>交班 - {{ system_name }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Microsoft YaHei", "SimSun", Arial, sans-serif; background: #e8ecf0; font-size: 13px; }
-        
-        .header-bar { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; }
-        .header-left { display: flex; align-items: center; gap: 20px; }
-        .station-name { font-size: 16px; font-weight: bold; }
-        .header-info { font-size: 13px; color: #a8c8e8; }
-        .header-right { display: flex; align-items: center; gap: 20px; }
-        
-        .menu-bar { background: #fff; border-bottom: 2px solid #1a4a7a; padding: 0; display: flex; }
-        .menu-item { padding: 8px 18px; cursor: pointer; border-right: 1px solid #eee; font-size: 13px; tabindex: "-1"; onfocus: "this.blur()"; }
-        .menu-item:hover { background: #f0f5fa; }
-        
-        .main-content { padding: 20px; display: flex; justify-content: center; }
-        
-        .shift-panel { background: #fff; border: 1px solid #ddd; border-radius: 4px; width: 520px; overflow: hidden; }
-        .shift-header { background: linear-gradient(180deg, #1a4a7a 0%, #0d3654 100%); color: #fff; padding: 20px; text-align: center; }
-        .shift-header h2 { font-size: 22px; letter-spacing: 4px; margin: 0; }
-        .shift-header .subtitle { font-size: 12px; margin-top: 5px; color: #a8c8e8; }
-        
-        .shift-body { padding: 20px; }
-        
-        .info-section { margin-bottom: 20px; }
-        .info-section-title { font-weight: bold; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #1a4a7a; color: #1a4a7a; }
-        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; }
+        body {
+            font-family: "Consolas", "Microsoft YaHei", monospace;
+            background: #0A1628;
+            color: #E0E0E0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* ===== 标题栏(48px) ===== */
+        .title-bar {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            height: 48px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .title-bar .left-info { display: flex; align-items: center; gap: 20px; }
+        .title-bar .station-name { color: #FFD700; font-size: 16px; font-weight: bold; letter-spacing: 2px; }
+        .title-bar .info-item { color: #B0C4DE; font-size: 13px; }
+        .title-bar .info-item span { color: #FFFFFF; }
+        .title-bar .right-info { display: flex; align-items: center; gap: 20px; }
+        .title-bar .time-display { color: #FFD700; font-size: 15px; }
+        .title-bar .module-title { color: #FFC107; font-size: 14px; }
+        /* ===== 功能菜单栏(36px) ===== */
+        .menu-bar {
+            background: #0D1B2A;
+            border-bottom: 2px solid #3A5A7C;
+            height: 36px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .menu-item {
+            padding: 0 18px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: #B0C4DE;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            border-right: 1px solid #2A4A6C;
+            transition: all 0.1s;
+        }
+        .menu-item:first-child { border-left: 1px solid #2A4A6C; }
+        .menu-item:hover, .menu-item.active { background: #1B3A5C; color: #FFD700; }
+        .menu-item .key { color: #FFD700; margin-right: 5px; }
+        /* ===== 主内容区 ===== */
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            padding: 30px 20px;
+        }
+        .close-panel {
+            background: #0D1B2A;
+            border: 3px solid #3A5A7C;
+            width: 100%;
+            max-width: 550px;
+        }
+        .panel-header {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        .panel-header h1 {
+            color: #FFD700;
+            font-size: 18px;
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+        }
+        .panel-header .subtitle {
+            color: #B0C4DE;
+            font-size: 12px;
+        }
+        .panel-body {
+            padding: 20px;
+        }
+        /* 信息区块 */
+        .info-section {
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: #FFD700;
+            font-size: 13px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #3A5A7C;
+            margin-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #1B3A5C;
+            font-size: 13px;
+        }
         .info-row:last-child { border-bottom: none; }
-        .info-label { color: #666; }
-        .info-value { font-weight: bold; color: #333; }
-        
-        .stats-section { background: #f8f9fa; padding: 15px; border-radius: 3px; margin-bottom: 15px; }
-        .stats-row { display: flex; justify-content: space-between; padding: 8px 0; }
-        .stats-row.highlight { font-size: 16px; font-weight: bold; color: #1a4a7a; padding-top: 12px; border-top: 1px solid #ddd; margin-top: 5px; }
-        .stats-value { font-weight: bold; }
-        .stats-value.money { color: #28a745; font-size: 16px; }
-        .stats-value.money.negative { color: #dc3545; }
-        
-        .ticket-breakdown { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ddd; }
-        .breakdown-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #666; }
-        
-        .next-shift { background: #fff3cd; padding: 12px; border-radius: 3px; margin-bottom: 15px; text-align: center; color: #856404; }
-        .next-shift i { margin-right: 5px; }
-        
-        .btn-group { display: flex; gap: 15px; justify-content: center; }
-        .btn { padding: 12px 40px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; font-size: 16px; background: #fff; letter-spacing: 2px; }
-        .btn.primary { background: #1a4a7a; color: #fff; border-color: #1a4a7a; }
-        .btn.danger { background: #dc3545; color: #fff; border-color: #dc3545; }
-        .btn:hover { opacity: 0.9; }
-        
-        .status-bar { background: #f5f5f5; border-top: 2px solid #1a4a7a; padding: 8px 15px; display: flex; justify-content: space-between; }
-        
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .info-label { color: #B0C4DE; }
+        .info-value { color: #FFFFFF; font-weight: bold; }
+        .info-value.highlight { color: #FFD700; }
+        /* 统计数据 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            padding: 15px 10px;
+            text-align: center;
+        }
+        .stat-box .stat-value {
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-box .stat-label {
+            color: #6B8299;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        .stat-box.highlight {
+            border-color: #B8860B;
+        }
+        .stat-box.highlight .stat-value { color: #FFC107; }
+        .stat-box.negative .stat-value { color: #FF4444; }
+        /* 明细列表 */
+        .detail-list {
+            background: #0A1628;
+            border: 1px solid #3A5A7C;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 12px;
+            border-bottom: 1px solid #1B3A5C;
+        }
+        .detail-item:last-child { border-bottom: none; }
+        .detail-item .label { color: #6B8299; }
+        .detail-item .value { color: #FFFFFF; }
+        /* 实收汇总 */
+        .summary-box {
+            background: #0A1628;
+            border: 2px solid #B8860B;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        .summary-row.total {
+            border-top: 2px solid #3A5A7C;
+            margin-top: 10px;
+            padding-top: 15px;
+        }
+        .summary-row .label { color: #B0C4DE; }
+        .summary-row .value { color: #FFFFFF; font-weight: bold; }
+        .summary-row.total .value {
+            color: #4CAF50;
+            font-size: 28px;
+        }
+        /* 操作按钮 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+            border: 2px solid #3A5A7C;
+            background: #1B3A5C;
+            color: #FFFFFF;
+            letter-spacing: 2px;
+            transition: all 0.15s;
+        }
+        .action-btn:hover { border-color: #FFD700; color: #FFD700; }
+        .action-btn.primary {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            color: #FFFFFF;
+        }
+        .action-btn.primary:hover { background: #3D9140; }
+        .action-btn.cancel {
+            background: transparent;
+            border-color: #3A5A7C;
+            color: #B0C4DE;
+        }
+        .action-btn.cancel:hover { border-color: #FF4444; color: #FF4444; }
+        /* ===== 操作区(60px) ===== */
+        .action-bar {
+            background: #1B3A5C;
+            border-top: 2px solid #3A5A7C;
+            height: 60px;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+        .action-bar .action-btn {
+            padding: 10px 30px;
+            font-size: 14px;
+        }
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
         .modal-overlay.show { display: flex; }
-        .modal-content { background: #fff; border-radius: 4px; padding: 20px; min-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); text-align: center; }
-        .modal-header { background: #1a4a7a; color: #fff; padding: 10px 15px; margin: -20px -20px 15px -20px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h4 { margin: 0; font-size: 16px; }
-        .modal-close { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
-        
-        .success-icon { font-size: 60px; color: #28a745; margin-bottom: 15px; }
-        .success-message { font-size: 18px; margin-bottom: 10px; }
-        
-        .confirm-summary { background: #f8f9fa; padding: 15px; border-radius: 3px; margin: 15px 0; text-align: left; }
-        .confirm-row { display: flex; justify-content: space-between; padding: 6px 0; }
-        .confirm-row.highlight { font-size: 18px; color: #1a4a7a; font-weight: bold; padding-top: 10px; border-top: 1px solid #ddd; margin-top: 5px; }
+        .modal-box {
+            background: #0D1B2A;
+            border: 3px solid #3A5A7C;
+            width: 450px;
+        }
+        .modal-header {
+            background: #1B3A5C;
+            border-bottom: 2px solid #3A5A7C;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { color: #FFD700; font-size: 15px; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #B0C4DE;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: #FF4444; }
+        .modal-body { padding: 20px; }
+        /* 确认汇总 */
+        .confirm-summary {
+            background: #0A1628;
+            border: 2px solid #3A5A7C;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .confirm-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+        .confirm-row .label { color: #B0C4DE; }
+        .confirm-row .value { color: #FFFFFF; font-weight: bold; }
+        .confirm-row.highlight {
+            border-top: 2px solid #3A5A7C;
+            margin-top: 10px;
+            padding-top: 15px;
+        }
+        .confirm-row.highlight .value { color: #4CAF50; font-size: 24px; }
+        /* 提示信息 */
+        .notice-box {
+            background: #2A2A1A;
+            border: 1px solid #FFC107;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #FFC107;
+        }
+        /* 成功状态 */
+        .success-modal .modal-box { border-color: #4CAF50; }
+        .success-modal .modal-header { background: #1B3A5C; border-color: #4CAF50; }
+        .success-modal h3 { color: #4CAF50 !important; }
     </style>
 </head>
 <body>
-    <div class="header-bar">
-        <div class="header-left">
-            <span class="station-name">{{ station_name }}</span>
-            <span class="header-info">{{ window_no }} {{ shift_name }}</span>
+    <!-- 标题栏 -->
+    <div class="title-bar">
+        <div class="left-info">
+            <div class="station-name">{{ session.get('station_name', '北京') }}</div>
+            <div class="info-item">窗口:<span>{{ session.get('window_no', '101号口') }}</span></div>
+            <div class="info-item">工号:<span>{{ session.get('employee_no', 'N/A') }}</span></div>
         </div>
-        <div class="header-center">
-            <span style="color:#ffcc00;">交班结账</span>
-        </div>
-        <div class="header-right">
-            <span id="currentTime">{{ current_time }}</span>
+        <div class="module-title">[ 交 班 结 账 ]</div>
+        <div class="right-info">
+            <div class="time-display" id="current-time">00:00:00</div>
         </div>
     </div>
     
+    <!-- 功能菜单栏 -->
     <div class="menu-bar">
-        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goMain()">售票<span class="shortcut">[G]</span></div>
-        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goRefund()">退票[R]</div>
-        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goSupplement()">到达补票</div>
-        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goQuery()">余票查询</div>
-        <div class="menu-item" tabindex="-1" onblur="this.blur()" onclick="goShift()">交班[X]</div>
+        <a href="{{ url_for('main') }}" class="menu-item"><span class="key">H</span>首页</a>
+        <a href="{{ url_for('sell') }}" class="menu-item"><span class="key">G</span>售票</a>
+        <a href="{{ url_for('refund') }}" class="menu-item"><span class="key">T</span>退票</a>
+        <a href="{{ url_for('query') }}" class="menu-item"><span class="key">I</span>查询</a>
+        <a href="{{ url_for('close_shift') }}" class="menu-item active"><span class="key">X</span>交班</a>
     </div>
     
+    <!-- 主内容区 -->
     <div class="main-content">
-        <div class="shift-panel">
-            <div class="shift-header">
-                <h2>交 班 记 录</h2>
-                <div class="subtitle">{{ station_name }} {{ window_no }}</div>
+        <div class="close-panel">
+            <div class="panel-header">
+                <h1>交 班 记 录</h1>
+                <div class="subtitle">{{ session.get('station_name', '北京') }} {{ session.get('window_no', '101号口') }}</div>
             </div>
             
-            <div class="shift-body">
-                <!-- 基本信息 -->
+            <div class="panel-body">
+                <!-- 班次信息 -->
                 <div class="info-section">
-                    <div class="info-section-title">班次信息</div>
+                    <div class="section-title">班次信息</div>
                     <div class="info-row">
                         <span class="info-label">工号:</span>
-                        <span class="info-value" id="employeeNo">{{ session.get('employee_no', '') }}</span>
+                        <span class="info-value">{{ session.get('employee_no', 'N/A') }}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">姓名:</span>
-                        <span class="info-value" id="userName">{{ session.get('user_name', '') }}</span>
+                        <span class="info-value">{{ session.get('user_name', 'N/A') }}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">班次:</span>
-                        <span class="info-value" id="shiftType"></span>
+                        <span class="info-label">班次类型:</span>
+                        <span class="info-value highlight">{{ session.get('shift_name', '白班') }}</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">上班时间:</span>
-                        <span class="info-value" id="startTime"></span>
+                        <span class="info-value" id="start-time">--:--:--</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">下班时间:</span>
-                        <span class="info-value" id="endTime"></span>
+                        <span class="info-value" id="end-time">--:--:--</span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">工作时长:</span>
-                        <span class="info-value" id="workDuration"></span>
+                        <span class="info-value" id="work-duration">--小时--分</span>
                     </div>
                 </div>
                 
-                <!-- 统计信息 -->
-                <div class="stats-section">
-                    <div class="info-section-title">本班售票统计</div>
-                    <div class="stats-row">
-                        <span>售票张数:</span>
-                        <span class="stats-value" id="ticketCount">0 张</span>
+                <!-- 统计数据 -->
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-tickets">0</div>
+                        <div class="stat-label">售票张数</div>
                     </div>
-                    <div class="stats-row">
-                        <span>退票张数:</span>
-                        <span class="stats-value" id="refundCount">0 张</span>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-refunds">0</div>
+                        <div class="stat-label">退票张数</div>
                     </div>
-                    <div class="stats-row">
-                        <span>补票张数:</span>
-                        <span class="stats-value" id="supplementCount">0 张</span>
-                    </div>
-                    
-                    <div class="ticket-breakdown" id="ticketBreakdown">
-                        <!-- 动态内容 -->
-                    </div>
-                    
-                    <div style="height:1px; background:#ddd; margin:10px 0;"></div>
-                    
-                    <div class="stats-row">
-                        <span>票房收入:</span>
-                        <span class="stats-value money" id="revenue">¥0.00</span>
-                    </div>
-                    <div class="stats-row">
-                        <span>退票退款:</span>
-                        <span class="stats-value money negative" id="refundAmount">-¥0.00</span>
-                    </div>
-                    <div class="stats-row">
-                        <span>补票收入:</span>
-                        <span class="stats-value money" id="supplementAmount">¥0.00</span>
-                    </div>
-                    
-                    <div class="stats-row highlight">
-                        <span>实收金额:</span>
-                        <span class="stats-value money" id="actualAmount">¥0.00</span>
+                    <div class="stat-box highlight">
+                        <div class="stat-value" id="stat-revenue">0.00</div>
+                        <div class="stat-label">票房收入(元)</div>
                     </div>
                 </div>
                 
-                <div class="next-shift" id="nextShiftInfo">
-                    <i class="fas fa-clock"></i>
-                    下一班次提醒: <span id="nextShiftText"></span>
+                <!-- 席别明细 -->
+                <div class="detail-list">
+                    <div class="section-title" style="margin:-10px -15px 10px -15px;padding:8px 15px;">席别售票明细</div>
+                    <div class="detail-item">
+                        <span class="label">二等座:</span>
+                        <span class="value" id="detail-second">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">一等座:</span>
+                        <span class="value" id="detail-first">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">商务座:</span>
+                        <span class="value" id="detail-business">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">硬座:</span>
+                        <span class="value" id="detail-hard-seat">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">软座:</span>
+                        <span class="value" id="detail-soft-seat">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">硬卧:</span>
+                        <span class="value" id="detail-hard-sleeper">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">软卧:</span>
+                        <span class="value" id="detail-soft-sleeper">0张 / 0.00元</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">其他:</span>
+                        <span class="value" id="detail-other">0张 / 0.00元</span>
+                    </div>
                 </div>
                 
-                <div class="btn-group">
-                    <button class="btn primary" onclick="confirmShiftClose()">确认交班[N]</button>
-                    <button class="btn" onclick="goMain()">取消[C]</button>
+                <!-- 收支汇总 -->
+                <div class="summary-box">
+                    <div class="summary-row">
+                        <span class="label">票房收入:</span>
+                        <span class="value" id="sum-revenue">¥0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">退票退款:</span>
+                        <span class="value negative" id="sum-refund">-¥0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span class="label">实收金额:</span>
+                        <span class="value" id="sum-actual">¥0.00</span>
+                    </div>
+                </div>
+                
+                <!-- 提示信息 -->
+                <div class="notice-box">
+                    ⚠️ 确认交班后本班次售票数据将锁定，请确保已清点现金并核对账目
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="showConfirmModal()">[N]确认交班</button>
+                    <button class="action-btn cancel" onclick="goMain()">[C]取消</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="status-bar">
-        <span>确认交班[N] 取消[C]</span>
-        <span>快捷键: Alt+G-售票 Alt+X-交班</span>
+    <!-- 操作区 -->
+    <div class="action-bar">
+        <span style="color:#B0C4DE;font-size:12px;">快捷键: N=确认交班 C=取消返回</span>
     </div>
     
-    <!-- 确认弹窗 -->
-    <div class="modal-overlay" id="confirmModal">
-        <div class="modal-content">
+    <!-- 确认交班模态框 -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-box">
             <div class="modal-header">
-                <h4>确认交班</h4>
-                <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+                <h3>[ 确 认 交 班 ]</h3>
+                <button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button>
             </div>
-            <div style="padding:10px 0;">
-                <p style="text-align:center; margin-bottom:15px; color:#666;">确定要进行交班操作吗？</p>
+            <div class="modal-body">
                 <div class="confirm-summary">
                     <div class="confirm-row">
-                        <span>售票张数:</span>
-                        <span id="c_ticketCount">0 张</span>
+                        <span class="label">售票张数:</span>
+                        <span class="value" id="confirm-tickets">0张</span>
                     </div>
                     <div class="confirm-row">
-                        <span>退票张数:</span>
-                        <span id="c_refundCount">0 张</span>
+                        <span class="label">退票张数:</span>
+                        <span class="value" id="confirm-refunds">0张</span>
+                    </div>
+                    <div class="confirm-row">
+                        <span class="label">票房收入:</span>
+                        <span class="value" id="confirm-revenue">¥0.00</span>
+                    </div>
+                    <div class="confirm-row">
+                        <span class="label">退票退款:</span>
+                        <span class="value" id="confirm-refund">¥0.00</span>
                     </div>
                     <div class="confirm-row highlight">
-                        <span>实收金额:</span>
-                        <span id="c_actualAmount">¥0.00</span>
+                        <span class="label">实收金额:</span>
+                        <span class="value" id="confirm-actual">¥0.00</span>
                     </div>
                 </div>
-                <div class="btn-group" style="margin-top:15px;">
-                    <button class="btn primary" onclick="processShiftClose()">确认[Enter]</button>
-                    <button class="btn" onclick="closeModal('confirmModal')">取消[Esc]</button>
+                
+                <div class="notice-box" style="margin-bottom:15px;">
+                    请再次确认以上数据无误，确认后不可修改
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn cancel" onclick="closeModal('confirm-modal')">[E]取消</button>
+                    <button class="action-btn primary" onclick="confirmShiftClose()">[Enter]确认交班</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- 成功弹窗 -->
-    <div class="modal-overlay" id="successModal">
-        <div class="modal-content" style="text-align:center;">
-            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-            <div class="success-message">交班成功</div>
-            <p style="color:#666; margin:10px 0;">请将当班收入交给下一班或结账</p>
-            <div style="margin:20px 0;">
-                <button class="btn primary" onclick="goLogin()">返回登录</button>
+    <!-- 交班成功模态框 -->
+    <div class="modal-overlay success-modal" id="success-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>[ 交 班 成 功 ]</h3>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <div style="color:#4CAF50;font-size:48px;margin-bottom:20px;">√</div>
+                <div style="color:#FFD700;font-size:24px;margin-bottom:15px;">交班成功!</div>
+                <div style="color:#B0C4DE;margin-bottom:10px;">班次 {{ session.get('shift_name', '') }} 已结束</div>
+                <div style="color:#B0C4DE;">请通知下一班次售票员交接</div>
+                <div style="margin-top:25px;">
+                    <button class="action-btn primary" onclick="goShiftSelect()" style="width:100%;">[返回选择班次]</button>
+                </div>
             </div>
         </div>
     </div>
-
+    
     <script>
-        let shiftData = null;
+        // 全局数据
+        let shiftData = {
+            ticket_count: 0,
+            refund_count: 0,
+            revenue: 0,
+            refund_amount: 0,
+            actual_amount: 0,
+            start_time: null,
+            details: {}
+        };
         
-        document.addEventListener('DOMContentLoaded', function() {
-            updateTime();
-            setInterval(updateTime, 1000);
-            loadShiftSummary();
-        });
-        
+        // 更新时间
         function updateTime() {
             const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                String(now.getHours()).padStart(2, '0') + ':' + 
-                String(now.getMinutes()).padStart(2, '0') + ':' + 
-                String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('zh-CN', {hour12: false});
+            document.getElementById('end-time').textContent = now.toLocaleTimeString('zh-CN', {hour12: false});
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // 计算工作时长
+        function calculateDuration(startTime) {
+            if (!startTime) return '--';
+            const start = new Date(startTime);
+            const now = new Date();
+            const diffMs = now - start;
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            return hours + '小时' + minutes + '分';
         }
         
-        async function loadShiftSummary() {
-            try {
-                const response = await fetch('/api/shift/summary');
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-                
-                shiftData = data;
-                
-                // 基本信息
-                document.getElementById('shiftType').textContent = data.shift_name;
-                
-                const startTime = new Date(data.start_time);
-                const endTime = new Date();
-                
-                document.getElementById('startTime').textContent = 
-                    startTime.toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
-                document.getElementById('endTime').textContent = 
-                    endTime.toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
-                
-                // 计算工作时长
-                const durationMs = endTime - startTime;
-                const hours = Math.floor(durationMs / 3600000);
-                const minutes = Math.floor((durationMs % 3600000) / 60000);
-                document.getElementById('workDuration').textContent = hours + '小时' + minutes + '分钟';
-                
-                // 统计
-                document.getElementById('ticketCount').textContent = data.ticket_count + ' 张';
-                document.getElementById('refundCount').textContent = data.refund_count + ' 张';
-                document.getElementById('supplementCount').textContent = (data.supplement_count || 0) + ' 张';
-                
-                document.getElementById('revenue').textContent = '¥' + data.revenue.toFixed(2);
-                document.getElementById('refundAmount').textContent = '-¥' + data.refund_amount.toFixed(2);
-                document.getElementById('supplementAmount').textContent = '¥' + (data.supplement_amount || 0).toFixed(2);
-                
-                const actualAmount = data.actual_amount;
-                document.getElementById('actualAmount').textContent = '¥' + actualAmount.toFixed(2);
-                
-                // 更新确认弹窗
-                document.getElementById('c_ticketCount').textContent = data.ticket_count + ' 张';
-                document.getElementById('c_refundCount').textContent = data.refund_count + ' 张';
-                document.getElementById('c_actualAmount').textContent = '¥' + actualAmount.toFixed(2);
-                
-                // 下一班次提醒
-                const nextShiftType = data.shift_type === 'day' ? '夜班' : '白班';
-                const nextTime = data.shift_type === 'day' ? '12:00' : '00:00';
-                document.getElementById('nextShiftText').textContent = nextShiftType + ' ' + nextTime + ' 开始';
-                
-            } catch (e) {
-                alert('加载班次信息失败: ' + e.message);
-            }
+        // 加载班次数据
+        function loadShiftData() {
+            fetch('/api/shift-stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        shiftData = data.data;
+                        
+                        document.getElementById('stat-tickets').textContent = shiftData.ticket_count || 0;
+                        document.getElementById('stat-refunds').textContent = shiftData.refund_count || 0;
+                        document.getElementById('stat-revenue').textContent = (shiftData.revenue || 0).toFixed(2);
+                        
+                        document.getElementById('sum-revenue').textContent = '¥' + (shiftData.revenue || 0).toFixed(2);
+                        document.getElementById('sum-refund').textContent = '-¥' + (shiftData.refund_amount || 0).toFixed(2);
+                        document.getElementById('sum-actual').textContent = '¥' + (shiftData.actual_amount || 0).toFixed(2);
+                        
+                        document.getElementById('start-time').textContent = shiftData.start_time ? new Date(shiftData.start_time).toLocaleString('zh-CN', {hour12: false}) : '--';
+                        document.getElementById('work-duration').textContent = calculateDuration(shiftData.start_time);
+                        
+                        // 席别明细
+                        const details = shiftData.details || {};
+                        document.getElementById('detail-second').textContent = (details.second_count || 0) + '张 / ¥' + (details.second_amount || 0).toFixed(2);
+                        document.getElementById('detail-first').textContent = (details.first_count || 0) + '张 / ¥' + (details.first_amount || 0).toFixed(2);
+                        document.getElementById('detail-business').textContent = (details.business_count || 0) + '张 / ¥' + (details.business_amount || 0).toFixed(2);
+                        document.getElementById('detail-hard-seat').textContent = (details.hard_seat_count || 0) + '张 / ¥' + (details.hard_seat_amount || 0).toFixed(2);
+                        document.getElementById('detail-soft-seat').textContent = (details.soft_seat_count || 0) + '张 / ¥' + (details.soft_seat_amount || 0).toFixed(2);
+                        document.getElementById('detail-hard-sleeper').textContent = (details.hard_sleeper_count || 0) + '张 / ¥' + (details.hard_sleeper_amount || 0).toFixed(2);
+                        document.getElementById('detail-soft-sleeper').textContent = (details.soft_sleeper_count || 0) + '张 / ¥' + (details.soft_sleeper_amount || 0).toFixed(2);
+                        document.getElementById('detail-other').textContent = (details.other_count || 0) + '张 / ¥' + (details.other_amount || 0).toFixed(2);
+                    }
+                })
+                .catch(() => {});
         }
         
-        function confirmShiftClose() {
-            if (!shiftData) return;
-            
-            // 显示确认弹窗
-            openModal('confirmModal');
+        loadShiftData();
+        setInterval(loadShiftData, 10000);
+        
+        // 显示确认模态框
+        function showConfirmModal() {
+            document.getElementById('confirm-tickets').textContent = (shiftData.ticket_count || 0) + '张';
+            document.getElementById('confirm-refunds').textContent = (shiftData.refund_count || 0) + '张';
+            document.getElementById('confirm-revenue').textContent = '¥' + (shiftData.revenue || 0).toFixed(2);
+            document.getElementById('confirm-refund').textContent = '¥' + (shiftData.refund_amount || 0).toFixed(2);
+            document.getElementById('confirm-actual').textContent = '¥' + (shiftData.actual_amount || 0).toFixed(2);
+            document.getElementById('confirm-modal').classList.add('show');
         }
         
-        async function processShiftClose() {
-            try {
-                const response = await fetch('/api/shift/close', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    closeModal('confirmModal');
-                    openModal('successModal');
-                } else {
-                    alert('交班失败: ' + data.error);
-                }
-                
-            } catch (e) {
-                alert('交班失败: ' + e.message);
-            }
-        }
-        
-        function openModal(id) {
-            document.getElementById(id).classList.add('show');
-        }
-        
+        // 关闭模态框
         function closeModal(id) {
             document.getElementById(id).classList.remove('show');
         }
         
-        function goLogin() {
-            window.location.href = '/login';
+        // 确认交班
+        function confirmShiftClose() {
+            fetch('{{ url_for("close_shift") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: ''
+            })
+            .then(r => {
+                if (r.redirected) {
+                    closeModal('confirm-modal');
+                    document.getElementById('success-modal').classList.add('show');
+                } else {
+                    return r.json();
+                }
+            })
+            .then(data => {
+                if (data) {
+                    if (data.status === 'success') {
+                        closeModal('confirm-modal');
+                        document.getElementById('success-modal').classList.add('show');
+                    } else {
+                        alert('交班失败: ' + data.message);
+                    }
+                }
+            })
+            .catch(err => {
+                // 如果是重定向，直接显示成功
+                closeModal('confirm-modal');
+                document.getElementById('success-modal').classList.add('show');
+            });
         }
         
         // 导航
-        function goMain() { window.location.href = '/'; }
-        function goRefund() { window.location.href = '/refund'; }
-        function goSupplement() { window.location.href = '/supplement'; }
-        function goQuery() { window.location.href = '/query'; }
-        function goShift() { window.location.href = '/shift'; }
+        function goMain() {
+            location.href = '{{ url_for("main") }}';
+        }
         
-        // 键盘事件
+        function goShiftSelect() {
+            location.href = '{{ url_for("shift_select") }}';
+        }
+        
+        // 键盘快捷键
         document.addEventListener('keydown', function(e) {
             if (e.altKey) {
                 switch(e.key.toUpperCase()) {
-                    case 'G': e.preventDefault(); goMain(); break;
-                    case 'R': e.preventDefault(); goRefund(); break;
-                    case 'S': e.preventDefault(); goSupplement(); break;
-                    case 'U': e.preventDefault(); goQuery(); break;
-                    case 'X': e.preventDefault(); goShift(); break;
-                }
-            } else if (!e.target.matches('input, select, textarea')) {
-                switch(e.key) {
-                    case 'n': case 'N': e.preventDefault(); confirmShiftClose(); break;
-                    case 'c': case 'C': e.preventDefault(); goMain(); break;
-                    case 'Escape':
-                        e.preventDefault();
-                        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
-                        break;
+                    case 'G': location.href = '{{ url_for("sell") }}'; break;
+                    case 'T': location.href = '{{ url_for("refund") }}'; break;
+                    case 'I': location.href = '{{ url_for("query") }}'; break;
+                    case 'X': location.href = '{{ url_for("close_shift") }}'; break;
+                    case 'H': location.href = '{{ url_for("main") }}'; break;
                 }
             }
             
-            if (e.key === 'Enter' && document.getElementById('confirmModal').classList.contains('show')) {
+            if (e.key === 'n' || e.key === 'N') {
+                if (!document.getElementById('confirm-modal').classList.contains('show') && 
+                    !document.getElementById('success-modal').classList.contains('show')) {
+                    showConfirmModal();
+                }
+            }
+            
+            if ((e.key === 'c' || e.key === 'C') && !e.altKey) {
+                if (document.getElementById('confirm-modal').classList.contains('show')) {
+                    closeModal('confirm-modal');
+                } else {
+                    goMain();
+                }
+            }
+            
+            if (e.key === 'Enter' && document.getElementById('confirm-modal').classList.contains('show')) {
                 e.preventDefault();
-                processShiftClose();
+                confirmShiftClose();
+            }
+            
+            if ((e.key === 'e' || e.key === 'E') && document.getElementById('confirm-modal').classList.contains('show')) {
+                closeModal('confirm-modal');
             }
         });
     </script>
