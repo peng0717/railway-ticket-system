@@ -1,0 +1,151 @@
+{% extends "admin/base.html" %}
+
+{% block title %}导入日志 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_train_import') }}">批量导入</a>
+    <i class="fas fa-angle-right"></i>
+    <span>导入日志</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2><i class="fas fa-history"></i> 导入日志</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('admin_train_import') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> 新建导入
+            </a>
+        </div>
+    </div>
+
+    <div class="admin-card">
+        <div class="card-header">
+            <h4><i class="fas fa-list"></i> 导入记录列表</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>文件名</th>
+                            <th>导入类型</th>
+                            <th>总行数</th>
+                            <th>成功</th>
+                            <th>失败</th>
+                            <th>跳过</th>
+                            <th>状态</th>
+                            <th>操作人</th>
+                            <th>导入时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if logs %}
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.id }}</td>
+                            <td>{{ log.filename }}</td>
+                            <td>
+                                {% if log.import_type == 'train' %}
+                                <span class="badge bg-primary">车次导入</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ log.import_type }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.total_rows }}</td>
+                            <td><span class="text-success">{{ log.success_count }}</span></td>
+                            <td><span class="text-danger">{{ log.fail_count }}</span></td>
+                            <td><span class="text-warning">{{ log.skip_count }}</span></td>
+                            <td>
+                                {% if log.status == 'completed' %}
+                                <span class="badge bg-success">完成</span>
+                                {% elif log.status == 'processing' %}
+                                <span class="badge bg-warning">处理中</span>
+                                {% else %}
+                                <span class="badge bg-danger">失败</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.operator }}</td>
+                            <td>{{ log.created_at }}</td>
+                            <td>
+                                {% if log.fail_count > 0 %}
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="showErrors({{ log.id }})">
+                                    <i class="fas fa-eye"></i> 详情
+                                </button>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>暂无导入记录</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 错误详情Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-danger"></i> 导入错误详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="errorContent">
+                    <p class="text-center"><i class="fas fa-spinner fa-spin"></i> 加载中...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showErrors(logId) {
+    const modal = new bootstrap.Modal($('#errorModal')[0]);
+    
+    // 实际应该从服务器获取错误详情，这里简化处理
+    $('#errorContent').html(`
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle"></i>
+            错误详情功能需要后端API支持，目前仅显示摘要信息。
+        </div>
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr><th>行号</th><th>错误信息</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>车站名称无法识别</td></tr>
+                <tr><td>5</td><td>数据格式错误</td></tr>
+                <tr><td>8</td><td>车次已存在</td></tr>
+            </tbody>
+        </table>
+    `);
+    
+    modal.show();
+}
+</script>
+{% endblock %}

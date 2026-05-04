@@ -1,0 +1,232 @@
+{% extends "admin/base.html" %}
+
+{% block title %}新增车次 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_trains') }}">班列总览</a>
+    <i class="fas fa-angle-right"></i>
+    <span>新增车次</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2><i class="fas fa-plus-circle"></i> 新增车次</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('admin_trains') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" id="trainForm">
+        <!-- 基本信息 -->
+        <div class="admin-card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-info-circle"></i> 基本信息</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">车次号 <span class="text-danger">*</span></label>
+                            <input type="text" name="train_number" class="form-control" placeholder="如: G1" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">车型 <span class="text-danger">*</span></label>
+                            <select name="train_type" class="form-select" required>
+                                <option value="G">高速动车组(G)</option>
+                                <option value="D">动车组(D)</option>
+                                <option value="C">城际动车组(C)</option>
+                                <option value="Z">直达特快(Z)</option>
+                                <option value="T">特快(T)</option>
+                                <option value="K">快速(K)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">始发时间 <span class="text-danger">*</span></label>
+                            <input type="time" name="start_time" class="form-control" value="08:00" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">始发站 <span class="text-danger">*</span></label>
+                            <select name="start_station" id="startStation" class="form-select" required>
+                                <option value="">请选择始发站</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_code }}">{{ station.station_name }} ({{ station.station_code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">终到站 <span class="text-danger">*</span></label>
+                            <select name="end_station" id="endStation" class="form-select" required>
+                                <option value="">请选择终到站</option>
+                                {% for station in stations %}
+                                <option value="{{ station.station_code }}">{{ station.station_name }} ({{ station.station_code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">终到时间 <span class="text-danger">*</span></label>
+                            <input type="time" name="end_time" class="form-control" value="12:00" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 经停站编排 -->
+        <div class="admin-card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-map-marker-alt"></i> 经停站编排</h4>
+                <button type="button" class="btn btn-sm btn-primary" onclick="addStop()">
+                    <i class="fas fa-plus"></i> 添加经停站
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="admin-table" id="stopsTable">
+                        <thead>
+                            <tr>
+                                <th width="60">序号</th>
+                                <th>车站</th>
+                                <th width="100">到时</th>
+                                <th width="100">发时</th>
+                                <th width="100">里程(km)</th>
+                                <th width="80">商务座</th>
+                                <th width="80">一等座</th>
+                                <th width="80">二等座</th>
+                                <th width="80">硬座</th>
+                                <th width="80">软座</th>
+                                <th width="80">硬卧</th>
+                                <th width="80">软卧</th>
+                                <th width="60">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stopsBody">
+                            <!-- 动态添加行 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="text-center mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> 保存车次
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let stopIndex = 0;
+const stations = [
+    {% for station in stations %}
+    { code: '{{ station.station_code }}', name: '{{ station.station_name }}' },
+    {% endfor %}
+];
+
+function addStop() {
+    stopIndex++;
+    const tbody = document.getElementById('stopsBody');
+    const tr = document.createElement('tr');
+    tr.id = 'stop_' + stopIndex;
+    tr.innerHTML = `
+        <td><input type="number" name="stop_sequence[]" class="form-control form-control-sm" value="${stopIndex + 1}" min="1"></td>
+        <td>
+            <select name="stop_station[]" class="form-select form-select-sm station-select" required onchange="updateStationName(${stopIndex}, this)">
+                <option value="">选择车站</option>
+                {% for station in stations %}
+                <option value="{{ station.station_code }}">{{ station.station_name }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input type="time" name="arrival_time[]" class="form-control form-control-sm"></td>
+        <td><input type="time" name="departure_time[]" class="form-control form-control-sm"></td>
+        <td><input type="number" name="distance[]" class="form-control form-control-sm" placeholder="里程" min="0"></td>
+        <td><input type="number" name="seat_business_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td><input type="number" name="seat_first_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td><input type="number" name="seat_second_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td><input type="number" name="seat_hard_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td><input type="number" name="seat_soft_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td><input type="number" name="seat_hard_sleeper_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td><input type="number" name="seat_soft_sleeper_${stopIndex}" class="form-control form-control-sm" value="0" min="0"></td>
+        <td>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeStop(${stopIndex})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function removeStop(index) {
+    $('#stop_' + index).remove();
+    renumberStops();
+}
+
+function renumberStops() {
+    $('#stopsBody tr').each(function(i) {
+        $(this).find('input[name="stop_sequence[]"]').val(i + 1);
+    });
+}
+
+function updateStationName(index, select) {
+    // 站点选择后的处理
+}
+
+// 添加默认经停站（始发站）
+$(function() {
+    addStop();
+    addStop();
+});
+
+$('#trainForm').on('submit', function(e) {
+    // 检查是否选择了始发站和终到站
+    const startStation = $('#startStation').val();
+    const endStation = $('#endStation').val();
+    
+    if (!startStation || !endStation) {
+        e.preventDefault();
+        alert('请选择始发站和终到站');
+        return;
+    }
+    
+    if (startStation === endStation) {
+        e.preventDefault();
+        alert('始发站和终到站不能相同');
+        return;
+    }
+    
+    // 检查席别数据
+    let hasSeats = false;
+    $('#stopsBody tr').each(function() {
+        $(this).find('input[type="number"]').each(function() {
+            if (parseInt($(this).val()) > 0) {
+                hasSeats = true;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

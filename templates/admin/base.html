@@ -104,6 +104,38 @@
                     </a>
                 </li>
                 
+                <li class="sidebar-header">班列管理</li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_trains' %}active{% endif %}">
+                    <a href="{{ url_for('admin_trains') }}">
+                        <i class="fas fa-train"></i>
+                        <span>班列总览</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_train_add' %}active{% endif %}">
+                    <a href="{{ url_for('admin_train_add') }}">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>新增车次</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_train_import' %}active{% endif %}">
+                    <a href="{{ url_for('admin_train_import') }}">
+                        <i class="fas fa-file-import"></i>
+                        <span>批量导入</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_train_sync' %}active{% endif %}">
+                    <a href="{{ url_for('admin_train_sync') }}">
+                        <i class="fas fa-sync"></i>
+                        <span>数据同步</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {% if request.endpoint == 'admin_import_logs' %}active{% endif %}">
+                    <a href="{{ url_for('admin_import_logs') }}">
+                        <i class="fas fa-history"></i>
+                        <span>导入日志</span>
+                    </a>
+                </li>
+                
                 <li class="sidebar-header">日志审计</li>
                 <li class="sidebar-item {% if request.endpoint == 'admin_logs' %}active{% endif %}">
                     <a href="{{ url_for('admin_logs') }}">

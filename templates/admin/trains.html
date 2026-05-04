@@ -1,0 +1,377 @@
+{% extends "admin/base.html" %}
+
+{% block title %}班列总览 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <span>班列总览</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2><i class="fas fa-train"></i> 全国开行班列总览</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('admin_train_add') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> 新增车次
+            </a>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="fas fa-train"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ total_trains }}</h3>
+                    <p>全部车次</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="fas fa-play"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ active_trains }}</h3>
+                    <p>开行车次</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-info">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ type_stats.get('G', 0) + type_stats.get('D', 0) }}</h3>
+                    <p>高铁/动车</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="fas fa-train-subway"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ type_stats.get('Z', 0) + type_stats.get('T', 0) + type_stats.get('K', 0) }}</h3>
+                    <p>普速列车</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 车型统计 -->
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-chart-pie"></i> 车型分布</h4>
+        </div>
+        <div class="card-body">
+            <div class="type-stats">
+                {% for type_name, type_code in [('高速动车组(G)', 'G'), ('城际动车组(C)', 'C'), ('动车组(D)', 'D'), ('直达特快(Z)', 'Z'), ('特快(T)', 'T'), ('快速(K)', 'K')] %}
+                <div class="type-item">
+                    <span class="type-badge type-{{ type_code|lower }}">{{ type_code }}</span>
+                    <span class="type-name">{{ type_name }}</span>
+                    <span class="type-count">{{ type_stats.get(type_code, 0) }} 列</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索筛选 -->
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-search"></i> 车次查询</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="输入车次号、始发站、终到站搜索">
+                </div>
+                <div class="col-md-3">
+                    <select id="typeFilter" class="form-select">
+                        <option value="">全部车型</option>
+                        <option value="G">高速动车组(G)</option>
+                        <option value="D">动车组(D)</option>
+                        <option value="C">城际动车组(C)</option>
+                        <option value="Z">直达特快(Z)</option>
+                        <option value="T">特快(T)</option>
+                        <option value="K">快速(K)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">全部状态</option>
+                        <option value="active">开行中</option>
+                        <option value="running">运行中</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-primary w-100" onclick="loadTrains(1)">
+                        <i class="fas fa-search"></i> 查询
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 车次列表 -->
+    <div class="admin-card">
+        <div class="card-header">
+            <h4><i class="fas fa-list"></i> 车次列表</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>车次</th>
+                            <th>类型</th>
+                            <th>始发站</th>
+                            <th>终到站</th>
+                            <th>发车时间</th>
+                            <th>到达时间</th>
+                            <th>里程(km)</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trainTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-spinner fa-spin"></i> 加载中...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="pagination-wrapper" id="paginationWrapper">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.type-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.type-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.type-badge {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    color: white;
+}
+.type-g { background: #007bff; }
+.type-d { background: #28a745; }
+.type-c { background: #17a2b8; }
+.type-z { background: #ffc107; color: #333; }
+.type-t { background: #fd7e14; }
+.type-k { background: #6c757d; }
+.type-name {
+    font-size: 14px;
+    color: #666;
+}
+.type-count {
+    font-weight: bold;
+    color: #333;
+}
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+}
+.bg-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.bg-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.bg-info { background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%); }
+.bg-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.stat-info h3 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: bold;
+}
+.stat-info p {
+    margin: 0;
+    color: #888;
+    font-size: 14px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+
+function loadTrains(page) {
+    currentPage = page;
+    const search = $('#searchInput').val();
+    const type = $('#typeFilter').val();
+    const status = $('#statusFilter').val();
+    
+    $.get('/admin/api/trains', {
+        page: page,
+        per_page: 20,
+        search: search,
+        type: type,
+        status: status
+    }, function(res) {
+        if (res.status === 'success') {
+            renderTable(res.data);
+            renderPagination(res);
+        }
+    });
+}
+
+function renderTable(trains) {
+    const tbody = $('#trainTableBody');
+    if (trains.length === 0) {
+        tbody.html('<tr><td colspan="9" class="text-center text-muted py-4">暂无数据</td></tr>');
+        return;
+    }
+    
+    let html = '';
+    trains.forEach(function(train) {
+        const typeClass = 'type-' + train.train_type.toLowerCase();
+        const statusClass = train.status === 'active' ? 'status-active' : 'status-stopped';
+        const statusText = train.status === 'active' ? '开行中' : '已停运';
+        
+        html += `
+        <tr>
+            <td><span class="train-number ${typeClass}">${train.train_number}</span></td>
+            <td><span class="train-type">${getTrainTypeName(train.train_type)}</span></td>
+            <td>${train.start_name || train.start_station}</td>
+            <td>${train.end_name || train.end_station}</td>
+            <td>${train.start_time || '-'}</td>
+            <td>${train.end_time || '-'}</td>
+            <td>${train.total_distance || 0}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <a href="/admin/trains/${train.train_id}" class="btn btn-outline-primary" title="查看详情">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="/admin/trains/${train.train_id}/seats" class="btn btn-outline-success" title="票额管理">
+                        <i class="fas fa-ticket-alt"></i>
+                    </a>
+                    <button class="btn btn-outline-warning" onclick="toggleStatus(${train.train_id})" title="停运/恢复">
+                        <i class="fas fa-power-off"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        `;
+    });
+    tbody.html(html);
+}
+
+function renderPagination(res) {
+    const wrapper = $('#paginationWrapper');
+    if (res.total_pages <= 1) {
+        wrapper.html('');
+        return;
+    }
+    
+    let html = '<nav><ul class="pagination justify-content-center">';
+    
+    // 上一页
+    html += `<li class="page-item ${res.page <= 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadTrains(${res.page - 1}); return false;">上一页</a>
+    </li>`;
+    
+    // 页码
+    for (let i = 1; i <= res.total_pages; i++) {
+        if (i === 1 || i === res.total_pages || (i >= res.page - 2 && i <= res.page + 2)) {
+            html += `<li class="page-item ${i === res.page ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="loadTrains(${i}); return false;">${i}</a>
+            </li>`;
+        } else if (i === res.page - 3 || i === res.page + 3) {
+            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+    }
+    
+    // 下一页
+    html += `<li class="page-item ${res.page >= res.total_pages ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadTrains(${res.page + 1}); return false;">下一页</a>
+    </li></ul></nav>`;
+    
+    wrapper.html(html);
+}
+
+function toggleStatus(trainId) {
+    if (!confirm('确认要切换该车次的运行状态吗？')) return;
+    
+    $.post(`/admin/trains/${trainId}/toggle-status`, function(res) {
+        if (res.status === 'success') {
+            showToast(res.message, 'success');
+            loadTrains(currentPage);
+        } else {
+            showToast(res.message || '操作失败', 'danger');
+        }
+    });
+}
+
+function getTrainTypeName(type) {
+    const types = {
+        'G': '高速动车组',
+        'D': '动车组',
+        'C': '城际动车组',
+        'Z': '直达特快',
+        'T': '特快',
+        'K': '快速'
+    };
+    return types[type] || type;
+}
+
+$(function() {
+    loadTrains(1);
+    
+    // 回车搜索
+    $('#searchInput').on('keypress', function(e) {
+        if (e.which === 13) {
+            loadTrains(1);
+        }
+    });
+});
+</script>
+{% endblock %}

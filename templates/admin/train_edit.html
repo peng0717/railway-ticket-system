@@ -1,0 +1,147 @@
+{% extends "admin/base.html" %}
+
+{% block title %}编辑车次 - {{ train.train_number }} - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_trains') }}">班列总览</a>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_train_detail', train_id=train.train_id) }}">{{ train.train_number }}</a>
+    <i class="fas fa-angle-right"></i>
+    <span>编辑</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2><i class="fas fa-edit"></i> 编辑车次 {{ train.train_number }}</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('admin_train_detail', train_id=train.train_id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" id="editForm">
+        <div class="admin-card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-info-circle"></i> 基本信息</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">车次号 <span class="text-danger">*</span></label>
+                            <input type="text" name="train_number" class="form-control" 
+                                   value="{{ train.train_number }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">车型 <span class="text-danger">*</span></label>
+                            <select name="train_type" class="form-select" required>
+                                <option value="G" {% if train.train_type == 'G' %}selected{% endif %}>高速动车组(G)</option>
+                                <option value="D" {% if train.train_type == 'D' %}selected{% endif %}>动车组(D)</option>
+                                <option value="C" {% if train.train_type == 'C' %}selected{% endif %}>城际动车组(C)</option>
+                                <option value="Z" {% if train.train_type == 'Z' %}selected{% endif %}>直达特快(Z)</option>
+                                <option value="T" {% if train.train_type == 'T' %}selected{% endif %}>特快(T)</option>
+                                <option value="K" {% if train.train_type == 'K' %}selected{% endif %}>快速(K)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">运行状态</label>
+                            <select class="form-select" disabled>
+                                <option>{{ '开行中' if train.status == 'active' else '已停运' }}</option>
+                            </select>
+                            <small class="text-muted">如需更改状态，请在详情页操作</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">始发时间 <span class="text-danger">*</span></label>
+                            <input type="time" name="start_time" class="form-control" 
+                                   value="{{ train.start_time }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">终到时间 <span class="text-danger">*</span></label>
+                            <input type="time" name="end_time" class="form-control" 
+                                   value="{{ train.end_time }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label">总里程</label>
+                            <input type="number" class="form-control" 
+                                   value="{{ train.total_distance }}" disabled>
+                            <small class="text-muted">里程由经停站自动计算</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>注意：</strong>始发站和终到站需要到详情页的经停站编排中修改。
+                </div>
+            </div>
+        </div>
+
+        <!-- 经停站（仅显示，不可编辑） -->
+        <div class="admin-card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-map-marker-alt"></i> 经停站信息</h4>
+                <small class="text-muted">如需修改经停站，请联系系统管理员</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>车站</th>
+                                <th>到时</th>
+                                <th>发时</th>
+                                <th>里程</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stop in stops %}
+                            <tr>
+                                <td>{{ stop.stop_sequence }}</td>
+                                <td>{{ stop.station_name or stop.station_code }}</td>
+                                <td>{{ stop.arrival_time or '-' }}</td>
+                                <td>{{ stop.departure_time or '-' }}</td>
+                                <td>{{ stop.distance_from_start }} km</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> 保存修改
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$('#editForm').on('submit', function() {
+    return confirm('确认保存修改吗？');
+});
+</script>
+{% endblock %}

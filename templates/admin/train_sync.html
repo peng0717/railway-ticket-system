@@ -1,0 +1,285 @@
+{% extends "admin/base.html" %}
+
+{% block title %}数据同步 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <span>数据同步</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2><i class="fas fa-sync"></i> 数据同步管理</h2>
+    </div>
+
+    <!-- 同步状态卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="admin-card">
+                <div class="card-header">
+                    <h4><i class="fas fa-clock"></i> 上次同步状态</h4>
+                </div>
+                <div class="card-body text-center">
+                    {% if last_sync %}
+                    <div class="sync-status-icon mb-3">
+                        {% if last_sync.status == 'completed' %}
+                        <i class="fas fa-check-circle text-success fa-4x"></i>
+                        {% elif last_sync.status == 'running' %}
+                        <i class="fas fa-spinner fa-spin text-primary fa-4x"></i>
+                        {% else %}
+                        <i class="fas fa-times-circle text-danger fa-4x"></i>
+                        {% endif %}
+                    </div>
+                    <h5>
+                        {% if last_sync.status == 'completed' %}
+                        <span class="badge bg-success">同步完成</span>
+                        {% elif last_sync.status == 'running' %}
+                        <span class="badge bg-primary">同步中...</span>
+                        {% else %}
+                        <span class="badge bg-danger">同步失败</span>
+                        {% endif %}
+                    </h5>
+                    <p class="text-muted mt-2 mb-1">
+                        <small>开始时间: {{ last_sync.started_at }}</small>
+                    </p>
+                    {% if last_sync.completed_at %}
+                    <p class="text-muted mb-1">
+                        <small>完成时间: {{ last_sync.completed_at }}</small>
+                    </p>
+                    {% endif %}
+                    <hr>
+                    <div class="row text-start">
+                        <div class="col-4">
+                            <div class="text-muted small">车次</div>
+                            <div class="h5 text-primary">{{ last_sync.train_count or 0 }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">车站</div>
+                            <div class="h5 text-success">{{ last_sync.station_count or 0 }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">售票员</div>
+                            <div class="h5 text-info">{{ last_sync.seller_count or 0 }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-muted py-4">
+                        <i class="fas fa-info-circle"></i> 暂无同步记录
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="admin-card">
+                <div class="card-header">
+                    <h4><i class="fas fa-bolt"></i> 发起同步</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="sync-option p-4 border rounded text-center mb-3" onclick="selectSyncType('full')">
+                                <input type="radio" name="sync_type" id="syncFull" value="full" class="form-check-input">
+                                <label for="syncFull" class="d-block cursor-pointer">
+                                    <i class="fas fa-database fa-3x text-primary mb-3"></i>
+                                    <h5>全量同步</h5>
+                                    <p class="text-muted small mb-0">将所有车次数据同步到所有车站售票员缓存</p>
+                                    <span class="badge bg-warning mt-2">耗时较长</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="sync-option p-4 border rounded text-center mb-3" onclick="selectSyncType('incremental')">
+                                <input type="radio" name="sync_type" id="syncIncremental" value="incremental" class="form-check-input" checked>
+                                <label for="syncIncremental" class="d-block cursor-pointer">
+                                    <i class="fas fa-sync fa-3x text-success mb-3"></i>
+                                    <h5>增量同步</h5>
+                                    <p class="text-muted small mb-0">仅同步新增或修改的车次数据</p>
+                                    <span class="badge bg-success mt-2">推荐</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>同步说明：</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>同步操作将车次信息写入 <code>seller_train_cache</code> 表</li>
+                            <li>售票员登录后会自动从缓存读取经过本站的车次</li>
+                            <li>建议在新增或修改车次后进行增量同步</li>
+                            <li>每日营业前建议执行一次全量同步确保数据一致</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="POST" id="syncForm">
+                        <input type="hidden" name="sync_type" id="selectedSyncType" value="incremental">
+                        <button type="submit" class="btn btn-primary btn-lg" id="syncBtn">
+                            <i class="fas fa-sync"></i> 立即同步
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 车站同步状态 -->
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-building"></i> 各车站同步状态</h4>
+        </div>
+        <div class="card-body">
+            {% if station_sync_status %}
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>车站编码</th>
+                            <th>车站名称</th>
+                            <th>缓存车次数</th>
+                            <th>最后同步时间</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for station in station_sync_status %}
+                        <tr>
+                            <td><code>{{ station.station_code }}</code></td>
+                            <td>{{ station.station_name or '-' }}</td>
+                            <td><span class="badge bg-primary">{{ station.train_count }}</span></td>
+                            <td>{{ station.last_sync or '-' }}</td>
+                            <td>
+                                {% if station.train_count > 0 %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> 已同步</span>
+                                {% else %}
+                                <span class="badge bg-secondary"><i class="fas fa-clock"></i> 待同步</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-building fa-3x mb-3"></i>
+                <p>暂无车站同步数据</p>
+                <p class="small">执行同步后将在此显示各车站状态</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 同步历史 -->
+    <div class="admin-card">
+        <div class="card-header">
+            <h4><i class="fas fa-history"></i> 同步历史</h4>
+        </div>
+        <div class="card-body">
+            {% if sync_history %}
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>同步类型</th>
+                            <th>触发人</th>
+                            <th>车次数</th>
+                            <th>状态</th>
+                            <th>开始时间</th>
+                            <th>完成时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sync in sync_history %}
+                        <tr>
+                            <td>{{ sync.sync_id }}</td>
+                            <td>
+                                {% if sync.sync_type == 'full' %}
+                                <span class="badge bg-warning">全量同步</span>
+                                {% else %}
+                                <span class="badge bg-info">增量同步</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ sync.triggered_by }}</td>
+                            <td>{{ sync.train_count }}</td>
+                            <td>
+                                {% if sync.status == 'completed' %}
+                                <span class="badge bg-success">完成</span>
+                                {% elif sync.status == 'running' %}
+                                <span class="badge bg-primary">进行中</span>
+                                {% else %}
+                                <span class="badge bg-danger">失败</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ sync.started_at }}</small></td>
+                            <td><small>{{ sync.completed_at or '-' }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-history fa-3x mb-3"></i>
+                <p>暂无同步历史</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.sync-option {
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.sync-option:hover {
+    border-color: #007bff !important;
+    background: #f8f9ff;
+}
+.sync-option input {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.cursor-pointer {
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectSyncType(type) {
+    $('#selectedSyncType').val(type);
+    $(`input[name="sync_type"][value="${type}"]`).prop('checked', true);
+}
+
+$('#syncForm').on('submit', function() {
+    $('#syncBtn').html('<i class="fas fa-spinner fa-spin"></i> 同步中...').prop('disabled', true);
+    return true;
+});
+
+// 自动刷新同步状态
+setInterval(function() {
+    $.get('/admin/api/sync/status', function(res) {
+        if (res.status === 'success' && res.history.length > 0) {
+            const lastSync = res.history[0];
+            if (lastSync.status === 'running') {
+                // 同步中状态，刷新页面
+                location.reload();
+            }
+        }
+    });
+}, 10000); // 每10秒检查一次
+</script>
+{% endblock %}

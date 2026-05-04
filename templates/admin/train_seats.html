@@ -1,0 +1,261 @@
+{% extends "admin/base.html" %}
+
+{% block title %}票额管理 - {{ train.train_number }} - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_trains') }}">班列总览</a>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_train_detail', train_id=train.train_id) }}">{{ train.train_number }}</a>
+    <i class="fas fa-angle-right"></i>
+    <span>票额管理</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2><i class="fas fa-ticket-alt"></i> {{ train.train_number }} 票额管理</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('admin_train_detail', train_id=train.train_id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回详情
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" id="seatsForm">
+        <!-- 批量设置 -->
+        <div class="admin-card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-magic"></i> 批量设置</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>批量设置席别</label>
+                            <select id="batchSeatType" class="form-select">
+                                <option value="">选择席别</option>
+                                <option value="seat_business">商务座</option>
+                                <option value="seat_first">一等座</option>
+                                <option value="seat_second">二等座</option>
+                                <option value="seat_soft">软座</option>
+                                <option value="seat_hard">硬座</option>
+                                <option value="seat_soft_sleeper">软卧</option>
+                                <option value="seat_hard_sleeper">硬卧</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>设置数量</label>
+                            <input type="number" id="batchSeatCount" class="form-control" min="0" value="0">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="button" class="btn btn-warning w-100" onclick="applyBatch()">
+                                <i class="fas fa-check"></i> 应用到所有站
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>按车型批量</label>
+                            <div class="input-group">
+                                <select id="typePrefix" class="form-select">
+                                    <option value="G">G字头</option>
+                                    <option value="D">D字头</option>
+                                    <option value="C">C字头</option>
+                                    <option value="Z">Z字头</option>
+                                    <option value="T">T字头</option>
+                                    <option value="K">K字头</option>
+                                </select>
+                                <input type="number" id="typeSeatCount" class="form-control" min="0" placeholder="数量">
+                                <button type="button" class="btn btn-outline-warning" onclick="applyTypeBatch()">
+                                    应用
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 票额表格 -->
+        <div class="admin-card mb-4">
+            <div class="card-header">
+                <h4><i class="fas fa-list"></i> 各站票额设置</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th width="50">站序</th>
+                                <th>车站</th>
+                                <th>到时</th>
+                                <th>发时</th>
+                                <th>里程</th>
+                                <th>商务座</th>
+                                <th>一等座</th>
+                                <th>二等座</th>
+                                <th>软座</th>
+                                <th>硬座</th>
+                                <th>软卧</th>
+                                <th>硬卧</th>
+                                <th>合计</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stop in stops %}
+                            <tr data-stop-id="{{ stop.stop_id }}">
+                                <td>{{ stop.stop_sequence }}</td>
+                                <td class="station-name">{{ stop.station_name or stop.station_code }}</td>
+                                <td>{{ stop.arrival_time or '-' }}</td>
+                                <td>{{ stop.departure_time or '-' }}</td>
+                                <td>{{ stop.distance_from_start }} km</td>
+                                <td>
+                                    <input type="number" name="seat_business_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_business or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="seat_first_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_first or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="seat_second_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_second or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="seat_soft_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_soft or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="seat_hard_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_hard or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="seat_soft_sleeper_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_soft_sleeper or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td>
+                                    <input type="number" name="seat_hard_sleeper_{{ stop.stop_id }}" 
+                                           value="{{ stop.seat_hard_sleeper or 0 }}" 
+                                           class="form-control form-control-sm seat-input" min="0">
+                                </td>
+                                <td class="seat-total">
+                                    {{ (stop.seat_business or 0) + (stop.seat_first or 0) + (stop.seat_second or 0) + (stop.seat_soft or 0) + (stop.seat_hard or 0) + (stop.seat_soft_sleeper or 0) + (stop.seat_hard_sleeper or 0) }}
+                                </td>
+                            </tr>
+                            <input type="hidden" name="stop_id[]" value="{{ stop.stop_id }}">
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="text-center mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> 保存票额设置
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.seat-input {
+    width: 70px;
+    text-align: center;
+}
+.seat-total {
+    font-weight: bold;
+    background: #f8f9fa;
+}
+.station-name {
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const stopIds = [
+    {% for stop in stops %}
+    {{ stop.stop_id }},
+    {% endfor %}
+];
+
+function applyBatch() {
+    const seatType = $('#batchSeatType').val();
+    const count = parseInt($('#batchSeatCount').val()) || 0;
+    
+    if (!seatType) {
+        alert('请选择要设置的席别');
+        return;
+    }
+    
+    stopIds.forEach(function(stopId) {
+        $(`input[name="${seatType}_${stopId}"]`).val(count);
+    });
+    
+    updateTotals();
+    showToast(`已将${seatType}批量设置为${count}张`, 'success');
+}
+
+function applyTypeBatch() {
+    const prefix = $('#typePrefix').val();
+    const count = parseInt($('#typeSeatCount').val()) || 0;
+    
+    // 简化实现：设置该车次所有站的二等座
+    stopIds.forEach(function(stopId) {
+        $(`input[name="seat_second_${stopId}"]`).val(count);
+    });
+    
+    updateTotals();
+    showToast(`已将${prefix}字头车次二等座批量设置为${count}张`, 'success');
+}
+
+function updateTotals() {
+    $('table tbody tr[data-stop-id]').each(function() {
+        const stopId = $(this).data('stop-id');
+        let total = 0;
+        
+        ['seat_business', 'seat_first', 'seat_second', 'seat_soft', 'seat_hard', 'seat_soft_sleeper', 'seat_hard_sleeper'].forEach(function(type) {
+            total += parseInt($(`input[name="${type}_${stopId}"]`).val()) || 0;
+        });
+        
+        $(this).find('.seat-total').text(total);
+    });
+}
+
+// 实时更新合计
+$(document).on('input', '.seat-input', function() {
+    updateTotals();
+});
+
+// 预警提示
+$('.seat-input').each(function() {
+    const val = parseInt($(this).val()) || 0;
+    if (val === 0) {
+        $(this).addClass('border-warning');
+    } else if (val >= 500) {
+        $(this).addClass('border-success');
+    }
+});
+</script>
+{% endblock %}

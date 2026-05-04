@@ -171,6 +171,76 @@ def ensure_database_initialized():
                     conn.commit()
                     print("✅ 自动补表: email_verifications")
                 
+                # 班列管理模块新表
+                if 'import_logs' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS import_logs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            import_type TEXT,
+                            filename TEXT,
+                            total_rows INTEGER DEFAULT 0,
+                            success_count INTEGER DEFAULT 0,
+                            fail_count INTEGER DEFAULT 0,
+                            skip_count INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'processing',
+                            error_details TEXT,
+                            operator TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: import_logs")
+                
+                if 'data_sync_status' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS data_sync_status (
+                            sync_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            sync_type TEXT,
+                            triggered_by TEXT,
+                            train_count INTEGER DEFAULT 0,
+                            station_count INTEGER DEFAULT 0,
+                            seller_count INTEGER DEFAULT 0,
+                            status TEXT DEFAULT 'running',
+                            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            completed_at TIMESTAMP,
+                            details TEXT
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: data_sync_status")
+                
+                if 'seller_train_cache' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS seller_train_cache (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            station_code TEXT,
+                            train_id INTEGER,
+                            train_number TEXT,
+                            sync_id INTEGER,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(station_code, train_id)
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: seller_train_cache")
+                
+                if 'train_seat_inventory' not in existing_tables:
+                    cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS train_seat_inventory (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            train_id INTEGER,
+                            travel_date TEXT,
+                            seat_type TEXT,
+                            total_seats INTEGER DEFAULT 0,
+                            sold_seats INTEGER DEFAULT 0,
+                            available_seats INTEGER DEFAULT 0,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(train_id, travel_date, seat_type)
+                        )
+                    ''')
+                    conn.commit()
+                    print("✅ 自动补表: train_seat_inventory")
+                
                 cursor.close()
                 conn.close()
                 return
@@ -194,6 +264,16 @@ def ensure_database_initialized():
         print("❌ 找不到初始化脚本 scripts/init_db.py，请手动运行: python scripts/init_db.py")
 
 ensure_database_initialized()
+
+# ==================== 全局模板函数 ====================
+
+@app.context_processor
+def inject_utils():
+    """注入全局模板函数"""
+    return {
+        'getTrainTypeName': getTrainTypeName,
+        'system_name': config.SYSTEM_NAME
+    }
 
 # ==================== 数据库连接函数 ====================
 
@@ -219,6 +299,18 @@ def get_db_dict_connection():
     return conn
 
 # ==================== 辅助函数 ====================
+
+def getTrainTypeName(type_code):
+    """获取车型名称"""
+    types = {
+        'G': '高速动车组',
+        'D': '动车组',
+        'C': '城际动车组',
+        'Z': '直达特快',
+        'T': '特快',
+        'K': '快速'
+    }
+    return types.get(type_code, type_code)
 
 def get_user_by_employee_no(employee_no):
     """根据工号获取用户"""
@@ -2743,6 +2835,683 @@ def api_process_refund():
             conn.rollback()
             conn.close()
         return jsonify({'status': 'error', 'message': f'退票失败: {str(e)}'})
+
+# ==================== 全国开行班列管理模块 ====================
+
+@app.route('/admin/trains')
+@admin_required
+def admin_trains():
+    """班列总览"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 统计各车型数量
+    cursor.execute('''
+        SELECT train_type, COUNT(*) as count 
+        FROM trains 
+        GROUP BY train_type
+    ''')
+    type_stats = {row[0]: row[1] for row in cursor.fetchall()}
+    
+    # 总车次数
+    cursor.execute('SELECT COUNT(*) FROM trains')
+    total_trains = cursor.fetchone()[0]
+    
+    # 今日新增（简化判断）
+    cursor.execute('SELECT COUNT(*) FROM trains WHERE status = ?', ('active',))
+    active_trains = cursor.fetchone()[0]
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin/trains.html',
+                         total_trains=total_trains,
+                         type_stats=type_stats,
+                         active_trains=active_trains)
+
+@app.route('/admin/trains/add', methods=['GET', 'POST'])
+@admin_required
+def admin_train_add():
+    """新增车次"""
+    if request.method == 'GET':
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT station_code, station_name FROM stations WHERE status = "active" ORDER BY station_name')
+        stations = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return render_template('admin/train_add.html', stations=stations)
+    
+    # POST处理
+    train_number = request.form.get('train_number', '').strip().upper()
+    train_type = request.form.get('train_type', 'G')
+    start_station = request.form.get('start_station', '').strip()
+    end_station = request.form.get('end_station', '').strip()
+    start_time = request.form.get('start_time', '08:00')
+    end_time = request.form.get('end_time', '12:00')
+    
+    if not train_number or not start_station or not end_station:
+        flash('请填写完整的车次信息', 'danger')
+        return redirect(url_for('admin_train_add'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 计算总里程
+        total_distance = 0
+        
+        # 插入车次
+        cursor.execute('''
+            INSERT INTO trains (train_number, train_type, start_station, end_station, 
+                              start_time, end_time, total_distance, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+        ''', (train_number, train_type, start_station, end_station, start_time, end_time, total_distance))
+        
+        train_id = cursor.lastrowid
+        
+        # 处理经停站
+        stop_sequences = request.form.getlist('stop_sequence[]')
+        station_codes = request.form.getlist('stop_station[]')
+        arrival_times = request.form.getlist('arrival_time[]')
+        departure_times = request.form.getlist('departure_time[]')
+        distances = request.form.getlist('distance[]')
+        
+        for i, station_code in enumerate(station_codes):
+            if not station_code:
+                continue
+            seq = int(stop_sequences[i]) if i < len(stop_sequences) else i + 1
+            arrival = arrival_times[i] if i < len(arrival_times) else ''
+            departure = departure_times[i] if i < len(departure_times) else ''
+            dist = int(distances[i]) if i < len(distances) and distances[i] else 0
+            
+            if dist > total_distance:
+                total_distance = dist
+            
+            # 席别数量
+            seat_business = int(request.form.get(f'seat_business_{i}', 0) or 0)
+            seat_first = int(request.form.get(f'seat_first_{i}', 0) or 0)
+            seat_second = int(request.form.get(f'seat_second_{i}', 0) or 0)
+            seat_soft = int(request.form.get(f'seat_soft_{i}', 0) or 0)
+            seat_hard = int(request.form.get(f'seat_hard_{i}', 0) or 0)
+            seat_soft_sleeper = int(request.form.get(f'seat_soft_sleeper_{i}', 0) or 0)
+            seat_hard_sleeper = int(request.form.get(f'seat_hard_sleeper_{i}', 0) or 0)
+            
+            cursor.execute('''
+                INSERT INTO train_stops (train_id, station_code, stop_sequence, 
+                                        arrival_time, departure_time, distance_from_start,
+                                        seat_business, seat_first, seat_second, seat_soft,
+                                        seat_hard, seat_soft_sleeper, seat_hard_sleeper)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (train_id, station_code, seq, arrival, departure, dist,
+                  seat_business, seat_first, seat_second, seat_soft,
+                  seat_hard, seat_soft_sleeper, seat_hard_sleeper))
+        
+        # 更新总里程
+        cursor.execute('UPDATE trains SET total_distance = ? WHERE train_id = ?', (total_distance, train_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash(f'车次 {train_number} 创建成功', 'success')
+        return redirect(url_for('admin_train_detail', train_id=train_id))
+        
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash(f'创建车次失败: {str(e)}', 'danger')
+        return redirect(url_for('admin_train_add'))
+
+@app.route('/admin/trains/<int:train_id>')
+@admin_required
+def admin_train_detail(train_id):
+    """车次详情"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 车次信息
+    cursor.execute('SELECT * FROM trains WHERE train_id = ?', (train_id,))
+    train = cursor.fetchone()
+    
+    if not train:
+        cursor.close()
+        conn.close()
+        flash('车次不存在', 'danger')
+        return redirect(url_for('admin_trains'))
+    
+    # 经停站信息
+    cursor.execute('''
+        SELECT ts.*, s.station_name 
+        FROM train_stops ts
+        LEFT JOIN stations s ON ts.station_code = s.station_code
+        WHERE ts.train_id = ?
+        ORDER BY ts.stop_sequence
+    ''', (train_id,))
+    stops = cursor.fetchall()
+    
+    # 票价信息
+    cursor.execute('''
+        SELECT tp.*, fs.station_name as from_name, ts.station_name as to_name
+        FROM ticket_prices tp
+        LEFT JOIN stations fs ON tp.from_station = fs.station_code
+        LEFT JOIN stations ts ON tp.to_station = ts.station_code
+        WHERE tp.from_station IN (SELECT station_code FROM train_stops WHERE train_id = ?)
+          AND tp.to_station IN (SELECT station_code FROM train_stops WHERE train_id = ?)
+        ORDER BY tp.from_station, tp.to_station
+    ''', (train_id, train_id))
+    prices = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin/train_detail.html', train=train, stops=stops, prices=prices)
+
+@app.route('/admin/trains/<int:train_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_train_edit(train_id):
+    """编辑车次"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM trains WHERE train_id = ?', (train_id,))
+    train = cursor.fetchone()
+    
+    if not train:
+        cursor.close()
+        conn.close()
+        flash('车次不存在', 'danger')
+        return redirect(url_for('admin_trains'))
+    
+    if request.method == 'GET':
+        cursor.execute('SELECT station_code, station_name FROM stations WHERE status = "active" ORDER BY station_name')
+        stations = cursor.fetchall()
+        cursor.execute('''
+            SELECT ts.*, s.station_name 
+            FROM train_stops ts
+            LEFT JOIN stations s ON ts.station_code = s.station_code
+            WHERE ts.train_id = ?
+            ORDER BY ts.stop_sequence
+        ''', (train_id,))
+        stops = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return render_template('admin/train_edit.html', train=train, stations=stations, stops=stops)
+    
+    # POST处理
+    train_number = request.form.get('train_number', '').strip().upper()
+    train_type = request.form.get('train_type', 'G')
+    start_time = request.form.get('start_time', '08:00')
+    end_time = request.form.get('end_time', '12:00')
+    
+    try:
+        cursor.execute('''
+            UPDATE trains SET train_number = ?, train_type = ?, 
+                            start_time = ?, end_time = ?
+            WHERE train_id = ?
+        ''', (train_number, train_type, start_time, end_time, train_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash(f'车次 {train_number} 更新成功', 'success')
+        return redirect(url_for('admin_train_detail', train_id=train_id))
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash(f'更新失败: {str(e)}', 'danger')
+        return redirect(url_for('admin_train_edit', train_id=train_id))
+
+@app.route('/admin/trains/<int:train_id>/toggle-status', methods=['POST'])
+@admin_required
+def admin_train_toggle_status(train_id):
+    """停运/恢复车次"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT train_id, train_number, status FROM trains WHERE train_id = ?', (train_id,))
+    train = cursor.fetchone()
+    
+    if not train:
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': '车次不存在'})
+    
+    new_status = 'running' if train['status'] == 'active' else 'active'
+    
+    cursor.execute('UPDATE trains SET status = ? WHERE train_id = ?', (new_status, train_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'status': 'success',
+        'message': f"车次 {train['train_number']} 已{'恢复开行' if new_status == 'active' else '停运'}",
+        'new_status': new_status
+    })
+
+@app.route('/admin/trains/<int:train_id>/seats', methods=['GET', 'POST'])
+@admin_required
+def admin_train_seats(train_id):
+    """票额管理"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM trains WHERE train_id = ?', (train_id,))
+    train = cursor.fetchone()
+    
+    if not train:
+        cursor.close()
+        conn.close()
+        flash('车次不存在', 'danger')
+        return redirect(url_for('admin_trains'))
+    
+    if request.method == 'POST':
+        # 批量更新票额
+        stop_ids = request.form.getlist('stop_id[]')
+        for stop_id in stop_ids:
+            seat_business = int(request.form.get(f'seat_business_{stop_id}', 0) or 0)
+            seat_first = int(request.form.get(f'seat_first_{stop_id}', 0) or 0)
+            seat_second = int(request.form.get(f'seat_second_{stop_id}', 0) or 0)
+            seat_soft = int(request.form.get(f'seat_soft_{stop_id}', 0) or 0)
+            seat_hard = int(request.form.get(f'seat_hard_{stop_id}', 0) or 0)
+            seat_soft_sleeper = int(request.form.get(f'seat_soft_sleeper_{stop_id}', 0) or 0)
+            seat_hard_sleeper = int(request.form.get(f'seat_hard_sleeper_{stop_id}', 0) or 0)
+            
+            cursor.execute('''
+                UPDATE train_stops SET 
+                    seat_business = ?, seat_first = ?, seat_second = ?,
+                    seat_soft = ?, seat_hard = ?, 
+                    seat_soft_sleeper = ?, seat_hard_sleeper = ?
+                WHERE stop_id = ?
+            ''', (seat_business, seat_first, seat_second, seat_soft, seat_hard,
+                  seat_soft_sleeper, seat_hard_sleeper, stop_id))
+        
+        conn.commit()
+        flash('票额设置已保存', 'success')
+    
+    # 获取经停站信息
+    cursor.execute('''
+        SELECT ts.*, s.station_name 
+        FROM train_stops ts
+        LEFT JOIN stations s ON ts.station_code = s.station_code
+        WHERE ts.train_id = ?
+        ORDER BY ts.stop_sequence
+    ''', (train_id,))
+    stops = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin/train_seats.html', train=train, stops=stops)
+
+@app.route('/admin/trains/import', methods=['GET', 'POST'])
+@admin_required
+def admin_train_import():
+    """批量导入"""
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('请选择要上传的文件', 'danger')
+            return redirect(url_for('admin_train_import'))
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('请选择要上传的文件', 'danger')
+            return redirect(url_for('admin_train_import'))
+        
+        if not file.filename.endswith('.csv'):
+            flash('只支持CSV格式文件', 'danger')
+            return redirect(url_for('admin_train_import'))
+        
+        import csv
+        from io import StringIO
+        
+        content = file.read().decode('utf-8-sig')
+        reader = csv.reader(StringIO(content))
+        rows = list(reader)
+        
+        if len(rows) < 2:
+            flash('CSV文件格式错误或数据为空', 'danger')
+            return redirect(url_for('admin_train_import'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 创建导入记录
+        cursor.execute('''
+            INSERT INTO import_logs (import_type, filename, total_rows, status, operator)
+            VALUES ('train', ?, ?, 'processing', ?)
+        ''', (file.filename, len(rows) - 1, session.get('admin_username', 'admin')))
+        import_id = cursor.lastrowid
+        
+        success_count = 0
+        fail_count = 0
+        skip_count = 0
+        errors = []
+        
+        # 获取站名到站码的映射
+        cursor.execute('SELECT station_name, station_code FROM stations')
+        station_map = {row[0]: row[1] for row in cursor.fetchall()}
+        
+        for i, row in enumerate(rows[1:], 1):
+            try:
+                if len(row) < 6:
+                    errors.append(f'第{i+1}行: 数据列数不足')
+                    fail_count += 1
+                    continue
+                
+                train_number = row[0].strip().upper()
+                train_type = row[1].strip()
+                start_station = station_map.get(row[2].strip(), '')
+                end_station = station_map.get(row[3].strip(), '')
+                start_time = row[4].strip()
+                end_time = row[5].strip()
+                
+                if not start_station or not end_station:
+                    errors.append(f'第{i+1}行: 站名无法识别({row[2]}/{row[3]})')
+                    fail_count += 1
+                    continue
+                
+                # 检查车次是否存在
+                cursor.execute('SELECT train_id FROM trains WHERE train_number = ?', (train_number,))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    errors.append(f'第{i+1}行: 车次{train_number}已存在，跳过')
+                    skip_count += 1
+                    continue
+                
+                # 插入车次
+                cursor.execute('''
+                    INSERT INTO trains (train_number, train_type, start_station, end_station,
+                                      start_time, end_time, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active')
+                ''', (train_number, train_type, start_station, end_station, start_time, end_time))
+                train_id = cursor.lastrowid
+                
+                success_count += 1
+                
+            except Exception as e:
+                errors.append(f'第{i+1}行: {str(e)}')
+                fail_count += 1
+        
+        # 更新导入记录
+        cursor.execute('''
+            UPDATE import_logs SET 
+                success_count = ?, fail_count = ?, skip_count = ?,
+                status = 'completed', error_details = ?
+            WHERE id = ?
+        ''', (success_count, fail_count, skip_count, json.dumps(errors[:50]), import_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash(f'导入完成: 成功{success_count}条, 失败{fail_count}条, 跳过{skip_count}条', 
+              'success' if fail_count == 0 else 'warning')
+        return redirect(url_for('admin_train_import'))
+    
+    return render_template('admin/train_import.html')
+
+@app.route('/admin/trains/import-logs')
+@admin_required
+def admin_import_logs():
+    """导入日志"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM import_logs 
+        ORDER BY created_at DESC 
+        LIMIT 50
+    ''')
+    logs = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin/import_logs.html', logs=logs)
+
+@app.route('/admin/trains/sync', methods=['GET', 'POST'])
+@admin_required
+def admin_train_sync():
+    """数据同步"""
+    if request.method == 'POST':
+        sync_type = request.form.get('sync_type', 'incremental')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 创建同步记录
+        cursor.execute('''
+            INSERT INTO data_sync_status (sync_type, triggered_by, status)
+            VALUES (?, ?, 'running')
+        ''', (sync_type, session.get('admin_username', 'admin')))
+        sync_id = cursor.lastrowid
+        
+        try:
+            # 统计信息
+            cursor.execute('SELECT COUNT(*) FROM trains WHERE status = "active"')
+            train_count = cursor.fetchone()[0]
+            
+            cursor.execute('SELECT COUNT(DISTINCT station_code) FROM users WHERE role = "seller"')
+            station_count = cursor.fetchone()[0]
+            
+            cursor.execute('SELECT COUNT(*) FROM users WHERE role = "seller"')
+            seller_count = cursor.fetchone()[0]
+            
+            # 清空旧缓存
+            cursor.execute('DELETE FROM seller_train_cache')
+            
+            # 根据train_stops生成新的缓存
+            cursor.execute('''
+                INSERT INTO seller_train_cache (station_code, train_id, train_number, sync_id)
+                SELECT DISTINCT ts.station_code, ts.train_id, t.train_number, ?
+                FROM train_stops ts
+                JOIN trains t ON ts.train_id = t.train_id
+                WHERE t.status = 'active'
+            ''', (sync_id,))
+            
+            # 更新同步记录
+            cursor.execute('''
+                UPDATE data_sync_status SET 
+                    train_count = ?, station_count = ?, seller_count = ?,
+                    status = 'completed', completed_at = ?
+                WHERE sync_id = ?
+            ''', (train_count, station_count, seller_count, datetime.now().isoformat(), sync_id))
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            flash(f'数据同步完成: {train_count}个车次已同步到{station_count}个车站', 'success')
+            
+        except Exception as e:
+            cursor.execute('''
+                UPDATE data_sync_status SET 
+                    status = 'failed',
+                    details = ?
+                WHERE sync_id = ?
+            ''', (str(e), sync_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash(f'同步失败: {str(e)}', 'danger')
+        
+        return redirect(url_for('admin_train_sync'))
+    
+    # GET请求
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 最新同步状态
+    cursor.execute('''
+        SELECT * FROM data_sync_status 
+        ORDER BY started_at DESC 
+        LIMIT 1
+    ''')
+    last_sync = cursor.fetchone()
+    
+    # 同步历史
+    cursor.execute('''
+        SELECT * FROM data_sync_status 
+        ORDER BY started_at DESC 
+        LIMIT 20
+    ''')
+    sync_history = cursor.fetchall()
+    
+    # 各车站同步状态
+    cursor.execute('''
+        SELECT stc.station_code, s.station_name, COUNT(*) as train_count, MAX(stc.updated_at) as last_sync
+        FROM seller_train_cache stc
+        LEFT JOIN stations s ON stc.station_code = s.station_code
+        GROUP BY stc.station_code
+        ORDER BY s.station_name
+    ''')
+    station_sync_status = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('admin/train_sync.html', 
+                         last_sync=last_sync,
+                         sync_history=sync_history,
+                         station_sync_status=station_sync_status)
+
+# ==================== API接口 ====================
+
+@app.route('/admin/api/trains')
+@admin_required
+def admin_api_trains():
+    """车次列表API"""
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    search = request.args.get('search', '')
+    train_type = request.args.get('type', '')
+    status = request.args.get('status', '')
+    
+    offset = (page - 1) * per_page
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    where_clauses = []
+    params = []
+    
+    if search:
+        where_clauses.append('(train_number LIKE ? OR start_station LIKE ? OR end_station LIKE ?)')
+        params.extend([f'%{search}%', f'%{search}%', f'%{search}%'])
+    
+    if train_type:
+        where_clauses.append('train_type = ?')
+        params.append(train_type)
+    
+    if status:
+        where_clauses.append('status = ?')
+        params.append(status)
+    
+    where_sql = ' AND '.join(where_clauses) if where_clauses else '1=1'
+    
+    # 总数
+    cursor.execute(f'SELECT COUNT(*) FROM trains WHERE {where_sql}', params)
+    total = cursor.fetchone()[0]
+    
+    # 数据
+    cursor.execute(f'''
+        SELECT t.*, 
+               ss.station_name as start_name,
+               es.station_name as end_name
+        FROM trains t
+        LEFT JOIN stations ss ON t.start_station = ss.station_code
+        LEFT JOIN stations es ON t.end_station = es.station_code
+        WHERE {where_sql}
+        ORDER BY t.train_number
+        LIMIT ? OFFSET ?
+    ''', params + [per_page, offset])
+    
+    trains = [dict(row) for row in cursor.fetchall()]
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'status': 'success',
+        'data': trains,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (total + per_page - 1) // per_page
+    })
+
+@app.route('/admin/api/trains/<int:train_id>')
+@admin_required
+def admin_api_train(train_id):
+    """车次详情API"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT t.*, 
+               ss.station_name as start_name,
+               es.station_name as end_name
+        FROM trains t
+        LEFT JOIN stations ss ON t.start_station = ss.station_code
+        LEFT JOIN stations es ON t.end_station = es.station_code
+        WHERE t.train_id = ?
+    ''', (train_id,))
+    train = cursor.fetchone()
+    
+    if not train:
+        cursor.close()
+        conn.close()
+        return jsonify({'status': 'error', 'message': '车次不存在'})
+    
+    cursor.execute('''
+        SELECT ts.*, s.station_name 
+        FROM train_stops ts
+        LEFT JOIN stations s ON ts.station_code = s.station_code
+        WHERE ts.train_id = ?
+        ORDER BY ts.stop_sequence
+    ''', (train_id,))
+    stops = [dict(row) for row in cursor.fetchall()]
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'status': 'success',
+        'data': dict(train),
+        'stops': stops
+    })
+
+@app.route('/admin/api/sync/status')
+@admin_required
+def admin_api_sync_status():
+    """同步状态API"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM data_sync_status 
+        ORDER BY started_at DESC 
+        LIMIT 10
+    ''')
+    history = [dict(row) for row in cursor.fetchall()]
+    
+    cursor.execute('''
+        SELECT COUNT(*) FROM seller_train_cache
+    ''')
+    cached_trains = cursor.fetchone()[0]
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify({
+        'status': 'success',
+        'history': history,
+        'cached_trains': cached_trains
+    })
 
 # ==================== 启动应用 ====================
 

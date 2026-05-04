@@ -1,0 +1,312 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ train.train_number }} - 车次详情 - {{ system_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="admin-breadcrumb">
+    <i class="fas fa-train"></i>
+    <span>班列管理</span>
+    <i class="fas fa-angle-right"></i>
+    <a href="{{ url_for('admin_trains') }}">班列总览</a>
+    <i class="fas fa-angle-right"></i>
+    <span>{{ train.train_number }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+    <div class="page-header">
+        <h2>
+            <span class="train-number-lg type-{{ train.train_type|lower }}">{{ train.train_number }}</span>
+            {{ getTrainTypeName(train.train_type) }}
+        </h2>
+        <div class="page-actions">
+            <a href="{{ url_for('admin_trains') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回
+            </a>
+            <a href="{{ url_for('admin_train_edit', train_id=train.train_id) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> 编辑
+            </a>
+            <a href="{{ url_for('admin_train_seats', train_id=train.train_id) }}" class="btn btn-success">
+                <i class="fas fa-ticket-alt"></i> 票额管理
+            </a>
+        </div>
+    </div>
+
+    <!-- 基本信息卡片 -->
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-info-circle"></i> 基本信息</h4>
+            <span class="status-badge status-{{ train.status }}">
+                {{ '开行中' if train.status == 'active' else '已停运' }}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>车次号</label>
+                        <span class="value">{{ train.train_number }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>车型</label>
+                        <span class="value">{{ getTrainTypeName(train.train_type) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>始发站</label>
+                        <span class="value">{{ train.start_station }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>终到站</label>
+                        <span class="value">{{ train.end_station }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>发车时间</label>
+                        <span class="value">{{ train.start_time }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>到达时间</label>
+                        <span class="value">{{ train.end_time }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>总里程</label>
+                        <span class="value">{{ train.total_distance }} km</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-item">
+                        <label>经停站数</label>
+                        <span class="value">{{ stops|length }} 站</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 经停站列表 -->
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-map-marked-alt"></i> 经停站信息</h4>
+        </div>
+        <div class="card-body">
+            <div class="train-route">
+                {% for stop in stops %}
+                <div class="route-stop {% if loop.first %}first{% elif loop.last %}last{% endif %}">
+                    <div class="stop-dot"></div>
+                    <div class="stop-info">
+                        <div class="stop-name">{{ stop.station_name or stop.station_code }}</div>
+                        <div class="stop-time">
+                            {% if stop.arrival_time %}到: {{ stop.arrival_time }}{% endif %}
+                            {% if stop.departure_time %} / 发: {{ stop.departure_time }}{% endif %}
+                        </div>
+                        <div class="stop-distance">{{ stop.distance_from_start }} km</div>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="route-line"></div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 席别票额 -->
+    <div class="admin-card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-chair"></i> 席别票额配置</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>站序</th>
+                            <th>车站</th>
+                            <th>商务座</th>
+                            <th>一等座</th>
+                            <th>二等座</th>
+                            <th>软座</th>
+                            <th>硬座</th>
+                            <th>软卧</th>
+                            <th>硬卧</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stop in stops %}
+                        <tr>
+                            <td>{{ stop.stop_sequence }}</td>
+                            <td>{{ stop.station_name or stop.station_code }}</td>
+                            <td><span class="seat-count seat-business">{{ stop.seat_business or 0 }}</span></td>
+                            <td><span class="seat-count seat-first">{{ stop.seat_first or 0 }}</span></td>
+                            <td><span class="seat-count seat-second">{{ stop.seat_second or 0 }}</span></td>
+                            <td><span class="seat-count seat-soft">{{ stop.seat_soft or 0 }}</span></td>
+                            <td><span class="seat-count seat-hard">{{ stop.seat_hard or 0 }}</span></td>
+                            <td><span class="seat-count seat-soft-sleeper">{{ stop.seat_soft_sleeper or 0 }}</span></td>
+                            <td><span class="seat-count seat-hard-sleeper">{{ stop.seat_hard_sleeper or 0 }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 票价信息 -->
+    {% if prices %}
+    <div class="admin-card">
+        <div class="card-header">
+            <h4><i class="fas fa-ticket-alt"></i> 票价信息</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>出发站</th>
+                            <th>到达站</th>
+                            <th>商务座</th>
+                            <th>一等座</th>
+                            <th>二等座</th>
+                            <th>软座</th>
+                            <th>硬座</th>
+                            <th>软卧</th>
+                            <th>硬卧</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for price in prices[:20] %}
+                        <tr>
+                            <td>{{ price.from_name or price.from_station }}</td>
+                            <td>{{ price.to_name or price.to_station }}</td>
+                            <td>{{ price.base_price or '-' }}</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.train-number-lg {
+    font-size: 32px;
+    font-weight: bold;
+    padding: 5px 15px;
+    border-radius: 8px;
+    color: white;
+}
+.train-route {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.route-stop {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    padding: 10px 0;
+}
+.route-stop.first, .route-stop.last {
+    padding-top: 5px;
+}
+.stop-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 3px solid #e7f3ff;
+    position: absolute;
+    left: 20px;
+    top: 15px;
+    z-index: 2;
+}
+.route-stop.first .stop-dot {
+    background: #28a745;
+}
+.route-stop.last .stop-dot {
+    background: #dc3545;
+}
+.stop-info {
+    margin-left: 50px;
+    flex: 1;
+}
+.stop-name {
+    font-weight: bold;
+    font-size: 16px;
+}
+.stop-time {
+    color: #666;
+    font-size: 14px;
+}
+.stop-distance {
+    color: #999;
+    font-size: 12px;
+}
+.route-line {
+    width: 2px;
+    height: 30px;
+    background: #dee2e6;
+    margin-left: 27px;
+}
+.info-item {
+    padding: 10px;
+}
+.info-item label {
+    display: block;
+    color: #888;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+.info-item .value {
+    font-size: 18px;
+    font-weight: bold;
+}
+.seat-count {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: #f8f9fa;
+    min-width: 50px;
+    text-align: center;
+}
+.seat-business { background: #e3f2fd; color: #1565c0; }
+.seat-first { background: #e8f5e9; color: #2e7d32; }
+.seat-second { background: #fff3e0; color: #ef6c00; }
+.seat-soft { background: #f3e5f5; color: #7b1fa2; }
+.seat-hard { background: #efebe9; color: #4e342e; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 格式化时间
+function formatTime(time) {
+    if (!time) return '-';
+    return time;
+}
+</script>
+{% endblock %}
