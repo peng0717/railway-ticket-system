@@ -946,7 +946,7 @@
             btn.disabled = !(hasTrain && hasSeat && fromStation && toStation);
         }
         
-        // 搜索车次
+        // 搜索车次（AJAX方式，不跳转页面）
         function searchTrains() {
             const date = document.getElementById('travel-date').value;
             const fromInput = document.getElementById('from-station').value.trim();
@@ -954,33 +954,118 @@
             const toInput = document.getElementById('to-station').value.trim();
             const toCode = document.getElementById('to-station-code').value;
             
-            // 如果输入框有值但隐藏域为空，尝试直接使用输入值作为 station_code
+            // 如果隐藏域为空但输入框有值，直接用输入值作为station_code
             let finalFromCode = fromCode || fromInput;
             let finalToCode = toCode || toInput;
             
-            // 验证
-            if (!date || !finalFromCode || !finalToCode) {
-                alert('请输入完整的日期、发站和到站');
+            if (!date) {
+                alert('请输入乘车日期');
+                return;
+            }
+            if (!finalFromCode) {
+                alert('请输入发站拼音码（如VNP=北京南）');
+                return;
+            }
+            if (!finalToCode) {
+                alert('请输入到站拼音码（如AFH=盐城）');
                 return;
             }
             
-            // 如果隐藏域为空，先用输入值查询车站信息
-            if (!fromCode && fromInput) {
-                document.getElementById('from-station-code').value = fromInput;
-            }
-            if (!toCode && toInput) {
-                document.getElementById('to-station-code').value = toInput;
+            // 同步隐藏域
+            document.getElementById('from-station-code').value = finalFromCode;
+            document.getElementById('to-station-code').value = finalToCode;
+            
+            // 如果中文站名显示为空，尝试查询
+            resolveStationName('from');
+            resolveStationName('to');
+            
+            // 先尝试按发到站查，再尝试按车次号查
+            const trainNumber = document.getElementById('train-number').value.trim();
+            
+            let searchUrl = '/api/search-trains?from=' + encodeURIComponent(finalFromCode) + '&to=' + encodeURIComponent(finalToCode);
+            if (trainNumber) {
+                searchUrl += '&q=' + encodeURIComponent(trainNumber);
             }
             
-            // 通过URL参数传递数据并刷新页面
-            const params = new URLSearchParams({
-                date: date,
-                from_station: finalFromCode,
-                from_station_name: fromInput,
-                to_station: finalToCode,
-                to_station_name: toInput
-            });
-            location.href = '{{ url_for("sell") }}?' + params.toString();
+            const trainListEl = document.getElementById('train-list');
+            trainListEl.innerHTML = '<div style="color:#FFD700;text-align:center;padding:30px;">查询中...</div>';
+            
+            fetch(searchUrl)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success' && data.data && data.data.length > 0) {
+                        renderTrainList(data.data);
+                    } else if (trainNumber) {
+                        // 如果按站查不到，再按车次号查
+                        return fetch('/api/search-trains?q=' + encodeURIComponent(trainNumber))
+                            .then(r => r.json())
+                            .then(data2 => {
+                                if (data2.status === 'success' && data2.data && data2.data.length > 0) {
+                                    renderTrainList(data2.data);
+                                } else {
+                                    trainListEl.innerHTML = '<div style="color:#FF4444;text-align:center;padding:30px;">未找到符合条件的车次<br><span style="color:#6B8299;font-size:12px;">发站:' + finalFromCode + ' 到站:' + finalToCode + '</span></div>';
+                                }
+                            });
+                    } else {
+                        trainListEl.innerHTML = '<div style="color:#FF4444;text-align:center;padding:30px;">未找到符合条件的车次<br><span style="color:#6B8299;font-size:12px;">发站:' + finalFromCode + ' 到站:' + finalToCode + '</span></div>';
+                    }
+                })
+                .catch(err => {
+                    trainListEl.innerHTML = '<div style="color:#FF4444;text-align:center;padding:30px;">查询失败: ' + err + '</div>';
+                });
+        }
+        
+        // 解析站名（根据拼音码查中文名）
+        function resolveStationName(prefix) {
+            const input = document.getElementById(prefix + '-station');
+            const code = document.getElementById(prefix + '-station-code');
+            const nameDisplay = document.getElementById(prefix + '-station-name-display');
+            
+            if (nameDisplay.textContent && nameDisplay.textContent.trim()) return; // 已有中文站名
+            
+            const val = (code.value || input.value).trim();
+            if (!val) return;
+            
+            fetch('/api/search-stations?q=' + encodeURIComponent(val))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success' && data.data.length > 0) {
+                        const station = data.data.find(s => s.station_code === val) || data.data[0];
+                        nameDisplay.textContent = station.station_name;
+                        // 确保隐藏域正确
+                        code.value = station.station_code;
+                    }
+                })
+                .catch(() => {});
+        }
+        
+        // 渲染车次列表
+        function renderTrainList(trains) {
+            const trainListEl = document.getElementById('train-list');
+            trainListEl.innerHTML = trains.map((t, i) => `
+                <div class="train-item ${i === 0 ? 'selected' : ''}" 
+                     data-train-id="${t.train_id}"
+                     data-train-number="${t.train_number}"
+                     data-from="${t.start_station}"
+                     data-to="${t.end_station}"
+                     data-departure="${t.start_time || ''}"
+                     data-duration="${t.duration || ''}"
+                     onclick="selectTrain(this)">
+                    <div class="train-num">${t.train_number}</div>
+                    <div class="train-route">
+                        <span class="train-from">${t.start_station}</span>
+                        <span class="train-arrow">→</span>
+                        <span class="train-to">${t.end_station}</span>
+                    </div>
+                    <div class="train-time">${t.start_time || ''}</div>
+                    <div class="train-duration">${t.duration || ''}</div>
+                </div>
+            `).join('');
+            
+            // 自动选中第一个
+            if (trains.length > 0) {
+                selectTrain(trainListEl.querySelector('.train-item'));
+            }
         }
         
         // 重置表单
@@ -1128,8 +1213,30 @@
                 }, 200);
             });
             
-            input.addEventListener('blur', () => {
+            input.addEventListener('blur', function() {
                 setTimeout(() => dropdown.classList.remove('show'), 200);
+                // 失焦时自动解析拼音码：如果输入了值但隐藏域为空，自动查询并填充
+                const val = this.value.trim();
+                const codeEl = document.getElementById(codeId);
+                const nameEl = document.getElementById(nameDisplayId);
+                if (val && !codeEl.value) {
+                    // 用户直接输入了拼音码但没选下拉，自动解析
+                    fetch('/api/search-stations?q=' + encodeURIComponent(val))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === 'success' && data.data.length > 0) {
+                                const station = data.data.find(s => s.station_code === val) || data.data.find(s => s.station_code.toUpperCase() === val.toUpperCase()) || data.data[0];
+                                codeEl.value = station.station_code;
+                                this.value = station.station_code;
+                                if (nameEl) nameEl.textContent = station.station_name;
+                                checkConfirmBtn();
+                            }
+                        })
+                        .catch(() => {});
+                } else if (val && codeEl.value && !nameEl.textContent) {
+                    // 有code但没中文名，自动查询
+                    resolveStationName(inputId.replace('-station', ''));
+                }
             });
         }
         

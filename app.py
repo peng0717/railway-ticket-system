@@ -433,11 +433,10 @@ def ensure_database_initialized():
                     print("⚠️  正在添加G1099车次数据...")
                     
                     # 首先确保所有站点存在（使用实际数据库中的拼音码）
-                    # 添加缺失的站点
-                    # 注意: SQH已被水家湖使用,使用SSH作为宿迁拼音码;阜宁南使用FYC
+                    # 注意: SSH已被上虞北占用！宿迁用SUQ；FYC不存在，阜宁南用FNJ
                     stations_to_add = [
-                        ('SSH', '宿迁', 'SQN', '江苏省', 1),
-                        ('FYC', '阜宁南', 'FNN', '江苏省', 0),
+                        ('SUQ', '宿迁', 'SUQ', '江苏省', 1),
+                        ('FNJ', '阜宁南', 'FNJ', '江苏省', 0),
                     ]
                     for code, name, pinyin, region, is_major in stations_to_add:
                         cursor.execute("SELECT station_id FROM stations WHERE station_code = ?", (code,))
@@ -462,9 +461,9 @@ def ensure_database_initialized():
                         ('VNP', 1, '07:30', '07:30', 0, 5, 30, 100),      # 北京南
                         ('JGK', 2, '09:12', '09:15', 406, 5, 30, 100),    # 济南西
                         ('UUH', 3, '10:48', '10:51', 692, 5, 30, 100),    # 徐州东
-                        ('SSH', 4, '11:32', '11:34', 758, 3, 25, 80),     # 宿迁
+                        ('SUQ', 4, '11:32', '11:34', 758, 3, 25, 80),     # 宿迁
                         ('AUH', 5, '12:08', '12:10', 812, 3, 25, 80),     # 淮安
-                        ('FYC', 6, '12:32', '12:34', 842, 2, 20, 60),    # 阜宁南
+                        ('FNJ', 6, '12:32', '12:34', 842, 2, 20, 60),    # 阜宁南
                         ('AJH', 7, '12:50', '12:52', 862, 2, 20, 60),     # 建湖
                         ('AFH', 8, '14:17', '14:17', 920, 5, 30, 100),   # 盐城
                     ]
@@ -491,9 +490,9 @@ def ensure_database_initialized():
                         ('VNP', 'VNP', 0, 5, 30, 100),
                         ('VNP', 'JGK', 406, 5, 30, 100),
                         ('VNP', 'UUH', 692, 5, 30, 100),
-                        ('VNP', 'SSH', 758, 3, 25, 80),
+                        ('VNP', 'SUQ', 758, 3, 25, 80),
                         ('VNP', 'AUH', 812, 3, 25, 80),
-                        ('VNP', 'FYC', 842, 2, 20, 60),
+                        ('VNP', 'FNJ', 842, 2, 20, 60),
                         ('VNP', 'AJH', 862, 2, 20, 60),
                         ('VNP', 'AFH', 920, 5, 30, 100),
                     ]
@@ -3394,8 +3393,24 @@ def api_search_trains():
     try:
         cursor = conn.cursor()
         
-        if query:
-            # 按车次号搜索
+        if from_station and to_station:
+            # 优先按发到站搜索
+            # 按发到站搜索（train_stops用train_id关联）
+            cursor.execute("""
+                SELECT DISTINCT t.train_id, t.train_number, t.train_type, t.start_station, t.end_station, t.start_time, t.end_time
+                FROM trains t
+                JOIN train_stops ts1 ON t.train_id = ts1.train_id AND ts1.station_code = ?
+                JOIN train_stops ts2 ON t.train_id = ts2.train_id AND ts2.station_code = ?
+                WHERE ts1.stop_sequence < ts2.stop_sequence
+                ORDER BY t.train_number
+                LIMIT 30
+            """, (from_station, to_station))
+            trains = [dict(t) for t in cursor.fetchall()]
+            # 如果同时有车次号query，过滤只保留匹配的
+            if query and trains:
+                trains = [t for t in trains if query in t['train_number'].upper()]
+        elif query:
+            # 只按车次号搜索
             cursor.execute("""
                 SELECT train_id, train_number, train_type, start_station, end_station, start_time, end_time
                 FROM trains
@@ -3407,18 +3422,6 @@ def api_search_trains():
                     train_number
                 LIMIT 20
             """, (f'{query}%', f'%{query}%', query, f'{query}%'))
-            trains = [dict(t) for t in cursor.fetchall()]
-        elif from_station and to_station:
-            # 按发到站搜索（train_stops用train_id关联）
-            cursor.execute("""
-                SELECT DISTINCT t.train_id, t.train_number, t.train_type, t.start_station, t.end_station, t.start_time, t.end_time
-                FROM trains t
-                JOIN train_stops ts1 ON t.train_id = ts1.train_id AND ts1.station_code = ?
-                JOIN train_stops ts2 ON t.train_id = ts2.train_id AND ts2.station_code = ?
-                WHERE ts1.stop_sequence < ts2.stop_sequence
-                ORDER BY t.train_number
-                LIMIT 30
-            """, (from_station, to_station))
             trains = [dict(t) for t in cursor.fetchall()]
         else:
             trains = []
