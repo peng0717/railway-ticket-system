@@ -347,10 +347,25 @@ ensure_database_initialized()
 
 @app.context_processor
 def inject_utils():
-    """注入全局模板函数"""
+    """注入全局模板函数和变量"""
+    # 全局注入 pending_registrations，避免每个路由都要手动传
+    pending_registrations = 0
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status='pending'")
+            row = cursor.fetchone()
+            pending_registrations = row['cnt'] if row else 0
+            cursor.close()
+            conn.close()
+    except Exception:
+        pass
+    
     return {
         'getTrainTypeName': getTrainTypeName,
-        'system_name': config.SYSTEM_NAME
+        'system_name': config.SYSTEM_NAME,
+        'pending_registrations': pending_registrations
     }
 
 # ==================== 数据库连接函数 ====================

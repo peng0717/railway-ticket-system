@@ -575,9 +575,11 @@
                 .then(data => {
                     if (data.status === 'success') {
                         currentState.stops = data.data.stops || [];
+                        currentState.trainType = data.data.train_type;
                         displayStops(data.data.stops);
+                        // 根据车型和站点显示席别
                         if (fromCode && toCode) {
-                            displaySeats(data.data.prices || {});
+                            displaySeats(data.data.train_type, data.data.stops, data.data.prices || {});
                         }
                     }
                 });
@@ -691,21 +693,46 @@
             `).join('');
         }
 
-        // 显示席别
-        function displaySeats(prices) {
-            const seatTypes = [
-                { key: 'business', name: '商务座', num: '1' },
-                { key: 'first', name: '一等座', num: '2' },
-                { key: 'second', name: '二等座', num: '3' },
-                { key: 'soft_seat', name: '软座', num: '4' },
-                { key: 'hard_seat', name: '硬座', num: '5' }
-            ];
+        // 显示席别（根据车型显示不同选项）
+        function displaySeats(trainType, stops, prices) {
+            // 根据车型定义席别
+            let seatTypes = [];
+            
+            if (trainType === 'G' || trainType === 'D' || trainType === 'C') {
+                // 高铁/动车/城际：商务座、一等座、二等座
+                seatTypes = [
+                    { key: 'business', name: '商务座', num: '1' },
+                    { key: 'first', name: '一等座', num: '2' },
+                    { key: 'second', name: '二等座', num: '3' }
+                ];
+            } else {
+                // 普速列车：软卧、硬卧、硬座
+                seatTypes = [
+                    { key: 'soft_sleeper', name: '软卧', num: '1' },
+                    { key: 'hard_sleeper', name: '硬卧', num: '2' },
+                    { key: 'hard', name: '硬座', num: '3' }
+                ];
+            }
 
-            document.getElementById('seat-list-content').innerHTML = seatTypes.map(s => {
+            // 从经停站获取余票数量
+            let seatCounts = {};
+            if (stops && stops.length > 0) {
+                stops.forEach(s => {
+                    if (s.seat_business > 0) seatCounts['business'] = (seatCounts['business'] || 0) + s.seat_business;
+                    if (s.seat_first > 0) seatCounts['first'] = (seatCounts['first'] || 0) + s.seat_first;
+                    if (s.seat_second > 0) seatCounts['second'] = (seatCounts['second'] || 0) + s.seat_second;
+                    if (s.seat_soft_sleeper > 0) seatCounts['soft_sleeper'] = (seatCounts['soft_sleeper'] || 0) + s.seat_soft_sleeper;
+                    if (s.seat_hard_sleeper > 0) seatCounts['hard_sleeper'] = (seatCounts['hard_sleeper'] || 0) + s.seat_hard_sleeper;
+                    if (s.seat_soft > 0) seatCounts['soft_seat'] = (seatCounts['soft_seat'] || 0) + s.seat_soft;
+                    if (s.seat_hard > 0) seatCounts['hard'] = (seatCounts['hard'] || 0) + s.seat_hard;
+                });
+            }
+
+            document.getElementById('seat-list-content').innerHTML = seatTypes.map((s, idx) => {
                 const price = prices[s.key] || Math.floor(Math.random() * 500 + 200);
-                const count = Math.floor(Math.random() * 100 + 10);
+                const count = seatCounts[s.key] || Math.floor(Math.random() * 100 + 10);
                 return `
-                    <div class="seat-item" data-seat="${s.key}" data-price="${price}" onclick="selectSeat(this)">
+                    <div class="seat-item ${count <= 0 ? 'disabled' : ''}" data-seat="${s.key}" data-price="${price}" data-count="${count}" onclick="selectSeat(this)">
                         <span class="seat-num">${s.num}.</span>
                         <span class="seat-name">${s.name}</span>
                         <span class="seat-price">¥${price}</span>
