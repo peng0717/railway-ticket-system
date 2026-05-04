@@ -260,7 +260,19 @@
         .station-option:hover { background: #1B3A5C; }
         .station-option .name { color: #FFFFFF; }
         .station-option .code { color: #6B8299; font-size: 11px; margin-left: 10px; }
-        .input-wrapper { position: relative; flex: 1; }
+        .input-wrapper { position: relative; flex: 1; display: flex; align-items: center; }
+        .station-name-display {
+            position: absolute;
+            right: 10px;
+            color: #4CAF50;
+            font-size: 12px;
+            pointer-events: none;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .input-wrapper input { padding-right: 90px; }
         /* 右侧信息区 */
         .info-panel {
             flex: 1;
@@ -574,6 +586,7 @@
                     <div class="input-wrapper">
                         <input type="text" name="from_station_name" id="from-station" placeholder="输入车站名或拼音首字母" autocomplete="off" value="{{ from_station|default('') }}">
                         <input type="hidden" name="from_station" id="from-station-code" value="{{ from_station_code|default('') }}">
+                        <span class="station-name-display" id="from-station-name-display"></span>
                         <div class="station-dropdown" id="from-station-dropdown"></div>
                     </div>
                 </div>
@@ -582,6 +595,7 @@
                     <div class="input-wrapper">
                         <input type="text" name="to_station_name" id="to-station" placeholder="输入车站名或拼音首字母" autocomplete="off" value="{{ to_station|default('') }}">
                         <input type="hidden" name="to_station" id="to-station-code" value="{{ to_station_code|default('') }}">
+                        <span class="station-name-display" id="to-station-name-display"></span>
                         <div class="station-dropdown" id="to-station-dropdown"></div>
                     </div>
                 </div>
@@ -935,23 +949,36 @@
         // 搜索车次
         function searchTrains() {
             const date = document.getElementById('travel-date').value;
-            const fromStation = document.getElementById('from-station').value;
+            const fromInput = document.getElementById('from-station').value.trim();
             const fromCode = document.getElementById('from-station-code').value;
-            const toStation = document.getElementById('to-station').value;
+            const toInput = document.getElementById('to-station').value.trim();
             const toCode = document.getElementById('to-station-code').value;
             
-            if (!date || !fromCode || !toCode) {
+            // 如果输入框有值但隐藏域为空，尝试直接使用输入值作为 station_code
+            let finalFromCode = fromCode || fromInput;
+            let finalToCode = toCode || toInput;
+            
+            // 验证
+            if (!date || !finalFromCode || !finalToCode) {
                 alert('请输入完整的日期、发站和到站');
                 return;
+            }
+            
+            // 如果隐藏域为空，先用输入值查询车站信息
+            if (!fromCode && fromInput) {
+                document.getElementById('from-station-code').value = fromInput;
+            }
+            if (!toCode && toInput) {
+                document.getElementById('to-station-code').value = toInput;
             }
             
             // 通过URL参数传递数据并刷新页面
             const params = new URLSearchParams({
                 date: date,
-                from_station: fromCode,
-                from_station_name: fromStation,
-                to_station: toCode,
-                to_station_name: toStation
+                from_station: finalFromCode,
+                from_station_name: fromInput,
+                to_station: finalToCode,
+                to_station_name: toInput
             });
             location.href = '{{ url_for("sell") }}?' + params.toString();
         }
@@ -961,8 +988,10 @@
             document.getElementById('train-number').value = '';
             document.getElementById('from-station').value = '';
             document.getElementById('from-station-code').value = '';
+            document.getElementById('from-station-name-display').textContent = '';
             document.getElementById('to-station').value = '';
             document.getElementById('to-station-code').value = '';
+            document.getElementById('to-station-name-display').textContent = '';
             document.getElementById('passenger-name').value = '';
             document.getElementById('passenger-id').value = '';
             document.getElementById('selected-train').textContent = '--';
@@ -990,8 +1019,8 @@
             
             document.getElementById('preview-date').textContent = date;
             document.getElementById('preview-train').textContent = selectedTrain.number;
-            document.getElementById('preview-from').textContent = document.getElementById('from-station').value || selectedTrain.from;
-            document.getElementById('preview-to').textContent = document.getElementById('to-station').value || selectedTrain.to;
+            document.getElementById('preview-from').textContent = document.getElementById('from-station-name-display').textContent || document.getElementById('from-station').value || selectedTrain.from;
+            document.getElementById('preview-to').textContent = document.getElementById('to-station-name-display').textContent || document.getElementById('to-station').value || selectedTrain.to;
             document.getElementById('preview-seat').textContent = selectedSeat;
             document.getElementById('preview-name').textContent = name;
             document.getElementById('preview-id').textContent = id;
@@ -1035,9 +1064,9 @@
             formData.append('train_number', selectedTrain.number);
             formData.append('date', document.getElementById('travel-date').value);
             formData.append('from_station', document.getElementById('from-station-code').value);
-            formData.append('from_station_name', document.getElementById('from-station').value);
+            formData.append('from_station_name', document.getElementById('from-station-name-display').textContent || document.getElementById('from-station').value);
             formData.append('to_station', document.getElementById('to-station-code').value);
-            formData.append('to_station_name', document.getElementById('to-station').value);
+            formData.append('to_station_name', document.getElementById('to-station-name-display').textContent || document.getElementById('to-station').value);
             formData.append('seat_type', selectedSeat);
             formData.append('ticket_type', currentTicketType);
             formData.append('price', currentPrice);
@@ -1066,9 +1095,10 @@
         
         // 车站搜索
         let stationSearchTimer = null;
-        function setupStationSearch(inputId, dropdownId, codeId) {
+        function setupStationSearch(inputId, dropdownId, codeId, nameDisplayId) {
             const input = document.getElementById(inputId);
             const dropdown = document.getElementById(dropdownId);
+            const nameDisplay = document.getElementById(nameDisplayId);
             
             input.addEventListener('input', function() {
                 clearTimeout(stationSearchTimer);
@@ -1084,7 +1114,7 @@
                         .then(data => {
                             if (data.status === 'success' && data.data.length > 0) {
                                 dropdown.innerHTML = data.data.slice(0, 8).map(s => 
-                                    `<div class="station-option" onclick="selectStation('${inputId}', '${codeId}', '${s.station_name}', '${s.station_code}')">
+                                    `<div class="station-option" onclick="selectStation('${inputId}', '${codeId}', '${nameDisplayId}', '${s.station_name}', '${s.station_code}')">
                                         <span class="name">${s.station_name}</span>
                                         <span class="code">${s.station_code}</span>
                                     </div>`
@@ -1103,16 +1133,24 @@
             });
         }
         
-        function selectStation(inputId, codeId, name, code) {
-            document.getElementById(inputId).value = name;
+        function selectStation(inputId, codeId, nameDisplayId, name, code) {
+            // 输入框显示拼音码（station_code）
+            document.getElementById(inputId).value = code;
+            // 隐藏域存储 station_code
             document.getElementById(codeId).value = code;
+            // 右侧显示中文站名
+            const nameDisplay = document.getElementById(nameDisplayId);
+            if (nameDisplay) {
+                nameDisplay.textContent = name;
+            }
+            // 隐藏下拉列表
             document.getElementById(inputId.replace('-station', '-station-dropdown')).classList.remove('show');
             checkConfirmBtn();
         }
         
         // 初始化车站搜索
-        setupStationSearch('from-station', 'from-station-dropdown', 'from-station-code');
-        setupStationSearch('to-station', 'to-station-dropdown', 'to-station-code');
+        setupStationSearch('from-station', 'from-station-dropdown', 'from-station-code', 'from-station-name-display');
+        setupStationSearch('to-station', 'to-station-dropdown', 'to-station-code', 'to-station-name-display');
         
         // 键盘快捷键
         document.addEventListener('keydown', function(e) {
@@ -1159,10 +1197,40 @@
         
         // 自动填充之前的查询条件
         {% if from_station_code %}
+        document.getElementById('from-station').value = '{{ from_station_code }}';
         document.getElementById('from-station-code').value = '{{ from_station_code }}';
         {% endif %}
+        {% if from_station_name %}
+        document.getElementById('from-station-name-display').textContent = '{{ from_station_name }}';
+        {% elif from_station_code %}
+        // 如果有 station_code 但没有 name，自动查询显示
+        fetch('/api/search-stations?q=' + encodeURIComponent('{{ from_station_code }}'))
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success' && data.data.length > 0) {
+                    const station = data.data.find(s => s.station_code === '{{ from_station_code }}') || data.data[0];
+                    document.getElementById('from-station-name-display').textContent = station.station_name;
+                }
+            })
+            .catch(() => {});
+        {% endif %}
         {% if to_station_code %}
+        document.getElementById('to-station').value = '{{ to_station_code }}';
         document.getElementById('to-station-code').value = '{{ to_station_code }}';
+        {% endif %}
+        {% if to_station_name %}
+        document.getElementById('to-station-name-display').textContent = '{{ to_station_name }}';
+        {% elif to_station_code %}
+        // 如果有 station_code 但没有 name，自动查询显示
+        fetch('/api/search-stations?q=' + encodeURIComponent('{{ to_station_code }}'))
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success' && data.data.length > 0) {
+                    const station = data.data.find(s => s.station_code === '{{ to_station_code }}') || data.data[0];
+                    document.getElementById('to-station-name-display').textContent = station.station_name;
+                }
+            })
+            .catch(() => {});
         {% endif %}
     </script>
 </body>

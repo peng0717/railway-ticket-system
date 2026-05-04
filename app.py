@@ -427,6 +427,104 @@ def ensure_database_initialized():
                     except Exception:
                         pass  # 表不存在，跳过
                 
+                # ========== 添加G1099车次数据 ==========
+                cursor.execute("SELECT train_id FROM trains WHERE train_number = 'G1099'")
+                if not cursor.fetchone():
+                    print("⚠️  正在添加G1099车次数据...")
+                    
+                    # 首先确保所有站点存在（使用实际数据库中的拼音码）
+                    # 添加缺失的站点
+                    # 注意: SQH已被水家湖使用,使用SSH作为宿迁拼音码;阜宁南使用FYC
+                    stations_to_add = [
+                        ('SSH', '宿迁', 'SQN', '江苏省', 1),
+                        ('FYC', '阜宁南', 'FNN', '江苏省', 0),
+                    ]
+                    for code, name, pinyin, region, is_major in stations_to_add:
+                        cursor.execute("SELECT station_id FROM stations WHERE station_code = ?", (code,))
+                        if not cursor.fetchone():
+                            cursor.execute("""
+                                INSERT INTO stations (station_code, station_name, pinyin_code, region, is_major, status)
+                                VALUES (?, ?, ?, ?, ?, 'active')
+                            """, (code, name, pinyin, region, is_major))
+                    
+                    # 添加G1099车次基本信息
+                    # G1099: 北京南-盐城 (京沪高铁+徐盐客专)
+                    cursor.execute("""
+                        INSERT INTO trains (train_number, train_type, start_station, end_station, start_time, end_time, running_days, total_distance, status, created_at)
+                        VALUES ('G1099', 'G', 'VNP', 'AFH', '07:30', '14:17', '1234567', 920, 'active', datetime('now'))
+                    """)
+                    train_id_result = cursor.execute("SELECT last_insert_rowid()").fetchone()
+                    train_id = train_id_result[0]
+                    
+                    # 添加经停站数据
+                    train_stops = [
+                        # (station_code, stop_sequence, arrival_time, departure_time, distance, seat_business, seat_first, seat_second)
+                        ('VNP', 1, '07:30', '07:30', 0, 5, 30, 100),      # 北京南
+                        ('JGK', 2, '09:12', '09:15', 406, 5, 30, 100),    # 济南西
+                        ('UUH', 3, '10:48', '10:51', 692, 5, 30, 100),    # 徐州东
+                        ('SSH', 4, '11:32', '11:34', 758, 3, 25, 80),     # 宿迁
+                        ('AUH', 5, '12:08', '12:10', 812, 3, 25, 80),     # 淮安
+                        ('FYC', 6, '12:32', '12:34', 842, 2, 20, 60),    # 阜宁南
+                        ('AJH', 7, '12:50', '12:52', 862, 2, 20, 60),     # 建湖
+                        ('AFH', 8, '14:17', '14:17', 920, 5, 30, 100),   # 盐城
+                    ]
+                    
+                    for station_code, stop_seq, arrival, departure, distance, biz, first, second in train_stops:
+                        cursor.execute("""
+                            INSERT INTO train_stops (train_id, station_code, stop_sequence, arrival_time, departure_time, distance_from_start, seat_business, seat_first, seat_second)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (train_id, station_code, stop_seq, arrival, departure, distance, biz, first, second))
+                    
+                    # 添加票价数据（按距离比例计算）
+                    # 基准票价: BJN->YC 商务1624, 一等820, 二等513
+                    # 总距离: 920km
+                    def calc_price(distance_km, total_dist=920):
+                        """按距离比例计算票价"""
+                        ratio = distance_km / total_dist
+                        biz = round(1624 * ratio, 2)
+                        first = round(820 * ratio, 2)
+                        second = round(513 * ratio, 2)
+                        return biz, first, second
+                    
+                    # 北京南(VNP)到各站票价
+                    price_segments = [
+                        ('VNP', 'VNP', 0, 5, 30, 100),
+                        ('VNP', 'JGK', 406, 5, 30, 100),
+                        ('VNP', 'UUH', 692, 5, 30, 100),
+                        ('VNP', 'SSH', 758, 3, 25, 80),
+                        ('VNP', 'AUH', 812, 3, 25, 80),
+                        ('VNP', 'FYC', 842, 2, 20, 60),
+                        ('VNP', 'AJH', 862, 2, 20, 60),
+                        ('VNP', 'AFH', 920, 5, 30, 100),
+                    ]
+                    
+                    for from_code, to_code, dist, biz, first, second in price_segments:
+                        biz_price, first_price, second_price = calc_price(dist)
+                        for seat_type, price in [('商务座', biz_price), ('一等座', first_price), ('二等座', second_price), ('无座', second_price)]:
+                            cursor.execute("""
+                                INSERT OR IGNORE INTO ticket_prices (from_station, to_station, seat_type, base_price, price_per_km, train_type)
+                                VALUES (?, ?, ?, ?, ?, 'G')
+                            """, (from_code, to_code, seat_type, price, price / max(dist, 1)))
+                    
+                    # 中间站之间的票价
+                    for i in range(1, len(train_stops)):
+                        for j in range(i + 1, len(train_stops)):
+                            from_code = train_stops[i][0]
+                            to_code = train_stops[j][0]
+                            dist = train_stops[j][4] - train_stops[i][4]
+                            if dist > 0:
+                                biz_price, first_price, second_price = calc_price(dist)
+                                for seat_type, price in [('商务座', biz_price), ('一等座', first_price), ('二等座', second_price), ('无座', second_price)]:
+                                    cursor.execute("""
+                                        INSERT OR IGNORE INTO ticket_prices (from_station, to_station, seat_type, base_price, price_per_km, train_type)
+                                        VALUES (?, ?, ?, ?, ?, 'G')
+                                    """, (from_code, to_code, seat_type, price, price / dist))
+                    
+                    conn.commit()
+                    print("✅ G1099车次数据添加完成")
+                else:
+                    print("ℹ️  G1099车次已存在，跳过添加")
+                
                 cursor.close()
                 conn.close()
                 return
