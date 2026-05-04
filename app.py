@@ -734,6 +734,9 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('admin_logged_in'):
+            # API请求返回JSON，页面请求重定向
+            if request.path.startswith('/admin/api/'):
+                return jsonify({'status': 'error', 'message': '请先登录管理员账号'}), 401
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
