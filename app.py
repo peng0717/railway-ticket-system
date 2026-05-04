@@ -2281,6 +2281,84 @@ def api_captcha():
     session['captcha_code'] = captcha_code.lower()
     return jsonify({'code': captcha_code, 'image': captcha_image})
 
+@app.route('/api/search-stations')
+def api_search_stations():
+    """搜索车站（支持拼音首字母）"""
+    query = request.args.get('q', '').strip()
+    if not query or len(query) < 1:
+        return jsonify({'status': 'success', 'data': []})
+    
+    stations = search_stations(query)
+    return jsonify({'status': 'success', 'data': stations})
+
+@app.route('/api/train-detail')
+@login_required
+def api_train_detail():
+    """获取车次详情（经停站、票价）"""
+    train_number = request.args.get('train_id', '').strip()
+    from_code = request.args.get('from', '').strip()
+    to_code = request.args.get('to', '').strip()
+    
+    if not train_number:
+        return jsonify({'status': 'error', 'message': '请提供车次号'})
+    
+    conn = get_db_dict_connection()
+    if not conn:
+        return jsonify({'status': 'error', 'message': '数据库连接失败'})
+    
+    try:
+        cursor = conn.cursor()
+        
+        # 获取车次基本信息
+        cursor.execute("""
+            SELECT train_number, train_type, start_station, end_station
+            FROM trains WHERE train_number = ?
+        """, (train_number,))
+        train = cursor.fetchone()
+        if not train:
+            cursor.close()
+            conn.close()
+            return jsonify({'status': 'error', 'message': '未找到该车次'})
+        
+        # 获取经停站
+        cursor.execute("""
+            SELECT stop_order, station_code, station_name, arrival_time, departure_time, distance
+            FROM train_stops WHERE train_number = ?
+            ORDER BY stop_order
+        """, (train_number,))
+        stops = [dict(s) for s in cursor.fetchall()]
+        
+        # 获取票价
+        prices = {}
+        if from_code and to_code:
+            cursor.execute("""
+                SELECT seat_type, price FROM ticket_prices
+                WHERE train_number = ? AND from_station_code = ? AND to_station_code = ?
+            """, (train_number, from_code, to_code))
+            price_rows = cursor.fetchall()
+            for p in price_rows:
+                prices[p['seat_type']] = p['price']
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'train_number': train['train_number'],
+                'train_type': train['train_type'],
+                'start_station': train['start_station'],
+                'end_station': train['end_station'],
+                'stops': stops,
+                'prices': prices
+            }
+        })
+    except Exception as e:
+        print(f"获取车次详情失败: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'status': 'error', 'message': '获取车次详情失败'})
+
 @app.route('/api/search-trains')
 @login_required
 def api_search_trains():
