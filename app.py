@@ -39,6 +39,42 @@ def get_db_path():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_dir, 'data', 'railway.db')
 
+# ==================== 自动初始化数据库 ====================
+
+def ensure_database_initialized():
+    """启动时自动检测并初始化数据库，从根源避免 'no such table' 错误"""
+    db_path = get_db_path()
+    if os.path.exists(db_path):
+        # 数据库文件存在，快速验证关键表是否存在
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+            if cursor.fetchone():
+                cursor.close()
+                conn.close()
+                return  # 数据库完好，无需初始化
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass  # 数据库损坏，重新初始化
+    
+    # 数据库不存在或损坏，自动执行初始化
+    print("⚠️  数据库不存在或不完整，正在自动初始化...")
+    init_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts', 'init_db.py')
+    if os.path.exists(init_script):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("init_db", init_script)
+        init_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(init_module)
+        if hasattr(init_module, 'init_database'):
+            init_module.init_database()
+            print("✅ 数据库自动初始化完成！")
+    else:
+        print("❌ 找不到初始化脚本 scripts/init_db.py，请手动运行: python scripts/init_db.py")
+
+ensure_database_initialized()
+
 # ==================== 数据库连接函数 ====================
 
 def get_db_connection():
