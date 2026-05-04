@@ -618,19 +618,23 @@ def admin_dashboard():
         
         # 统计待审核
         cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'pending'")
-        stats['pending'] = cursor.fetchone().get('cnt', 0) if cursor.fetchone() else 0
+        row = cursor.fetchone()
+        stats['pending'] = row.get('cnt', 0) if row else 0
         
         # 统计已通过
         cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'approved'")
-        stats['approved'] = cursor.fetchone().get('cnt', 0) if cursor.fetchone() else 0
+        row = cursor.fetchone()
+        stats['approved'] = row.get('cnt', 0) if row else 0
         
         # 统计已拒绝
         cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status = 'rejected'")
-        stats['rejected'] = cursor.fetchone().get('cnt', 0) if cursor.fetchone() else 0
+        row = cursor.fetchone()
+        stats['rejected'] = row.get('cnt', 0) if row else 0
         
         # 统计已冻结
         cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE status = 'frozen'")
-        stats['frozen'] = cursor.fetchone().get('cnt', 0) if cursor.fetchone() else 0
+        row = cursor.fetchone()
+        stats['frozen'] = row.get('cnt', 0) if row else 0
         
         # 最近申请
         cursor.execute("""
