@@ -341,6 +341,68 @@ def ensure_database_initialized():
                     conn.commit()
                     print("✅ 自动补表: simulation_config")
                 
+                # ========== 自动补列：确保所有关键列都存在 ==========
+                alter_statements = {
+                    'users': {
+                        'status': "ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'",
+                        'id_card': "ALTER TABLE users ADD COLUMN id_card TEXT",
+                        'email': "ALTER TABLE users ADD COLUMN email TEXT",
+                        'machine_code': "ALTER TABLE users ADD COLUMN machine_code TEXT",
+                        'ticket_limit': "ALTER TABLE users ADD COLUMN ticket_limit INTEGER DEFAULT 200",
+                    },
+                    'refunds': {
+                        'approval_status': "ALTER TABLE refunds ADD COLUMN approval_status TEXT DEFAULT 'pending'",
+                        'approved_by': "ALTER TABLE refunds ADD COLUMN approved_by INTEGER",
+                        'approved_at': "ALTER TABLE refunds ADD COLUMN approved_at TIMESTAMP",
+                        'reject_reason': "ALTER TABLE refunds ADD COLUMN reject_reason TEXT",
+                        'shift_id': "ALTER TABLE refunds ADD COLUMN shift_id INTEGER",
+                    },
+                    'tickets': {
+                        'payment_method': "ALTER TABLE tickets ADD COLUMN payment_method TEXT",
+                        'ticket_type': "ALTER TABLE tickets ADD COLUMN ticket_type TEXT DEFAULT 'normal'",
+                        'ticket_class': "ALTER TABLE tickets ADD COLUMN ticket_class TEXT",
+                        'shift_id': "ALTER TABLE tickets ADD COLUMN shift_id INTEGER",
+                    },
+                    'operation_logs': {
+                        'user_id': "ALTER TABLE operation_logs ADD COLUMN user_id INTEGER",
+                    },
+                    'shifts': {
+                        'user_id': "ALTER TABLE shifts ADD COLUMN user_id INTEGER",
+                        'total_tickets': "ALTER TABLE shifts ADD COLUMN total_tickets INTEGER DEFAULT 0",
+                        'total_amount': "ALTER TABLE shifts ADD COLUMN total_amount REAL DEFAULT 0",
+                        'cash_amount': "ALTER TABLE shifts ADD COLUMN cash_amount REAL DEFAULT 0",
+                        'electronic_amount': "ALTER TABLE shifts ADD COLUMN electronic_amount REAL DEFAULT 0",
+                        'total_refunds': "ALTER TABLE shifts ADD COLUMN total_refunds INTEGER DEFAULT 0",
+                    },
+                    'system_settings': {
+                        'description': "ALTER TABLE system_settings ADD COLUMN description TEXT",
+                        'updated_at': "ALTER TABLE system_settings ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                    },
+                    'registration_applications': {
+                        'reject_reason': "ALTER TABLE registration_applications ADD COLUMN reject_reason TEXT",
+                        'reviewed_at': "ALTER TABLE registration_applications ADD COLUMN reviewed_at TIMESTAMP",
+                        'reviewed_by': "ALTER TABLE registration_applications ADD COLUMN reviewed_by INTEGER",
+                    },
+                    'risk_controls': {
+                        'operated_by': "ALTER TABLE risk_controls ADD COLUMN operated_by INTEGER DEFAULT 0",
+                    },
+                }
+                
+                for table_name, columns in alter_statements.items():
+                    try:
+                        cursor.execute(f"PRAGMA table_info({table_name})")
+                        existing_cols = {col[1] for col in cursor.fetchall()}
+                        for col_name, alter_sql in columns.items():
+                            if col_name not in existing_cols:
+                                try:
+                                    cursor.execute(alter_sql)
+                                    conn.commit()
+                                    print(f"✅ 自动补列: {table_name}.{col_name}")
+                                except Exception as e:
+                                    print(f"⚠️  补列失败 {table_name}.{col_name}: {e}")
+                    except Exception:
+                        pass  # 表不存在，跳过
+                
                 cursor.close()
                 conn.close()
                 return
@@ -382,15 +444,21 @@ def inject_utils():
                 row = cursor.fetchone()
                 pending_registrations = row['cnt'] if row else 0
             except Exception:
-                pass
+                pending_registrations = 0
             try:
                 cursor.execute("SELECT COUNT(*) as cnt FROM pending_refunds WHERE status='pending'")
                 row = cursor.fetchone()
                 pending_refunds = row['cnt'] if row else 0
             except Exception:
+                pending_refunds = 0
+            try:
+                cursor.close()
+            except Exception:
                 pass
-            cursor.close()
-            conn.close()
+            try:
+                conn.close()
+            except Exception:
+                pass
     except Exception:
         pass
     
