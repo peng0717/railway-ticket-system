@@ -370,15 +370,25 @@ ensure_database_initialized()
 @app.context_processor
 def inject_utils():
     """注入全局模板函数和变量"""
-    # 全局注入 pending_registrations，避免每个路由都要手动传
+    # 全局注入侧边栏所需的统计变量，避免每个路由都要手动传
     pending_registrations = 0
+    pending_refunds = 0
     try:
         conn = get_db_connection()
         if conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status='pending'")
-            row = cursor.fetchone()
-            pending_registrations = row['cnt'] if row else 0
+            try:
+                cursor.execute("SELECT COUNT(*) as cnt FROM registration_applications WHERE status='pending'")
+                row = cursor.fetchone()
+                pending_registrations = row['cnt'] if row else 0
+            except Exception:
+                pass
+            try:
+                cursor.execute("SELECT COUNT(*) as cnt FROM pending_refunds WHERE status='pending'")
+                row = cursor.fetchone()
+                pending_refunds = row['cnt'] if row else 0
+            except Exception:
+                pass
             cursor.close()
             conn.close()
     except Exception:
@@ -387,7 +397,8 @@ def inject_utils():
     return {
         'getTrainTypeName': getTrainTypeName,
         'system_name': config.SYSTEM_NAME,
-        'pending_registrations': pending_registrations
+        'pending_registrations': pending_registrations,
+        'pending_refunds': pending_refunds
     }
 
 # ==================== 数据库连接函数 ====================
