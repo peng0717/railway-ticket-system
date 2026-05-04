@@ -4002,7 +4002,7 @@ def get_sim_random_train():
         
         cursor.execute("""
             SELECT station_code, station_name, arrival_time, departure_time
-            FROM train_stops WHERE train_id = ? ORDER BY stop_order
+            FROM train_stops WHERE train_id = ? ORDER BY stop_sequence
         """, (train['train_id'],))
         stops = cursor.fetchall()
         cursor.close()
@@ -4083,18 +4083,18 @@ def sim_open_shift(seller):
         cursor = conn.cursor()
         now = datetime.now()
         cursor.execute("""
-            INSERT INTO shifts (seller_id, seller_name, employee_no, station_code, 
-                window_no, shift_date, start_time, status, ticket_count, revenue)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (seller['user_id'], seller['name'], seller['employee_no'], seller['station_code'],
-              seller['window_no'], now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S'),
-              'open', 0, 0.0))
+            INSERT INTO shifts (employee_no, shift_type, start_time, status, 
+                ticket_count, refund_count, waste_count, revenue, refund_amount, actual_amount,
+                user_id, total_tickets, total_amount, cash_amount, electronic_amount, total_refunds)
+            VALUES (?, 'day', ?, 'open', 0, 0, 0, 0.0, 0.0, 0.0, ?, 0, 0.0, 0.0, 0.0, 0)
+        """, (seller['employee_no'], now.strftime('%Y-%m-%d %H:%M:%S'), seller['user_id']))
         shift_id = cursor.lastrowid
         conn.commit()
         cursor.close()
         conn.close()
         return shift_id
-    except:
+    except Exception as e:
+        print(f"模拟开班失败: {e}")
         if conn:
             conn.rollback()
             conn.close()
@@ -4108,13 +4108,14 @@ def sim_close_shift(shift_id):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE shifts SET status = 'closed', end_time = ?
+            UPDATE shifts SET status = 'closed', end_time = ?, closed_by = 'simulation'
             WHERE shift_id = ?
-        """, (datetime.now().strftime('%H:%M:%S'), shift_id))
+        """, (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), shift_id))
         conn.commit()
         cursor.close()
         conn.close()
-    except:
+    except Exception as e:
+        print(f"模拟结班失败: {e}")
         if conn:
             conn.rollback()
             conn.close()
@@ -4127,13 +4128,19 @@ def sim_update_shift(shift_id, ticket_delta=0, revenue_delta=0.0):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE shifts SET ticket_count = ticket_count + ?, revenue = revenue + ?
+            UPDATE shifts SET 
+                total_tickets = total_tickets + ?,
+                total_amount = total_amount + ?,
+                cash_amount = cash_amount + ?,
+                ticket_count = ticket_count + ?,
+                revenue = revenue + ?
             WHERE shift_id = ?
-        """, (ticket_delta, revenue_delta, shift_id))
+        """, (ticket_delta, revenue_delta, revenue_delta, ticket_delta, revenue_delta, shift_id))
         conn.commit()
         cursor.close()
         conn.close()
-    except:
+    except Exception as e:
+        print(f"模拟更新班次失败: {e}")
         if conn:
             conn.rollback()
             conn.close()
@@ -4161,23 +4168,28 @@ def sim_sell_ticket(seller, shift_id):
     
     try:
         cursor = conn.cursor()
+        # 查站名
+        from_station_name = from_stop['station_name']
+        to_station_name = to_stop['station_name']
+        
         cursor.execute("""
             INSERT INTO tickets (
-                ticket_id, shift_id, train_number, train_id,
-                from_station, to_station, from_station_name, to_station_name,
-                travel_date, departure_time, arrival_time,
+                ticket_id, train_id, train_number,
+                from_station, to_station, 
+                travel_date, departure_time, 
                 seat_type, seat_number, ticket_type, 
-                passenger_name, id_number, phone,
-                price, status, seller_id, window_no, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                passenger_name, id_number, id_type,
+                price, status, seller_id, window_no, sold_at, shift_id, payment_method, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            ticket_id, shift_id, train['train_number'], train['train_id'],
-            from_stop['station_code'], to_stop['station_code'],
-            from_stop['station_name'], to_stop['station_name'],
-            travel_date, from_stop['departure_time'], to_stop['arrival_time'],
-            seat_type, f"{random.randint(1, 16):02d}{random.randint(1, 20):02d}{random.choice('ABCDF')}",
-            'simulation', passenger_name, id_number, f"1{random.randint(3,9)}{random.randint(10000000, 99999999)}",
-            price, 'sold', seller['user_id'], seller['window_no'], datetime.now().isoformat()
+            ticket_id, train['train_id'], train['train_number'],
+            from_station_name, to_station_name,
+            travel_date, from_stop['departure_time'],
+            seat_type, f"{random.randint(1, 16):02d}车{random.randint(1, 20):02d}{random.choice('ABCDF')}",
+            'simulation', passenger_name, id_number, '身份证',
+            price, 'sold', seller['user_id'], seller['window_no'], 
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'), shift_id, 'cash',
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         ))
         
         cursor.execute("""
@@ -4217,7 +4229,7 @@ def sim_refund_ticket(seller, shift_id):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT ticket_id, train_number, from_station, to_station,
-                   from_station_name, to_station_name, seat_type, price, train_id, travel_date
+                   seat_type, price, train_id, travel_date
             FROM tickets WHERE status = 'sold' AND ticket_type = 'simulation'
             ORDER BY RANDOM() LIMIT 1
         """)
@@ -4237,12 +4249,14 @@ def sim_refund_ticket(seller, shift_id):
         try:
             cursor = conn2.cursor()
             cursor.execute("""
-                INSERT INTO refunds (ticket_id, shift_id, refund_amount, refund_fee,
-                    refund_reason, refund_type, status, operated_by, operated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (ticket['ticket_id'], shift_id, refund_amount, refund_fee,
-                  random.choice(SIMUL_REFUND_REASONS), 'simulation', 'approved',
-                  seller['user_id'], datetime.now().isoformat()))
+                INSERT INTO refunds (ticket_id, refund_amount, refund_fee,
+                    refund_reason, refund_type, operator_id, refund_time, shift_id,
+                    approval_status, approved_by, approved_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'auto_approved', 0, ?)
+            """, (ticket['ticket_id'], refund_amount, refund_fee,
+                  random.choice(SIMUL_REFUND_REASONS), 'simulation', seller['user_id'],
+                  datetime.now().strftime('%Y-%m-%d %H:%M:%S'), shift_id,
+                  datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             
             cursor.execute("UPDATE tickets SET status = 'refunded' WHERE ticket_id = ?",
                           (ticket['ticket_id'],))
@@ -4265,7 +4279,7 @@ def sim_refund_ticket(seller, shift_id):
             return {
                 'type': 'refund', 'seller': seller['employee_no'], 'seller_name': seller['name'],
                 'ticket_id': ticket['ticket_id'], 'train_number': ticket['train_number'],
-                'from_station': ticket['from_station_name'], 'to_station': ticket['to_station_name'],
+                'from_station': ticket['from_station'], 'to_station': ticket['to_station'],
                 'seat_type': ticket['seat_type'], 'price': ticket['price'],
                 'refund_fee': refund_fee, 'refund_amount': refund_amount
             }
